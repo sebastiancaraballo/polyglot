@@ -191,6 +191,33 @@ func TestStatsRoundTrip(t *testing.T) {
 	}
 }
 
+func TestCountLearnedCards(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	profile, err := store.CreateProfile(ctx, "learner")
+	if err != nil {
+		t.Fatalf("CreateProfile: %v", err)
+	}
+
+	if n, err := store.CountLearnedCards(ctx, profile.ID); err != nil || n != 0 {
+		t.Fatalf("CountLearnedCards = (%d, %v), want (0, nil)", n, err)
+	}
+
+	now := time.Now().UTC()
+	// One learned card (reps > 0) and one brand-new card (reps == 0).
+	if err := store.SaveCardState(ctx, profile.ID, model.CardState{CardID: "a", Ease: model.DefaultEase, Reps: 1, DueAt: now, LastReviewedAt: now}); err != nil {
+		t.Fatalf("SaveCardState a: %v", err)
+	}
+	if err := store.SaveCardState(ctx, profile.ID, model.CardState{CardID: "b", Ease: model.DefaultEase, Reps: 0, DueAt: now, LastReviewedAt: now}); err != nil {
+		t.Fatalf("SaveCardState b: %v", err)
+	}
+
+	if n, err := store.CountLearnedCards(ctx, profile.ID); err != nil || n != 1 {
+		t.Fatalf("CountLearnedCards = (%d, %v), want (1, nil)", n, err)
+	}
+}
+
 func TestCardStateCascadeIsolation(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()

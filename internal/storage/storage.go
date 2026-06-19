@@ -33,6 +33,10 @@ type Storage interface {
 	// SaveStats replaces the aggregate stats for a profile.
 	SaveStats(ctx context.Context, profileID int64, stats model.Stats) error
 
+	// CountLearnedCards returns how many cards the profile has reviewed at least
+	// once successfully (reps > 0).
+	CountLearnedCards(ctx context.Context, profileID int64) (int, error)
+
 	// Close releases the underlying resources.
 	Close() error
 }
