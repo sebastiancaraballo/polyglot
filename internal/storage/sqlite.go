@@ -250,6 +250,19 @@ func (s *SQLiteStore) SaveStats(ctx context.Context, profileID int64, stats mode
 	return requireAffected(res)
 }
 
+// CountLearnedCards returns the number of cards the profile has reviewed at
+// least once successfully (reps > 0).
+func (s *SQLiteStore) CountLearnedCards(ctx context.Context, profileID int64) (int, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM card_states WHERE profile_id = ? AND reps > 0`, profileID,
+	).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count learned cards: %w", err)
+	}
+	return n, nil
+}
+
 // rowScanner is satisfied by both *sql.Row and *sql.Rows.
 type rowScanner interface {
 	Scan(dest ...any) error
