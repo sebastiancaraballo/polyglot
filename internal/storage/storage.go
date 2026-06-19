@@ -1,0 +1,38 @@
+package storage
+
+import (
+	"context"
+	"errors"
+
+	"github.com/sebastiancaraballo/polyglot/internal/model"
+)
+
+// ErrNotFound is returned when a requested record does not exist.
+var ErrNotFound = errors.New("storage: not found")
+
+// Storage persists learner profiles and their progress. Implementations must be
+// safe for sequential use by a single running application instance.
+type Storage interface {
+	// CreateProfile creates a new profile (and its empty stats row) and returns it.
+	CreateProfile(ctx context.Context, name string) (model.Profile, error)
+	// ListProfiles returns all profiles ordered by creation time.
+	ListProfiles(ctx context.Context) ([]model.Profile, error)
+	// GetProfile returns the profile with the given id, or ErrNotFound.
+	GetProfile(ctx context.Context, id int64) (model.Profile, error)
+	// SetOnboarded marks a profile as having completed onboarding.
+	SetOnboarded(ctx context.Context, profileID int64) error
+
+	// GetCardState returns the scheduling state for a card, or ErrNotFound if the
+	// card has never been reviewed by the profile.
+	GetCardState(ctx context.Context, profileID int64, cardID string) (model.CardState, error)
+	// SaveCardState inserts or updates the scheduling state for a card.
+	SaveCardState(ctx context.Context, profileID int64, state model.CardState) error
+
+	// GetStats returns the aggregate stats for a profile.
+	GetStats(ctx context.Context, profileID int64) (model.Stats, error)
+	// SaveStats replaces the aggregate stats for a profile.
+	SaveStats(ctx context.Context, profileID int64, stats model.Stats) error
+
+	// Close releases the underlying resources.
+	Close() error
+}
