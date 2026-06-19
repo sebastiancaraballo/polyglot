@@ -1,0 +1,26 @@
+# Binaries
+/polyglot
+/polyglot.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test & coverage artifacts
+*.test
+*.out
+coverage.*
+
+# GoReleaser / build output
+/dist/
+
+# Local app data (never commit a user's database)
+*.db
+*.db-shm
+*.db-wal
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
