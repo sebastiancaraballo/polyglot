@@ -57,6 +57,26 @@ type Messages struct {
 	BestLabel     string
 	HiraganaLabel string
 	KatakanaLabel string
+
+	// Onboarding
+	WelcomeTitle    string
+	WelcomeIntro    string
+	ControlsTitle   string
+	ControlsKeys    []string
+	WelcomeNext     string
+	PracticeTitle   string
+	SampleWord      string
+	SampleRomaji    string
+	SamplePrompt    string
+	SampleOptions   []string
+	SampleCorrect   int
+	SampleHint      string
+	PracticeCorrect string
+	PracticeRetry   string
+	PracticeNext    string
+	DoneTitle       string
+	DoneRecommend   string
+	DoneNext        string
 }
 
 // ES is the Spanish localization, used by default in v1.
@@ -108,6 +128,31 @@ var ES = Messages{
 	BestLabel:     "récord",
 	HiraganaLabel: "Hiragana",
 	KatakanaLabel: "Katakana",
+
+	WelcomeTitle:  "Bienvenido a Polyglot ✨",
+	WelcomeIntro:  "Vas a aprender japonés desde el español.",
+	ControlsTitle: "Controles básicos:",
+	ControlsKeys: []string{
+		"↑ ↓      moverte por las opciones",
+		"enter    confirmar",
+		"espacio  revelar respuesta (en flashcards)",
+		"esc      volver al menú",
+		"q        salir",
+	},
+	WelcomeNext:     "enter  probemos un ejercicio →",
+	PracticeTitle:   "Práctica guiada",
+	SampleWord:      "みず",
+	SampleRomaji:    "mizu",
+	SamplePrompt:    "¿Qué significa esta palabra?",
+	SampleOptions:   []string{"Fuego", "Agua", "Gato", "Árbol"},
+	SampleCorrect:   1,
+	SampleHint:      "◀ pista: ¡es esta!",
+	PracticeCorrect: "¡Genial! 🎉 Ya sabes lo básico.",
+	PracticeRetry:   "Casi… la respuesta correcta está marcada. Inténtalo.",
+	PracticeNext:    "enter  continuar →",
+	DoneTitle:       "¡Todo listo!",
+	DoneRecommend:   "Te recomiendo empezar por el Entrenador de Kana.",
+	DoneNext:        "enter  ir al menú principal",
 }
 
 // Default is the active UI language.

@@ -12,6 +12,7 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/screens/flashcards"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/kana"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/menu"
+	"github.com/sebastiancaraballo/polyglot/internal/screens/onboarding"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/quiz"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/stats"
 	"github.com/sebastiancaraballo/polyglot/internal/storage"
@@ -39,7 +40,11 @@ type rootModel struct {
 
 func newRoot(ctx appContext) rootModel {
 	m := rootModel{ctx: ctx}
-	m.screen = m.build(nav.Menu)
+	initial := nav.Menu
+	if !ctx.profile.Onboarded {
+		initial = nav.Onboarding
+	}
+	m.screen = m.build(initial)
 	return m
 }
 
@@ -92,6 +97,11 @@ func (m rootModel) build(s nav.Screen) tea.Model {
 		return stats.New(stats.Deps{
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
 			ProfileID: m.ctx.profile.ID, Course: m.ctx.course,
+		})
+	case nav.Onboarding:
+		return onboarding.New(onboarding.Deps{
+			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
+			ProfileID: m.ctx.profile.ID,
 		})
 	default:
 		return menu.New(m.ctx.theme, m.ctx.msgs, m.ctx.summary(), m.ctx.version)
