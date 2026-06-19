@@ -17,5 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Spaced-repetition scheduler (`internal/srs`): a pure `Review` function with Again/Hard/Good/Easy grades (SM-2 style ease and interval growth), plus `NewCard`, `IsDue`, and `PreviewInterval` helpers.
 - Interactive terminal UI foundation (Bubble Tea v2): a root router model, the main menu screen with a JLPT progress badge and study streak, a Spanish localization package (`internal/i18n`), and a theme/layout package (`internal/ui`) with a high-contrast variant, `NO_COLOR` support, responsive centering, and a progress bar.
 - `Storage.CountLearnedCards` to report how many cards a profile has learned (for the progress badge).
+- Study screens: kana trainer, spaced-repetition flashcards (reveal + 1–4 grading with next-interval previews), multiple-choice vocabulary quiz, and a statistics screen (JLPT progress, streak/record, kana totals).
+- Screen routing: a `nav` package for navigation messages and a router that builds and switches screens; the menu now navigates to each study mode.
+- Shared study logic (`internal/study`): multiple-choice option generation and study-streak bookkeeping, both unit-tested.
+- Flashcards and quiz persist reviews through the spaced-repetition scheduler and update the daily streak.
 
 [Unreleased]: https://github.com/sebastiancaraballo/polyglot/commits/main

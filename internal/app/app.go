@@ -11,7 +11,6 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/content"
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/model"
-	"github.com/sebastiancaraballo/polyglot/internal/screens/menu"
 	"github.com/sebastiancaraballo/polyglot/internal/storage"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
 )
@@ -43,14 +42,17 @@ func Run(version string) error {
 	if err != nil {
 		return err
 	}
-	summary, err := buildSummary(ctx, store, course, profile.ID)
-	if err != nil {
-		return err
-	}
 
-	menuModel := menu.New(ui.DefaultTheme(), i18n.Default, summary, version)
-	program := tea.NewProgram(newRoot(menuModel))
-	if _, err := program.Run(); err != nil {
+	root := newRoot(appContext{
+		store:   store,
+		course:  course,
+		profile: profile,
+		theme:   ui.DefaultTheme(),
+		msgs:    i18n.Default,
+		version: version,
+	})
+
+	if _, err := tea.NewProgram(root).Run(); err != nil {
 		return fmt.Errorf("run program: %w", err)
 	}
 	return nil
@@ -66,36 +68,4 @@ func ensureProfile(ctx context.Context, store storage.Storage) (model.Profile, e
 		return profiles[0], nil
 	}
 	return store.CreateProfile(ctx, defaultProfileName)
-}
-
-// buildSummary computes the menu's progress badge from stored progress and the
-// loaded course.
-func buildSummary(ctx context.Context, store storage.Storage, course *content.Course, profileID int64) (menu.Summary, error) {
-	stats, err := store.GetStats(ctx, profileID)
-	if err != nil {
-		return menu.Summary{}, err
-	}
-	learned, err := store.CountLearnedCards(ctx, profileID)
-	if err != nil {
-		return menu.Summary{}, err
-	}
-
-	total := 0
-	for _, lesson := range course.Lessons {
-		total += len(lesson.Cards)
-	}
-	percent := 0
-	if total > 0 {
-		percent = learned * 100 / total
-	}
-
-	// v1 ships N5 content, so the target level is fixed for now.
-	return menu.Summary{
-		Level:     string(model.N5),
-		NextLevel: string(model.N4),
-		Percent:   percent,
-		Streak:    stats.Streak,
-		Learned:   learned,
-		Total:     total,
-	}, nil
 }
