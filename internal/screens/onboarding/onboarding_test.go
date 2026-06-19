@@ -32,6 +32,8 @@ func newTestModel(t *testing.T) (Model, *storage.SQLiteStore, int64) {
 
 func enter() tea.KeyPressMsg { return tea.KeyPressMsg{Code: tea.KeyEnter} }
 
+func space() tea.KeyPressMsg { return tea.KeyPressMsg{Code: tea.KeySpace} }
+
 func TestOnboardingFlowCompletes(t *testing.T) {
 	m, store, profileID := newTestModel(t)
 
@@ -92,5 +94,21 @@ func TestOnboardingWrongAnswerStays(t *testing.T) {
 	}
 	if m.step != stepExercise {
 		t.Fatal("a wrong answer should keep the learner on the exercise step")
+	}
+}
+
+func TestOnboardingSpaceAdvancesAndAnswers(t *testing.T) {
+	m, _, _ := newTestModel(t)
+
+	next, _ := m.Update(space())
+	m = next.(Model)
+	if m.step != stepExercise {
+		t.Fatalf("step = %d, want stepExercise", m.step)
+	}
+
+	next, _ = m.Update(space())
+	m = next.(Model)
+	if !m.answered {
+		t.Fatal("space should answer the sample exercise")
 	}
 }
