@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
+	"github.com/sebastiancaraballo/polyglot/internal/nav"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
 )
 
@@ -22,8 +23,10 @@ type Summary struct {
 }
 
 type item struct {
-	icon  string
-	label string
+	icon   string
+	label  string
+	screen nav.Screen
+	quit   bool
 }
 
 // Model is the main menu screen.
@@ -35,7 +38,6 @@ type Model struct {
 
 	items  []item
 	cursor int
-	status string
 
 	width  int
 	height int
@@ -49,11 +51,11 @@ func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Mo
 		summary: summary,
 		version: version,
 		items: []item{
-			{"かな", msgs.ItemKana},
-			{"🎴", msgs.ItemFlashcards},
-			{"✓", msgs.ItemQuiz},
-			{"📊", msgs.ItemStats},
-			{"⏻", msgs.ItemQuit},
+			{"かな", msgs.ItemKana, nav.Kana, false},
+			{"🎴", msgs.ItemFlashcards, nav.Flashcards, false},
+			{"✓", msgs.ItemQuiz, nav.Quiz, false},
+			{"📊", msgs.ItemStats, nav.Stats, false},
+			{"⏻", msgs.ItemQuit, nav.Menu, true},
 		},
 	}
 }
@@ -71,12 +73,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "up", "k":
-			m.status = ""
 			if m.cursor > 0 {
 				m.cursor--
 			}
 		case "down", "j":
-			m.status = ""
 			if m.cursor < len(m.items)-1 {
 				m.cursor++
 			}
@@ -88,13 +88,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) choose() (tea.Model, tea.Cmd) {
-	// The Quit item is always last.
-	if m.cursor == len(m.items)-1 {
+	it := m.items[m.cursor]
+	if it.quit {
 		return m, tea.Quit
 	}
-	// Study screens are wired in a later step.
-	m.status = m.msgs.ComingSoon
-	return m, nil
+	return m, nav.GoTo(it.screen)
 }
 
 // View implements tea.Model.
@@ -116,12 +114,6 @@ func (m Model) View() tea.View {
 		} else {
 			b.WriteString(m.theme.Normal.Render("  " + line))
 		}
-		b.WriteString("\n")
-	}
-
-	if m.status != "" {
-		b.WriteString("\n")
-		b.WriteString(m.theme.Accent.Render(m.status))
 		b.WriteString("\n")
 	}
 

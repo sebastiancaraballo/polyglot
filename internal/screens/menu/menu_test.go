@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
+	"github.com/sebastiancaraballo/polyglot/internal/nav"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
 )
 
@@ -65,15 +66,19 @@ func TestMenuQuitKey(t *testing.T) {
 	}
 }
 
-func TestMenuComingSoon(t *testing.T) {
+func TestMenuNavigates(t *testing.T) {
 	m := newTestMenu()
-	m.cursor = 0 // a study screen, not yet wired
-	updated, cmd := m.choose()
-	if cmd != nil {
-		t.Fatal("selecting an unimplemented screen should not issue a command")
+	m.cursor = 0 // kana
+	_, cmd := m.choose()
+	if cmd == nil {
+		t.Fatal("selecting a study screen should return a navigation command")
 	}
-	if updated.(Model).status != i18n.ES.ComingSoon {
-		t.Fatalf("status = %q, want %q", updated.(Model).status, i18n.ES.ComingSoon)
+	msg, ok := cmd().(nav.GoToMsg)
+	if !ok {
+		t.Fatalf("expected nav.GoToMsg, got %T", cmd())
+	}
+	if msg.Screen != nav.Kana {
+		t.Errorf("navigated to %v, want Kana", msg.Screen)
 	}
 }
 
