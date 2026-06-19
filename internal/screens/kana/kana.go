@@ -152,36 +152,54 @@ func (m Model) View() tea.View {
 }
 
 func (m Model) questionView() string {
-	var b strings.Builder
-	fmt.Fprintf(&b, "%s  %d/%d\n\n", m.theme.Title.Render(m.msgs.KanaTitle), m.index+1, len(m.deck))
-	b.WriteString(lipgloss.Place(20, 3, lipgloss.Center, lipgloss.Center, m.theme.Accent.Render(m.deck[m.index].Char)))
-	b.WriteString("\n")
-	b.WriteString(m.msgs.KanaPrompt)
-	b.WriteString("\n\n")
+	header := fmt.Sprintf("%s  %d/%d", m.theme.Title.Render(m.msgs.KanaTitle), m.index+1, len(m.deck))
 
+	var lower strings.Builder
+	lower.WriteString(m.msgs.KanaPrompt)
+	lower.WriteString("\n\n")
 	for i, opt := range m.options {
-		marker := fmt.Sprintf(" %d) ", i+1)
-		line := marker + opt
+		line := fmt.Sprintf(" %d) %s", i+1, opt)
 		switch {
 		case m.answered && i == m.correct:
-			b.WriteString(m.theme.Success.Render("✓" + line))
+			lower.WriteString(m.theme.Success.Render("✓" + line))
 		case m.answered && i == m.selected:
-			b.WriteString(m.theme.Error.Render("✗" + line))
+			lower.WriteString(m.theme.Error.Render("✗" + line))
 		case i == m.selected:
-			b.WriteString(m.theme.Selected.Render("▸" + line))
+			lower.WriteString(m.theme.Selected.Render("▸" + line))
 		default:
-			b.WriteString(m.theme.Normal.Render(" " + line))
+			lower.WriteString(m.theme.Normal.Render(" " + line))
 		}
-		b.WriteString("\n")
+		lower.WriteString("\n")
 	}
-
-	b.WriteString("\n")
+	lower.WriteString("\n")
 	if m.answered {
-		b.WriteString(m.theme.Help.Render(m.msgs.ContinueHelp))
+		lower.WriteString(m.theme.Help.Render(m.msgs.ContinueHelp))
 	} else {
-		b.WriteString(m.theme.Help.Render(m.msgs.ChoiceHelp))
+		lower.WriteString(m.theme.Help.Render(m.msgs.ChoiceHelp))
 	}
-	return b.String()
+	lowerStr := lower.String()
+
+	// Render the kana as a large, prominent tile centered over the content.
+	tile := m.bigKana(m.deck[m.index].Char)
+	width := lipgloss.Width(lowerStr)
+	if w := lipgloss.Width(tile); w > width {
+		width = w
+	}
+	tile = lipgloss.PlaceHorizontal(width, lipgloss.Center, tile)
+
+	return lipgloss.JoinVertical(lipgloss.Left, header, "", tile, "", lowerStr)
+}
+
+// bigKana renders a kana character as a large, bordered focal tile. A terminal
+// app cannot change the font size (that is the terminal's job), so prominence is
+// achieved with a wide border and generous padding around the glyph.
+func (m Model) bigKana(char string) string {
+	return m.theme.Accent.
+		Bold(true).
+		Border(lipgloss.RoundedBorder()).
+		Padding(2, 6).
+		Align(lipgloss.Center).
+		Render(char)
 }
 
 func (m Model) summaryView() string {
