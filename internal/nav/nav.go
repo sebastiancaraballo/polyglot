@@ -14,6 +14,7 @@ const (
 	Flashcards
 	Quiz
 	Stats
+	Onboarding
 )
 
 // GoToMsg requests navigation to a screen.

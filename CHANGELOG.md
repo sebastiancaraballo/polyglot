@@ -21,5 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Screen routing: a `nav` package for navigation messages and a router that builds and switches screens; the menu now navigates to each study mode.
 - Shared study logic (`internal/study`): multiple-choice option generation and study-streak bookkeeping, both unit-tested.
 - Flashcards and quiz persist reviews through the spaced-repetition scheduler and update the daily streak.
+- First-run onboarding (`internal/screens/onboarding`): teaches the keyboard controls and runs a guided sample exercise, then marks the profile as onboarded so it does not repeat. New profiles start in onboarding automatically.
 
 [Unreleased]: https://github.com/sebastiancaraballo/polyglot/commits/main
