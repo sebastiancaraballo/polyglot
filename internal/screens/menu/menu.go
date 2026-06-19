@@ -80,7 +80,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursor < len(m.items)-1 {
 				m.cursor++
 			}
-		case "enter", " ":
+		}
+		if ui.IsConfirmKey(msg) {
 			return m.choose()
 		}
 	}

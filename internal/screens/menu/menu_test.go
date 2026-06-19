@@ -82,6 +82,23 @@ func TestMenuNavigates(t *testing.T) {
 	}
 }
 
+func TestMenuSpaceNavigates(t *testing.T) {
+	m := newTestMenu()
+	m.cursor = 0 // kana
+
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
+	if cmd == nil {
+		t.Fatal("pressing space should return a navigation command")
+	}
+	msg, ok := cmd().(nav.GoToMsg)
+	if !ok {
+		t.Fatalf("expected nav.GoToMsg, got %T", cmd())
+	}
+	if msg.Screen != nav.Kana {
+		t.Errorf("navigated to %v, want Kana", msg.Screen)
+	}
+}
+
 func TestMenuViewShowsProgress(t *testing.T) {
 	m := newTestMenu()
 	content := m.View().Content

@@ -107,7 +107,8 @@ func (m Model) handleExercise(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.selected = i
 			m = m.answer()
 		}
-	case "enter", " ":
+	}
+	if ui.IsConfirmKey(msg) {
 		m = m.answer()
 	}
 	return m, nil
@@ -127,7 +128,7 @@ func (m Model) finish() (tea.Model, tea.Cmd) {
 }
 
 func confirm(msg tea.KeyPressMsg) bool {
-	return msg.String() == "enter" || msg.String() == " "
+	return ui.IsConfirmKey(msg)
 }
 
 // View implements tea.Model.

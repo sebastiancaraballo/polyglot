@@ -138,7 +138,8 @@ func (m Model) answerKey(msg tea.KeyPressMsg) Model {
 			m.selected = i
 			m = m.reveal()
 		}
-	case "enter", " ":
+	}
+	if ui.IsConfirmKey(msg) {
 		m = m.reveal()
 	}
 	return m
@@ -189,7 +190,7 @@ func (m *Model) persist(card model.Card, correct bool) error {
 }
 
 func confirm(msg tea.KeyPressMsg) bool {
-	return msg.String() == "enter" || msg.String() == " "
+	return ui.IsConfirmKey(msg)
 }
 
 // View implements tea.Model.

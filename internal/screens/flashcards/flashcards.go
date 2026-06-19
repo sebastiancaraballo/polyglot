@@ -104,7 +104,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	if !m.revealed {
-		if msg.String() == " " || msg.String() == "enter" {
+		if ui.IsConfirmKey(msg) {
 			m.revealed = true
 		}
 		return m, nil

@@ -120,7 +120,8 @@ func (m Model) answerKey(msg tea.KeyPressMsg) Model {
 			m.selected = i
 			m = m.reveal()
 		}
-	case "enter", " ":
+	}
+	if ui.IsConfirmKey(msg) {
 		m = m.reveal()
 	}
 	return m
@@ -135,7 +136,7 @@ func (m Model) reveal() Model {
 }
 
 func isConfirm(msg tea.KeyPressMsg) bool {
-	return msg.String() == "enter" || msg.String() == " "
+	return ui.IsConfirmKey(msg)
 }
 
 // View implements tea.Model.
