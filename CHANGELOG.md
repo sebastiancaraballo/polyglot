@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-06-20
+
 ### Added
 - Initial project scaffolding: module layout, license, documentation, and core dependencies.
 - Continuous integration (GitHub Actions): tests, `go vet`, `gofmt`, and `golangci-lint` across Linux, macOS, and Windows.
@@ -34,4 +36,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Japanese long-vowel romaji now uses pronunciation forms with macrons in lesson cards, with kana input forms documented in notes.
 - Spacebar shortcuts now work with Bubble Tea v2 key names across the menu, onboarding, kana trainer, quiz, and flashcards screens.
 
-[Unreleased]: https://github.com/sebastiancaraballo/polyglot/commits/main
+[Unreleased]: https://github.com/sebastiancaraballo/polyglot/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/sebastiancaraballo/polyglot/releases/tag/v0.0.1
