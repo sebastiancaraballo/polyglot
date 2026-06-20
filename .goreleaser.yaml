@@ -37,13 +37,15 @@ checksum:
   name_template: checksums.txt
 
 changelog:
+  # No sort: keep chronological (newest-first) order from the git history.
   use: github
-  sort: asc
   filters:
     exclude:
       - "^test:"
       - "^chore:"
+      - "^Initial commit"
       - "Merge pull request"
+      - "Merge branch"
 
 release:
   draft: false
