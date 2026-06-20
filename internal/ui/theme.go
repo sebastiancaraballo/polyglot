@@ -33,6 +33,24 @@ func DefaultTheme() Theme {
 	return NewTheme(NoColor())
 }
 
+// PlainTheme returns a theme with no color or text attributes. Only the box
+// keeps its border. It produces deterministic, escape-free output, which makes
+// it well suited to golden-file tests.
+func PlainTheme() Theme {
+	plain := lipgloss.NewStyle()
+	return Theme{
+		Title:    plain,
+		Subtle:   plain,
+		Normal:   plain,
+		Selected: plain,
+		Accent:   plain,
+		Success:  plain,
+		Error:    plain,
+		Help:     plain,
+		Box:      lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(1, 3),
+	}
+}
+
 // NewTheme builds a theme. When highContrast is true, colors are dropped in
 // favor of bold and reverse styling.
 func NewTheme(highContrast bool) Theme {

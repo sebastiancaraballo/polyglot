@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shared study logic (`internal/study`): multiple-choice option generation and study-streak bookkeeping, both unit-tested.
 - Flashcards and quiz persist reviews through the spaced-repetition scheduler and update the daily streak.
 - First-run onboarding (`internal/screens/onboarding`): teaches the keyboard controls and runs a guided sample exercise, then marks the profile as onboarded so it does not repeat. New profiles start in onboarding automatically.
+- Golden-file tests for the menu, onboarding, and stats screens (via `github.com/charmbracelet/x/exp/golden`), plus a `ui.PlainTheme` for deterministic, escape-free rendering.
 
 ### Changed
 - Keyboard command labels in Spanish UI help text now use uppercase key names.

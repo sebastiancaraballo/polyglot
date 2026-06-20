@@ -43,7 +43,10 @@ symbols/text), keep romaji visible alongside Japanese.
 
 - Format with `gofmt`; keep `go vet ./...` and `golangci-lint` clean.
 - Tests: `go test ./...`. Prefer table-driven unit tests. Validate all YAML content in
-  tests. Use `github.com/charmbracelet/x/exp/teatest` golden-file tests for TUI screens.
+  tests. For TUI screens, use golden-file tests via `github.com/charmbracelet/x/exp/golden`
+  (`teatest` is Bubble Tea v1 only and is incompatible with the v2 models): drive the model
+  through `Update`/`View().Content` and snapshot it. Render with `ui.PlainTheme()` for stable,
+  escape-free output, and regenerate goldens with `go test ./... -update`.
 - Wrap errors with `%w`.
 
 ## Git & GitHub workflow
