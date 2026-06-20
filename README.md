@@ -25,12 +25,17 @@ Typing/romaji input is planned for v1.1.
 
 ## Installation
 
-> Distribution artifacts (Homebrew, Scoop, prebuilt binaries) will be published with the
-> first release. In the meantime:
+**Prebuilt binaries** for macOS, Windows, and Linux (amd64 and arm64) are attached to
+each [GitHub Release](https://github.com/sebastiancaraballo/polyglot/releases). Download
+the archive for your platform, extract it, and run the `polyglot` binary.
+
+**With Go:**
 
 ```sh
 go install github.com/sebastiancaraballo/polyglot/cmd/polyglot@latest
 ```
+
+> Homebrew and Scoop packages are planned for a future release.
 
 ## Usage
 
