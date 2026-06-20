@@ -1,0 +1,50 @@
+version: 2
+
+project_name: polyglot
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: polyglot
+    main: ./cmd/polyglot
+    binary: polyglot
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^test:"
+      - "^chore:"
+      - "Merge pull request"
+
+release:
+  draft: false
+  prerelease: auto

@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Flashcards and quiz persist reviews through the spaced-repetition scheduler and update the daily streak.
 - First-run onboarding (`internal/screens/onboarding`): teaches the keyboard controls and runs a guided sample exercise, then marks the profile as onboarded so it does not repeat. New profiles start in onboarding automatically.
 - Golden-file tests for the menu, onboarding, and stats screens (via `github.com/charmbracelet/x/exp/golden`), plus a `ui.PlainTheme` for deterministic, escape-free rendering.
+- Release automation: a GoReleaser config and a tag-triggered GitHub Actions workflow that build cross-platform binaries (macOS/Windows/Linux, amd64/arm64), generate checksums, and publish a GitHub Release. README documents installing from releases or via `go install`.
 
 ### Changed
 - Keyboard command labels in Spanish UI help text now use uppercase key names.
