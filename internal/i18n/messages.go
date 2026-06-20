@@ -90,7 +90,7 @@ var ES = Messages{
 	ItemQuiz:       "Quiz de opción múltiple",
 	ItemStats:      "Mis estadísticas",
 	ItemQuit:       "Salir",
-	MenuHelp:       "↑/↓ moverse · enter elegir · q salir",
+	MenuHelp:       "↑/↓ moverse · ENTER elegir · Q salir",
 
 	LevelLabel:    "Nivel",
 	TowardLabel:   "hacia",
@@ -98,10 +98,10 @@ var ES = Messages{
 	DaysSuffix:    "días",
 	LearnedSuffix: "palabras aprendidas",
 
-	ChoiceHelp:   "1-4 elegir · ↑/↓ mover · enter confirmar · esc menú",
-	ContinueHelp: "enter continuar · esc menú",
-	RestartHelp:  "enter reiniciar · esc menú",
-	BackHelp:     "esc volver al menú",
+	ChoiceHelp:   "1-4 elegir · ↑/↓ mover · ENTER confirmar · ESC menú",
+	ContinueHelp: "ENTER continuar · ESC menú",
+	RestartHelp:  "ENTER reiniciar · ESC menú",
+	BackHelp:     "ESC volver al menú",
 	SessionDone:  "¡Sesión completada!",
 	ScoreLabel:   "Aciertos",
 
@@ -113,7 +113,7 @@ var ES = Messages{
 	ReviewLabel:     "Repasa",
 
 	FlashTitle:    "Flashcards",
-	RevealHelp:    "espacio revelar · esc menú",
+	RevealHelp:    "ESPACIO revelar · ESC menú",
 	GradePrompt:   "¿Qué tal lo recordaste?",
 	GradeAgain:    "Otra vez",
 	GradeHard:     "Difícil",
@@ -134,12 +134,12 @@ var ES = Messages{
 	ControlsTitle: "Controles básicos:",
 	ControlsKeys: []string{
 		"↑ ↓      moverte por las opciones",
-		"enter    confirmar",
-		"espacio  revelar respuesta (en flashcards)",
-		"esc      volver al menú",
-		"q        salir",
+		"ENTER    confirmar",
+		"ESPACIO  revelar respuesta (en flashcards)",
+		"ESC      volver al menú",
+		"Q        salir",
 	},
-	WelcomeNext:     "enter  probemos un ejercicio →",
+	WelcomeNext:     "ENTER  probemos un ejercicio →",
 	PracticeTitle:   "Práctica guiada",
 	SampleWord:      "みず",
 	SampleRomaji:    "mizu",
@@ -149,10 +149,10 @@ var ES = Messages{
 	SampleHint:      "◀ pista: ¡es esta!",
 	PracticeCorrect: "¡Genial! Ya sabes lo básico.",
 	PracticeRetry:   "Casi… la respuesta correcta está marcada. Inténtalo.",
-	PracticeNext:    "enter  continuar →",
+	PracticeNext:    "ENTER  continuar →",
 	DoneTitle:       "¡Todo listo!",
 	DoneRecommend:   "Te recomiendo empezar por el Entrenador de Kana.",
-	DoneNext:        "enter  ir al menú principal",
+	DoneNext:        "ENTER  ir al menú principal",
 }
 
 // Default is the active UI language.

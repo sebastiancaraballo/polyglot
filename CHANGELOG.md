@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - First-run onboarding (`internal/screens/onboarding`): teaches the keyboard controls and runs a guided sample exercise, then marks the profile as onboarded so it does not repeat. New profiles start in onboarding automatically.
 
 ### Changed
+- Keyboard command labels in Spanish UI help text now use uppercase key names.
 - Terminal UI labels now use text symbols instead of pictographic emoji, and the language pair tagline uses ISO language codes (`es → ja`) instead of country flags.
 - Kana trainer: the prompted character is now shown in a large, bordered focal tile centered above the answer options for better readability.
 

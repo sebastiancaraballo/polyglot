@@ -2,6 +2,7 @@ package i18n
 
 import (
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -31,6 +32,16 @@ func TestSpanishMessagesAvoidPictographicEmoji(t *testing.T) {
 			if strings.Contains(value, emoji) {
 				t.Fatalf("message %q contains banned emoji %q", value, emoji)
 			}
+		}
+	}
+}
+
+func TestSpanishMessagesUseUppercaseKeyLabels(t *testing.T) {
+	values := messageStrings(reflect.ValueOf(ES))
+	banned := regexp.MustCompile(`\b(enter|esc|espacio|q)\b`)
+	for _, value := range values {
+		if banned.MatchString(value) {
+			t.Fatalf("message %q contains lowercase key label", value)
 		}
 	}
 }
