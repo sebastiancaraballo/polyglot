@@ -14,12 +14,12 @@ The application ships as a **single self-contained binary** — no runtime to in
 
 ## Features (v1)
 
-- 🎴 **Spaced-repetition flashcards (SRS)** — review vocabulary on an optimal schedule.
-- かな **Kana trainer** — learn hiragana and katakana.
+- ▣ **Spaced-repetition flashcards (SRS)** — review vocabulary on an optimal schedule.
+- ◇ **Kana trainer** — learn hiragana and katakana.
 - ✓ **Multiple-choice quizzes** — quick reinforcement.
-- 📊 **Progress & JLPT level** — a motivational badge showing your estimated JLPT level.
-- 👤 **Local profiles** — multiple learners on the same machine, each with their own progress.
-- ♿ **Accessible** — responsive layout, high-contrast theme, `NO_COLOR` support, keyboard-first.
+- ▤ **Progress & JLPT level** — a motivational badge showing your estimated JLPT level.
+- ◎ **Local profiles** — multiple learners on the same machine, each with their own progress.
+- ※ **Accessible** — responsive layout, high-contrast theme, `NO_COLOR` support, keyboard-first.
 
 Typing/romaji input is planned for v1.1.
 

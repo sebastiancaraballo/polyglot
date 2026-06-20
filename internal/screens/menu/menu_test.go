@@ -82,6 +82,19 @@ func TestMenuNavigates(t *testing.T) {
 	}
 }
 
+func TestMenuUsesTextSymbols(t *testing.T) {
+	m := newTestMenu()
+	want := []string{"◇", "▣", "✓", "▤", "⏻"}
+	if len(m.items) != len(want) {
+		t.Fatalf("items = %d, want %d", len(m.items), len(want))
+	}
+	for i, wantIcon := range want {
+		if got := m.items[i].icon; got != wantIcon {
+			t.Errorf("item %d icon = %q, want %q", i, got, wantIcon)
+		}
+	}
+}
+
 func TestMenuSpaceNavigates(t *testing.T) {
 	m := newTestMenu()
 	m.cursor = 0 // kana
@@ -102,7 +115,7 @@ func TestMenuSpaceNavigates(t *testing.T) {
 func TestMenuViewShowsProgress(t *testing.T) {
 	m := newTestMenu()
 	content := m.View().Content
-	for _, want := range []string{"Polyglot", "N5", "40%", i18n.ES.StreakLabel, i18n.ES.ItemKana} {
+	for _, want := range []string{"Polyglot", "es → ja", "N5", "40%", i18n.ES.StreakLabel, i18n.ES.ItemKana} {
 		if !strings.Contains(content, want) {
 			t.Errorf("view is missing %q", want)
 		}
