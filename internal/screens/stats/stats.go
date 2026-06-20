@@ -105,7 +105,7 @@ func (m Model) View() tea.View {
 	bar := ui.ProgressBar(m.percent, 10)
 	fmt.Fprintf(&b, "%s %s  %s %d%%  (%d/%d)\n",
 		m.deps.Msgs.LevelLabel, string(model.N5), bar, m.percent, m.learned, m.total)
-	fmt.Fprintf(&b, "🔥 %s: %d %s  (%s: %d)\n",
+	fmt.Fprintf(&b, "▲ %s: %d %s  (%s: %d)\n",
 		m.deps.Msgs.StreakLabel, m.streak, m.deps.Msgs.DaysSuffix, m.deps.Msgs.BestLabel, m.best)
 	fmt.Fprintf(&b, "%s: %d   %s: %d\n",
 		m.deps.Msgs.HiraganaLabel, m.hira, m.deps.Msgs.KatakanaLabel, m.kata)

@@ -4,7 +4,7 @@ package i18n
 // single struct lets additional UI languages be added without touching screens.
 type Messages struct {
 	AppName string
-	Tagline string // "🇪🇸 → 🇯🇵"
+	Tagline string // "es → ja"
 
 	// Menu
 	MenuPrompt     string
@@ -82,7 +82,7 @@ type Messages struct {
 // ES is the Spanish localization, used by default in v1.
 var ES = Messages{
 	AppName: "Polyglot",
-	Tagline: "🇪🇸 → 🇯🇵",
+	Tagline: "es → ja",
 
 	MenuPrompt:     "¿Qué quieres estudiar hoy?",
 	ItemKana:       "Entrenador de Kana",
@@ -102,7 +102,7 @@ var ES = Messages{
 	ContinueHelp: "enter continuar · esc menú",
 	RestartHelp:  "enter reiniciar · esc menú",
 	BackHelp:     "esc volver al menú",
-	SessionDone:  "¡Sesión completada! 🎉",
+	SessionDone:  "¡Sesión completada!",
 	ScoreLabel:   "Aciertos",
 
 	KanaTitle:  "Entrenador de Kana",
@@ -120,7 +120,7 @@ var ES = Messages{
 	GradeGood:     "Bien",
 	GradeEasy:     "Fácil",
 	ReviewedLabel: "Tarjetas repasadas",
-	NothingDue:    "No hay tarjetas para repasar ahora. ¡Vuelve más tarde! 🌙",
+	NothingDue:    "No hay tarjetas para repasar ahora. Vuelve más tarde.",
 	Today:         "hoy",
 	DayShort:      "d",
 
@@ -129,7 +129,7 @@ var ES = Messages{
 	HiraganaLabel: "Hiragana",
 	KatakanaLabel: "Katakana",
 
-	WelcomeTitle:  "Bienvenido a Polyglot ✨",
+	WelcomeTitle:  "Bienvenido a Polyglot",
 	WelcomeIntro:  "Vas a aprender japonés desde el español.",
 	ControlsTitle: "Controles básicos:",
 	ControlsKeys: []string{
@@ -147,7 +147,7 @@ var ES = Messages{
 	SampleOptions:   []string{"Fuego", "Agua", "Gato", "Árbol"},
 	SampleCorrect:   1,
 	SampleHint:      "◀ pista: ¡es esta!",
-	PracticeCorrect: "¡Genial! 🎉 Ya sabes lo básico.",
+	PracticeCorrect: "¡Genial! Ya sabes lo básico.",
 	PracticeRetry:   "Casi… la respuesta correcta está marcada. Inténtalo.",
 	PracticeNext:    "enter  continuar →",
 	DoneTitle:       "¡Todo listo!",

@@ -51,10 +51,10 @@ func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Mo
 		summary: summary,
 		version: version,
 		items: []item{
-			{"かな", msgs.ItemKana, nav.Kana, false},
-			{"🎴", msgs.ItemFlashcards, nav.Flashcards, false},
+			{"◇", msgs.ItemKana, nav.Kana, false},
+			{"▣", msgs.ItemFlashcards, nav.Flashcards, false},
 			{"✓", msgs.ItemQuiz, nav.Quiz, false},
-			{"📊", msgs.ItemStats, nav.Stats, false},
+			{"▤", msgs.ItemStats, nav.Stats, false},
 			{"⏻", msgs.ItemQuit, nav.Menu, true},
 		},
 	}
@@ -133,7 +133,7 @@ func (m Model) badge() string {
 	level := fmt.Sprintf("%s: %s  %s %d%% %s %s",
 		m.msgs.LevelLabel, m.summary.Level, bar, m.summary.Percent,
 		m.msgs.TowardLabel, m.summary.NextLevel)
-	streak := fmt.Sprintf("🔥 %s: %d %s · %d %s",
+	streak := fmt.Sprintf("▲ %s: %d %s · %d %s",
 		m.msgs.StreakLabel, m.summary.Streak, m.msgs.DaysSuffix,
 		m.summary.Learned, m.msgs.LearnedSuffix)
 	return lipgloss.JoinVertical(lipgloss.Left, level, streak)
