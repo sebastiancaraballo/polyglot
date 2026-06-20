@@ -1,6 +1,7 @@
 package content
 
 import (
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -47,6 +48,46 @@ func TestLoadEmbeddedCourse(t *testing.T) {
 	}
 	if types[model.Hiragana] == 0 || types[model.Katakana] == 0 {
 		t.Errorf("expected both hiragana and katakana, got %v", types)
+	}
+}
+
+func TestEmbeddedCourseUsesPronunciationRomajiForLongVowels(t *testing.T) {
+	course, err := LoadEmbedded(DefaultPair)
+	if err != nil {
+		t.Fatalf("LoadEmbedded: %v", err)
+	}
+
+	want := map[string]struct {
+		romaji string
+		input  string
+	}{
+		"おはよう":  {romaji: "ohayō", input: "ohayou"},
+		"ありがとう": {romaji: "arigatō", input: "arigatou"},
+		"さようなら": {romaji: "sayōnara", input: "sayounara"},
+		"きゅう":   {romaji: "kyū", input: "kyuu"},
+		"じゅう":   {romaji: "jū", input: "juu"},
+	}
+
+	found := make(map[string]bool, len(want))
+	for _, lesson := range course.Lessons {
+		for _, card := range lesson.Cards {
+			expected, ok := want[card.JP]
+			if !ok {
+				continue
+			}
+			found[card.JP] = true
+			if card.Romaji != expected.romaji {
+				t.Errorf("%s romaji = %q, want %q", card.JP, card.Romaji, expected.romaji)
+			}
+			if !strings.Contains(card.Notes, expected.input) {
+				t.Errorf("%s notes = %q, want input form %q", card.JP, card.Notes, expected.input)
+			}
+		}
+	}
+	for jp := range want {
+		if !found[jp] {
+			t.Errorf("missing embedded card %q", jp)
+		}
 	}
 }
 

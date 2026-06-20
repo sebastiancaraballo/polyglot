@@ -8,18 +8,29 @@ cards:
     notes: "Saludo general durante el día."
   - es: "Buenos días"
     jp: "おはよう"
-    romaji: "ohayou"
-    notes: "Versión cortés: おはようございます (ohayou gozaimasu)."
+    romaji: "ohayō"
+    notes: |-
+      Pronunciación: ohayō.
+      Entrada kana: ohayou.
+      Cortés: おはようございます.
+      Cortés (pronunciación): ohayō gozaimasu.
+      Cortés (entrada kana): ohayou gozaimasu.
   - es: "Buenas noches (saludo)"
     jp: "こんばんは"
     romaji: "konbanwa"
   - es: "Gracias"
     jp: "ありがとう"
-    romaji: "arigatou"
-    notes: "Versión cortés: ありがとうございます."
+    romaji: "arigatō"
+    notes: |-
+      Pronunciación: arigatō.
+      Entrada kana: arigatou.
+      Cortés: ありがとうございます.
+      Cortés (pronunciación): arigatō gozaimasu.
+      Cortés (entrada kana): arigatou gozaimasu.
   - es: "Adiós"
     jp: "さようなら"
-    romaji: "sayounara"
+    romaji: "sayōnara"
+    notes: "Pronunciación: sayōnara. Entrada kana: sayounara."
   - es: "Sí"
     jp: "はい"
     romaji: "hai"

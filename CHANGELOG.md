@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kana trainer: the prompted character is now shown in a large, bordered focal tile centered above the answer options for better readability.
 
 ### Fixed
+- Japanese long-vowel romaji now uses pronunciation forms with macrons in lesson cards, with kana input forms documented in notes.
 - Spacebar shortcuts now work with Bubble Tea v2 key names across the menu, onboarding, kana trainer, quiz, and flashcards screens.
 
 [Unreleased]: https://github.com/sebastiancaraballo/polyglot/commits/main

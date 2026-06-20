@@ -179,7 +179,7 @@ func (m Model) cardView() string {
 	b.WriteString(t.Subtle.Render(card.Romaji))
 	b.WriteString("\n")
 	if card.Notes != "" {
-		b.WriteString(t.Subtle.Render(card.Notes))
+		b.WriteString(t.Subtle.Render(ui.WrapText(card.Notes, m.noteWidth())))
 		b.WriteString("\n")
 	}
 	b.WriteString("\n")
@@ -189,6 +189,20 @@ func (m Model) cardView() string {
 	b.WriteString("\n")
 	b.WriteString(t.Help.Render(m.deps.Msgs.BackHelp))
 	return b.String()
+}
+
+func (m Model) noteWidth() int {
+	if m.width <= 0 {
+		return 64
+	}
+	width := m.width - 12
+	if width < 24 {
+		return 24
+	}
+	if width > 64 {
+		return 64
+	}
+	return width
 }
 
 func (m Model) gradeOptions(card model.Card) string {
