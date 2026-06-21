@@ -14,15 +14,38 @@ type Messages struct {
 	ItemStats      string
 	ItemSettings   string
 	ItemQuit       string
+	SwitchProfile  string
 	MenuHelp       string
 
 	// Settings
-	SettingsTitle    string
-	DeleteAllData    string
-	DeleteAllWarning string
-	ConfirmDelete    string
-	CancelLabel      string
-	ConfirmHelp      string
+	SettingsTitle        string
+	DeleteProfile        string
+	DeleteProfileWarning string
+	ConfirmDeleteProfile string
+	DeleteAllData        string
+	DeleteAllWarning     string
+	ConfirmDelete        string
+	CancelLabel          string
+	ConfirmHelp          string
+
+	// Profiles
+	ProfileNameTitle       string
+	ProfileNamePrompt      string
+	ProfileNamePlaceholder string
+	ProfileNameEmpty       string
+	ProfileNameTooLongFmt  string
+	ProfileNameInvalid     string
+	ProfileNameHelpFirst   string
+	ProfileNameHelpCancel  string
+	ProfileAvatarTitle     string
+	ProfileAvatarPrompt    string
+	ProfileAvatarHelp      string
+	ProfileCreateError     string
+	ProfilesTitle          string
+	ProfileCreateNew       string
+	ActiveProfileLabel     string
+	ProfilesHelp           string
+	NoProfiles             string
 
 	// Progress badge
 	XPLabel       string // "XP"
@@ -99,14 +122,36 @@ var ES = Messages{
 	ItemStats:      "Mis estadísticas",
 	ItemSettings:   "Ajustes",
 	ItemQuit:       "Salir",
-	MenuHelp:       "↑/↓ moverse · ENTER elegir · Q salir",
+	SwitchProfile:  "Cambiar de perfil",
+	MenuHelp:       "↑/↓ moverse · ENTER elegir/cambiar perfil · Q salir",
 
-	SettingsTitle:    "Ajustes",
-	DeleteAllData:    "Borrar todos los datos",
-	DeleteAllWarning: "Esto borra todos los perfiles, progreso y estadísticas. No se puede deshacer.",
-	ConfirmDelete:    "Sí, borrar todo",
-	CancelLabel:      "Cancelar",
-	ConfirmHelp:      "↑/↓ elegir · ENTER confirmar · ESC cancelar",
+	SettingsTitle:        "Ajustes",
+	DeleteProfile:        "Borrar mi perfil",
+	DeleteProfileWarning: "Esto borra solo el perfil actual y su progreso. No se puede deshacer.",
+	ConfirmDeleteProfile: "Sí, borrar mi perfil",
+	DeleteAllData:        "Borrar todos los datos",
+	DeleteAllWarning:     "Esto borra todos los perfiles, progreso y estadísticas. No se puede deshacer.",
+	ConfirmDelete:        "Sí, borrar todo",
+	CancelLabel:          "Cancelar",
+	ConfirmHelp:          "↑/↓ elegir · ENTER confirmar · ESC cancelar",
+
+	ProfileNameTitle:       "Crea tu perfil",
+	ProfileNamePrompt:      "¿Cómo te llamas?",
+	ProfileNamePlaceholder: "Tu nombre",
+	ProfileNameEmpty:       "Escribe un nombre.",
+	ProfileNameTooLongFmt:  "Máximo %d caracteres.",
+	ProfileNameInvalid:     "Usa letras, espacios o puntuación de nombre.",
+	ProfileNameHelpFirst:   "Escribe tu nombre · ENTER continuar",
+	ProfileNameHelpCancel:  "Escribe tu nombre · ENTER continuar · ESC cancelar",
+	ProfileAvatarTitle:     "Elige tu avatar",
+	ProfileAvatarPrompt:    "Estos avatares se generan desde tu nombre.",
+	ProfileAvatarHelp:      "←/→ mover · 1-5 elegir · ENTER confirmar · ESC volver",
+	ProfileCreateError:     "No pude crear el perfil.",
+	ProfilesTitle:          "Perfiles",
+	ProfileCreateNew:       "＋ Crear nuevo perfil",
+	ActiveProfileLabel:     "actual",
+	ProfilesHelp:           "↑/↓ mover · ENTER elegir · ESC menú",
+	NoProfiles:             "No hay perfiles todavía.",
 
 	XPLabel:       "XP",
 	StreakLabel:   "Racha",

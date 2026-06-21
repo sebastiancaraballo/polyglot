@@ -1,17 +1,17 @@
 ╭──────────────────────────────────────────────────────────────╮
 │                                                              │
-│   Borrar mi perfil                                           │
+│   Elige tu avatar                                            │
 │                                                              │
-│   Esto borra solo el perfil actual y su progreso. No se      │
-│   puede deshacer.                                            │
+│   Estos avatares se generan desde tu nombre.                 │
 │                                                              │
-│   ▸ Cancelar                                                 │
-│     Sí, borrar mi perfil                                     │
+│   ▸ 1          2          3          4          5            │
+│   ┌────────┐ ██████████     ██     ██  ██  ██   ██  ██       │
+│   │        │   ██  ██       ██     ██████████ ██      ██     │
+│   │   S    │ ██      ██   ██  ██     ██████                  │
+│   │        │ ██████████   ██████                             │
+│   └────────┘   ██████     ██████   ██████████ ██████████     │
 │                                                              │
-│   ↑/↓ elegir · ENTER confirmar · ESC cancelar                │
-│                                                              │
-│                                                              │
-│                                                              │
+│   ←/→ mover · 1-5 elegir · ENTER confirmar · ESC volver      │
 │                                                              │
 │                                                              │
 │                                                              │

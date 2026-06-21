@@ -20,7 +20,7 @@ func TestSpaceAnswersQuizQuestion(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 
-	profile, err := store.CreateProfile(context.Background(), "tester")
+	profile, err := store.CreateProfile(context.Background(), "tester", "")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}

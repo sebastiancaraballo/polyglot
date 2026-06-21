@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/pressly/goose/v3"
@@ -74,8 +75,9 @@ func (s *SQLiteStore) Close() error {
 	return s.db.Close()
 }
 
-// CreateProfile inserts a new profile along with an empty stats row.
-func (s *SQLiteStore) CreateProfile(ctx context.Context, name string) (model.Profile, error) {
+// CreateProfile inserts a new profile (with its text-avatar spec) along with an
+// empty stats row.
+func (s *SQLiteStore) CreateProfile(ctx context.Context, name, avatar string) (model.Profile, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return model.Profile{}, fmt.Errorf("begin tx: %w", err)
@@ -84,8 +86,8 @@ func (s *SQLiteStore) CreateProfile(ctx context.Context, name string) (model.Pro
 
 	now := time.Now().UTC()
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO profiles (name, onboarded, created_at) VALUES (?, 0, ?)`,
-		name, now.Format(timeLayout),
+		`INSERT INTO profiles (name, avatar, onboarded, created_at) VALUES (?, ?, 0, ?)`,
+		name, avatar, now.Format(timeLayout),
 	)
 	if err != nil {
 		return model.Profile{}, fmt.Errorf("insert profile: %w", err)
@@ -104,13 +106,23 @@ func (s *SQLiteStore) CreateProfile(ctx context.Context, name string) (model.Pro
 		return model.Profile{}, fmt.Errorf("commit: %w", err)
 	}
 
-	return model.Profile{ID: id, Name: name, Onboarded: false, CreatedAt: now}, nil
+	return model.Profile{ID: id, Name: name, Avatar: avatar, Onboarded: false, CreatedAt: now}, nil
+}
+
+// DeleteProfile removes a profile and, via ON DELETE CASCADE, its stats and card
+// states.
+func (s *SQLiteStore) DeleteProfile(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM profiles WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("delete profile: %w", err)
+	}
+	return requireAffected(res)
 }
 
 // ListProfiles returns all profiles ordered by creation time then id.
 func (s *SQLiteStore) ListProfiles(ctx context.Context) ([]model.Profile, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, name, onboarded, created_at FROM profiles ORDER BY created_at, id`,
+		`SELECT id, name, avatar, onboarded, created_at FROM profiles ORDER BY created_at, id`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("query profiles: %w", err)
@@ -134,7 +146,7 @@ func (s *SQLiteStore) ListProfiles(ctx context.Context) ([]model.Profile, error)
 // GetProfile returns the profile with the given id, or ErrNotFound.
 func (s *SQLiteStore) GetProfile(ctx context.Context, id int64) (model.Profile, error) {
 	row := s.db.QueryRowContext(ctx,
-		`SELECT id, name, onboarded, created_at FROM profiles WHERE id = ?`, id,
+		`SELECT id, name, avatar, onboarded, created_at FROM profiles WHERE id = ?`, id,
 	)
 	p, err := scanProfile(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -275,6 +287,39 @@ func (s *SQLiteStore) CountLearnedCards(ctx context.Context, profileID int64) (i
 	return n, nil
 }
 
+// activeProfileKey is the app_meta key holding the active profile's id.
+const activeProfileKey = "active_profile_id"
+
+// GetActiveProfileID returns the persisted active profile id. ok is false when no
+// active profile has been set yet.
+func (s *SQLiteStore) GetActiveProfileID(ctx context.Context) (id int64, ok bool, err error) {
+	var value string
+	row := s.db.QueryRowContext(ctx, `SELECT value FROM app_meta WHERE key = ?`, activeProfileKey)
+	if err := row.Scan(&value); errors.Is(err, sql.ErrNoRows) {
+		return 0, false, nil
+	} else if err != nil {
+		return 0, false, fmt.Errorf("scan active profile: %w", err)
+	}
+	id, err = strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return 0, false, fmt.Errorf("parse active profile id %q: %w", value, err)
+	}
+	return id, true, nil
+}
+
+// SetActiveProfileID persists which profile is active.
+func (s *SQLiteStore) SetActiveProfileID(ctx context.Context, id int64) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO app_meta (key, value) VALUES (?, ?)
+		 ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
+		activeProfileKey, strconv.FormatInt(id, 10),
+	)
+	if err != nil {
+		return fmt.Errorf("set active profile: %w", err)
+	}
+	return nil
+}
+
 // rowScanner is satisfied by both *sql.Row and *sql.Rows.
 type rowScanner interface {
 	Scan(dest ...any) error
@@ -285,7 +330,7 @@ func scanProfile(s rowScanner) (model.Profile, error) {
 		p         model.Profile
 		createdAt string
 	)
-	if err := s.Scan(&p.ID, &p.Name, &p.Onboarded, &createdAt); err != nil {
+	if err := s.Scan(&p.ID, &p.Name, &p.Avatar, &p.Onboarded, &createdAt); err != nil {
 		return model.Profile{}, err
 	}
 	parsed, err := parseTime(createdAt)

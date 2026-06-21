@@ -7,6 +7,7 @@ import "time"
 type Profile struct {
 	ID        int64
 	Name      string
+	Avatar    string // text-avatar spec (see internal/avatar); empty means none yet
 	Onboarded bool
 	CreatedAt time.Time
 }
