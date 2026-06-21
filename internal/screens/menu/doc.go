@@ -1,3 +1,3 @@
-// Package menu implements the main menu screen, including the JLPT progress badge
-// and study streak.
+// Package menu implements the main menu screen, including the XP and study-streak
+// progress badge.
 package menu
