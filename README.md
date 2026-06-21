@@ -57,11 +57,6 @@ go vet ./...            # static checks
 gofmt -l .              # formatting check
 ```
 
-## Contributing
-
-Contributions are welcome — especially new lessons. Please open an issue or pull
-request to get started.
-
 ## License
 
 [MIT](LICENSE) © 2026 Sebastián Caraballo
