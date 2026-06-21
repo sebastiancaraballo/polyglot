@@ -57,6 +57,18 @@ symbols/text), keep romaji visible alongside Japanese.
 - **Versioning:** Semantic Versioning. Keep `CHANGELOG.md` updated
   ([Keep a Changelog](https://keepachangelog.com/) format).
 
+### Worktrees
+
+- Start each new feature in its own git worktree so the working copy and branch
+  stay isolated: `git worktree add ../polyglot-<feature> -b <feature>`, and
+  `git worktree remove ../polyglot-<feature>` once the PR is merged.
+- No extra data isolation is configured, and none is needed: tests open their own
+  throwaway databases via `t.TempDir()`, and the app's real database
+  (`os.UserConfigDir()/polyglot`) is only touched by `go run ./cmd/polyglot`, which
+  is not part of this workflow. If running the app locally from a worktree ever
+  becomes necessary, add a data-directory override first so it doesn't share the
+  real database.
+
 ## Common commands
 
 ```sh
