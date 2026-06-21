@@ -36,6 +36,20 @@ func Frame(theme Theme, width, height int, content string) string {
 	return Center(width, height, box.Render(content))
 }
 
+// FrameContentWidth returns the display width available for content inside
+// Frame's border and padding.
+func FrameContentWidth(theme Theme, width int) int {
+	w := frameWidth
+	if width > 0 && width-2 < w {
+		w = width - 2
+	}
+	contentWidth := w - theme.Box.GetHorizontalFrameSize()
+	if contentWidth < 0 {
+		return 0
+	}
+	return contentWidth
+}
+
 // Center places content in the middle of a width×height area. When the size is
 // unknown (zero), it returns the content unchanged so screens still render.
 func Center(width, height int, content string) string {

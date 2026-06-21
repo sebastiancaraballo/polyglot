@@ -195,11 +195,12 @@ func (m Model) questionView() string {
 	}
 	lowerStr := lower.String()
 
-	// Render the kana as a large, prominent tile centered over the content.
+	// Render the kana as a large, prominent tile centered within the frame, not
+	// within the dynamic help/options text below it.
 	tile := m.bigKana(m.deck[m.index].Char)
-	width := lipgloss.Width(lowerStr)
-	if w := lipgloss.Width(tile); w > width {
-		width = w
+	width := ui.FrameContentWidth(t, m.width)
+	if tileWidth := lipgloss.Width(tile); tileWidth > width {
+		width = tileWidth
 	}
 	tile = lipgloss.PlaceHorizontal(width, lipgloss.Center, tile)
 
