@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Screens now render inside a fixed-size frame whose dimensions depend only on the terminal size, so the border no longer grows or shrinks with its content (e.g. when a quiz reveals an answer) or when moving between sections.
+
 ## [0.0.1] - 2026-06-20
 
 ### Added

@@ -113,7 +113,7 @@ func (m Model) View() tea.View {
 	b.WriteString("\n")
 	b.WriteString(t.Help.Render(m.deps.Msgs.BackHelp))
 
-	view := tea.NewView(ui.Center(m.width, m.height, t.Box.Render(b.String())))
+	view := tea.NewView(ui.Frame(t, m.width, m.height, b.String()))
 	view.AltScreen = true
 	return view
 }

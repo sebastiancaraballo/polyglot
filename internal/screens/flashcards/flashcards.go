@@ -156,7 +156,7 @@ func (m Model) View() tea.View {
 	default:
 		content = m.cardView()
 	}
-	view := tea.NewView(ui.Center(m.width, m.height, m.deps.Theme.Box.Render(content)))
+	view := tea.NewView(ui.Frame(m.deps.Theme, m.width, m.height, content))
 	view.AltScreen = true
 	return view
 }

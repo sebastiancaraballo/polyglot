@@ -121,8 +121,7 @@ func (m Model) View() tea.View {
 	b.WriteString("\n")
 	b.WriteString(m.theme.Help.Render(m.msgs.MenuHelp))
 
-	content := m.theme.Box.Render(b.String())
-	view := tea.NewView(ui.Center(m.width, m.height, content))
+	view := tea.NewView(ui.Frame(m.theme, m.width, m.height, b.String()))
 	view.AltScreen = true
 	return view
 }
