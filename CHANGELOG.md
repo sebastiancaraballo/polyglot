@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Kana trainer character tile now stays centered when an answer is revealed.
+- Flashcard grading options now render one per line so the labels do not wrap across the frame.
 
 ### Removed
 - The JLPT progress indicator (menu badge and stats screen). The hardcoded N5 → N4 level didn't reflect real proficiency; XP and the words-learned count replace it as accurate progress signals.
