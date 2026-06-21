@@ -57,15 +57,6 @@ go vet ./...            # static checks
 gofmt -l .              # formatting check
 ```
 
-## Documentation
-
-Project documentation and a guide for authoring lessons live in the
-[project Wiki](https://github.com/sebastiancaraballo/polyglot/wiki).
-
-## Contributing
-
-Contributions are welcome — especially new lessons. See the Wiki's lesson-authoring guide.
-
 ## License
 
 [MIT](LICENSE) © 2026 Sebastián Caraballo
