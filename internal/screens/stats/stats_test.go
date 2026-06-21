@@ -34,7 +34,7 @@ func TestStatsGolden(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("SaveCardState: %v", err)
 	}
-	if err := store.SaveStats(ctx, profile.ID, model.Stats{Streak: 5, BestStreak: 12, LastStudiedAt: now}); err != nil {
+	if err := store.SaveStats(ctx, profile.ID, model.Stats{Streak: 5, BestStreak: 12, LastStudiedAt: now, XP: 1240}); err != nil {
 		t.Fatalf("SaveStats: %v", err)
 	}
 

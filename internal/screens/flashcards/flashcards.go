@@ -118,7 +118,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) grade(grade srs.Grade) Model {
 	card := m.queue[m.index]
 	state := srs.Review(m.states[card.ID], grade, time.Now())
-	if err := m.persist(state); err != nil {
+	if err := m.persist(state, grade); err != nil {
 		m.err = err
 	}
 	m.reviewed++
@@ -127,9 +127,12 @@ func (m Model) grade(grade srs.Grade) Model {
 	return m
 }
 
-func (m *Model) persist(state model.CardState) error {
+func (m *Model) persist(state model.CardState, grade srs.Grade) error {
 	ctx := context.Background()
 	if err := m.deps.Store.SaveCardState(ctx, m.deps.ProfileID, state); err != nil {
+		return err
+	}
+	if err := m.deps.Store.AddXP(ctx, m.deps.ProfileID, study.XPForGrade(grade)); err != nil {
 		return err
 	}
 	if !m.streakApplied {

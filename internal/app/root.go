@@ -82,7 +82,10 @@ func (m rootModel) route(s nav.Screen) (tea.Model, tea.Cmd) {
 func (m rootModel) build(s nav.Screen) tea.Model {
 	switch s {
 	case nav.Kana:
-		return kana.New(m.ctx.theme, m.ctx.msgs, m.ctx.course.Kana)
+		return kana.New(kana.Deps{
+			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
+			ProfileID: m.ctx.profile.ID, Items: m.ctx.course.Kana,
+		})
 	case nav.Flashcards:
 		return flashcards.New(flashcards.Deps{
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
@@ -121,21 +124,14 @@ func (c appContext) allCards() []model.Card {
 // error it falls back to zero values rather than failing navigation.
 func (c appContext) summary() menu.Summary {
 	ctx := context.Background()
-	total := len(c.allCards())
 
 	stats, _ := c.store.GetStats(ctx, c.profile.ID)
 	learned, _ := c.store.CountLearnedCards(ctx, c.profile.ID)
 
-	percent := 0
-	if total > 0 {
-		percent = learned * 100 / total
-	}
 	return menu.Summary{
-		Level:     string(model.N5),
-		NextLevel: string(model.N4),
-		Percent:   percent,
-		Streak:    stats.Streak,
-		Learned:   learned,
-		Total:     total,
+		XP:      stats.XP,
+		Streak:  stats.Streak,
+		Learned: learned,
+		Total:   len(c.allCards()),
 	}
 }

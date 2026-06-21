@@ -28,11 +28,11 @@ type Deps struct {
 type Model struct {
 	deps Deps
 
+	xp      int
 	streak  int
 	best    int
 	learned int
 	total   int
-	percent int
 	hira    int
 	kata    int
 	err     error
@@ -56,14 +56,12 @@ func New(deps Deps) Model {
 		return m
 	}
 
+	m.xp = stats.XP
 	m.streak = stats.Streak
 	m.best = stats.BestStreak
 	m.learned = learned
 	for _, lesson := range deps.Course.Lessons {
 		m.total += len(lesson.Cards)
-	}
-	if m.total > 0 {
-		m.percent = m.learned * 100 / m.total
 	}
 	for _, k := range deps.Course.Kana {
 		switch k.Type {
@@ -102,9 +100,8 @@ func (m Model) View() tea.View {
 	b.WriteString(t.Title.Render(m.deps.Msgs.StatsTitle))
 	b.WriteString("\n\n")
 
-	bar := ui.ProgressBar(m.percent, 10)
-	fmt.Fprintf(&b, "%s %s  %s %d%%  (%d/%d)\n",
-		m.deps.Msgs.LevelLabel, string(model.N5), bar, m.percent, m.learned, m.total)
+	fmt.Fprintf(&b, "★ %s: %d\n", m.deps.Msgs.XPLabel, m.xp)
+	fmt.Fprintf(&b, "%d/%d %s\n", m.learned, m.total, m.deps.Msgs.LearnedSuffix)
 	fmt.Fprintf(&b, "▲ %s: %d %s  (%s: %d)\n",
 		m.deps.Msgs.StreakLabel, m.streak, m.deps.Msgs.DaysSuffix, m.deps.Msgs.BestLabel, m.best)
 	fmt.Fprintf(&b, "%s: %d   %s: %d\n",

@@ -170,12 +170,12 @@ func TestStatsRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetStats: %v", err)
 	}
-	if stats.Streak != 0 || stats.BestStreak != 0 || !stats.LastStudiedAt.IsZero() {
+	if stats.Streak != 0 || stats.BestStreak != 0 || !stats.LastStudiedAt.IsZero() || stats.XP != 0 {
 		t.Errorf("fresh stats = %+v, want zero values", stats)
 	}
 
 	studied := time.Date(2026, 6, 19, 20, 0, 0, 0, time.UTC)
-	if err := store.SaveStats(ctx, profile.ID, model.Stats{Streak: 5, BestStreak: 12, LastStudiedAt: studied}); err != nil {
+	if err := store.SaveStats(ctx, profile.ID, model.Stats{Streak: 5, BestStreak: 12, LastStudiedAt: studied, XP: 150}); err != nil {
 		t.Fatalf("SaveStats: %v", err)
 	}
 
@@ -183,11 +183,40 @@ func TestStatsRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetStats after save: %v", err)
 	}
-	if stats.Streak != 5 || stats.BestStreak != 12 {
-		t.Errorf("got streak=%d best=%d, want 5 and 12", stats.Streak, stats.BestStreak)
+	if stats.Streak != 5 || stats.BestStreak != 12 || stats.XP != 150 {
+		t.Errorf("got streak=%d best=%d xp=%d, want 5, 12 and 150", stats.Streak, stats.BestStreak, stats.XP)
 	}
 	if !stats.LastStudiedAt.Equal(studied) {
 		t.Errorf("LastStudiedAt = %v, want %v", stats.LastStudiedAt, studied)
+	}
+}
+
+func TestAddXP(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	profile, err := store.CreateProfile(ctx, "learner")
+	if err != nil {
+		t.Fatalf("CreateProfile: %v", err)
+	}
+
+	if err := store.AddXP(ctx, profile.ID, 10); err != nil {
+		t.Fatalf("AddXP: %v", err)
+	}
+	if err := store.AddXP(ctx, profile.ID, 5); err != nil {
+		t.Fatalf("AddXP: %v", err)
+	}
+
+	stats, err := store.GetStats(ctx, profile.ID)
+	if err != nil {
+		t.Fatalf("GetStats: %v", err)
+	}
+	if stats.XP != 15 {
+		t.Errorf("XP after adding 10 then 5 = %d, want 15", stats.XP)
+	}
+
+	if err := store.AddXP(ctx, 9999, 10); !errors.Is(err, ErrNotFound) {
+		t.Errorf("AddXP for unknown profile = %v, want ErrNotFound", err)
 	}
 }
 

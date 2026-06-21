@@ -12,14 +12,13 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
 )
 
-// Summary is the progress data shown in the menu header (JLPT badge and streak).
+// Summary is the progress data shown in the menu header (XP, streak, and the
+// number of words learned).
 type Summary struct {
-	Level     string
-	NextLevel string
-	Percent   int
-	Streak    int
-	Learned   int
-	Total     int
+	XP      int
+	Streak  int
+	Learned int
+	Total   int
 }
 
 type item struct {
@@ -126,14 +125,11 @@ func (m Model) View() tea.View {
 	return view
 }
 
-// badge renders the JLPT progress line and study streak.
+// badge renders the experience-point total and study streak.
 func (m Model) badge() string {
-	bar := ui.ProgressBar(m.summary.Percent, 10)
-	level := fmt.Sprintf("%s: %s  %s %d%% %s %s",
-		m.msgs.LevelLabel, m.summary.Level, bar, m.summary.Percent,
-		m.msgs.TowardLabel, m.summary.NextLevel)
+	xp := fmt.Sprintf("★ %s: %d", m.msgs.XPLabel, m.summary.XP)
 	streak := fmt.Sprintf("▲ %s: %d %s · %d %s",
 		m.msgs.StreakLabel, m.summary.Streak, m.msgs.DaysSuffix,
 		m.summary.Learned, m.msgs.LearnedSuffix)
-	return lipgloss.JoinVertical(lipgloss.Left, level, streak)
+	return lipgloss.JoinVertical(lipgloss.Left, xp, streak)
 }

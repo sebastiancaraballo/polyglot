@@ -1,6 +1,7 @@
 package kana
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -12,22 +13,30 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/model"
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
+	"github.com/sebastiancaraballo/polyglot/internal/storage"
 	"github.com/sebastiancaraballo/polyglot/internal/study"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
 )
 
 const optionCount = 4
 
+// Deps are the dependencies the kana trainer needs.
+type Deps struct {
+	Theme     ui.Theme
+	Msgs      i18n.Messages
+	Store     storage.Storage
+	ProfileID int64
+	Items     []model.KanaItem
+}
+
 // Model is the kana trainer screen: it shows a kana character and asks the
 // learner to choose its romaji reading from four options.
 type Model struct {
-	theme ui.Theme
-	msgs  i18n.Messages
-	rng   *rand.Rand
+	deps Deps
+	rng  *rand.Rand
 
-	items []model.KanaItem // original set, for restarting
-	deck  []model.KanaItem // shuffled session order
-	pool  []string         // all romaji, for distractors
+	deck []model.KanaItem // shuffled session order
+	pool []string         // all romaji, for distractors
 
 	index        int
 	options      []string
@@ -35,19 +44,20 @@ type Model struct {
 	selected     int
 	answered     bool
 	correctCount int
+	err          error
 
 	width, height int
 }
 
-// New builds a kana trainer for the given items.
-func New(theme ui.Theme, msgs i18n.Messages, items []model.KanaItem) Model {
+// New builds a kana trainer from the given dependencies.
+func New(deps Deps) Model {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // not security-sensitive
-	m := Model{theme: theme, msgs: msgs, rng: rng, items: items}
-	m.pool = make([]string, 0, len(items))
-	for _, it := range items {
+	m := Model{deps: deps, rng: rng}
+	m.pool = make([]string, 0, len(deps.Items))
+	for _, it := range deps.Items {
 		m.pool = append(m.pool, it.Romaji)
 	}
-	m.deck = append([]model.KanaItem(nil), items...)
+	m.deck = append([]model.KanaItem(nil), deps.Items...)
 	m.rng.Shuffle(len(m.deck), func(i, j int) { m.deck[i], m.deck[j] = m.deck[j], m.deck[i] })
 	return m.setQuestion()
 }
@@ -89,7 +99,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case m.finished():
 		if isConfirm(msg) {
-			return New(m.theme, m.msgs, m.items), nil // restart
+			return New(m.deps), nil // restart
 		}
 	case m.answered:
 		if isConfirm(msg) {
@@ -129,8 +139,12 @@ func (m Model) answerKey(msg tea.KeyPressMsg) Model {
 
 func (m Model) reveal() Model {
 	m.answered = true
-	if m.selected == m.correct {
+	correct := m.selected == m.correct
+	if correct {
 		m.correctCount++
+	}
+	if err := m.deps.Store.AddXP(context.Background(), m.deps.ProfileID, study.XPForAnswer(correct)); err != nil {
+		m.err = err
 	}
 	return m
 }
@@ -147,36 +161,37 @@ func (m Model) View() tea.View {
 	} else {
 		content = m.questionView()
 	}
-	view := tea.NewView(ui.Frame(m.theme, m.width, m.height, content))
+	view := tea.NewView(ui.Frame(m.deps.Theme, m.width, m.height, content))
 	view.AltScreen = true
 	return view
 }
 
 func (m Model) questionView() string {
-	header := fmt.Sprintf("%s  %d/%d", m.theme.Title.Render(m.msgs.KanaTitle), m.index+1, len(m.deck))
+	t := m.deps.Theme
+	header := fmt.Sprintf("%s  %d/%d", t.Title.Render(m.deps.Msgs.KanaTitle), m.index+1, len(m.deck))
 
 	var lower strings.Builder
-	lower.WriteString(m.msgs.KanaPrompt)
+	lower.WriteString(m.deps.Msgs.KanaPrompt)
 	lower.WriteString("\n\n")
 	for i, opt := range m.options {
 		line := fmt.Sprintf(" %d) %s", i+1, opt)
 		switch {
 		case m.answered && i == m.correct:
-			lower.WriteString(m.theme.Success.Render("✓" + line))
+			lower.WriteString(t.Success.Render("✓" + line))
 		case m.answered && i == m.selected:
-			lower.WriteString(m.theme.Error.Render("✗" + line))
+			lower.WriteString(t.Error.Render("✗" + line))
 		case i == m.selected:
-			lower.WriteString(m.theme.Selected.Render("▸" + line))
+			lower.WriteString(t.Selected.Render("▸" + line))
 		default:
-			lower.WriteString(m.theme.Normal.Render(" " + line))
+			lower.WriteString(t.Normal.Render(" " + line))
 		}
 		lower.WriteString("\n")
 	}
 	lower.WriteString("\n")
 	if m.answered {
-		lower.WriteString(m.theme.Help.Render(m.msgs.ContinueHelp))
+		lower.WriteString(t.Help.Render(m.deps.Msgs.ContinueHelp))
 	} else {
-		lower.WriteString(m.theme.Help.Render(m.msgs.ChoiceHelp))
+		lower.WriteString(t.Help.Render(m.deps.Msgs.ChoiceHelp))
 	}
 	lowerStr := lower.String()
 
@@ -195,7 +210,7 @@ func (m Model) questionView() string {
 // app cannot change the font size (that is the terminal's job), so prominence is
 // achieved with a wide border and generous padding around the glyph.
 func (m Model) bigKana(char string) string {
-	return m.theme.Accent.
+	return m.deps.Theme.Accent.
 		Bold(true).
 		Border(lipgloss.RoundedBorder()).
 		Padding(2, 6).
@@ -204,10 +219,11 @@ func (m Model) bigKana(char string) string {
 }
 
 func (m Model) summaryView() string {
+	t := m.deps.Theme
 	var b strings.Builder
-	b.WriteString(m.theme.Title.Render(m.msgs.SessionDone))
+	b.WriteString(t.Title.Render(m.deps.Msgs.SessionDone))
 	b.WriteString("\n\n")
-	fmt.Fprintf(&b, "%s: %d/%d\n\n", m.msgs.ScoreLabel, m.correctCount, len(m.deck))
-	b.WriteString(m.theme.Help.Render(m.msgs.RestartHelp))
+	fmt.Fprintf(&b, "%s: %d/%d\n\n", m.deps.Msgs.ScoreLabel, m.correctCount, len(m.deck))
+	b.WriteString(t.Help.Render(m.deps.Msgs.RestartHelp))
 	return b.String()
 }

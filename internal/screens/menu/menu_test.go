@@ -12,7 +12,7 @@ import (
 )
 
 func newTestMenu() Model {
-	summary := Summary{Level: "N5", NextLevel: "N4", Percent: 40, Streak: 5, Learned: 8, Total: 20}
+	summary := Summary{XP: 1240, Streak: 5, Learned: 8, Total: 20}
 	return New(ui.NewTheme(true), i18n.ES, summary, "test")
 }
 
@@ -115,7 +115,7 @@ func TestMenuSpaceNavigates(t *testing.T) {
 func TestMenuViewShowsProgress(t *testing.T) {
 	m := newTestMenu()
 	content := m.View().Content
-	for _, want := range []string{"Polyglot", "es → ja", "N5", "40%", i18n.ES.StreakLabel, i18n.ES.ItemKana} {
+	for _, want := range []string{"Polyglot", "es → ja", i18n.ES.XPLabel, "1240", i18n.ES.StreakLabel, i18n.ES.ItemKana} {
 		if !strings.Contains(content, want) {
 			t.Errorf("view is missing %q", want)
 		}
