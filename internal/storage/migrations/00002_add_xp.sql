@@ -1,0 +1,5 @@
+-- +goose Up
+ALTER TABLE stats ADD COLUMN xp INTEGER NOT NULL DEFAULT 0;
+
+-- +goose Down
+ALTER TABLE stats DROP COLUMN xp;

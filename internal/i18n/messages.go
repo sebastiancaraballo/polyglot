@@ -16,8 +16,7 @@ type Messages struct {
 	MenuHelp       string
 
 	// Progress badge
-	LevelLabel    string // "Nivel"
-	TowardLabel   string // "hacia"
+	XPLabel       string // "XP"
 	StreakLabel   string // "Racha"
 	DaysSuffix    string // "días"
 	LearnedSuffix string // "palabras aprendidas"
@@ -92,8 +91,7 @@ var ES = Messages{
 	ItemQuit:       "Salir",
 	MenuHelp:       "↑/↓ moverse · ENTER elegir · Q salir",
 
-	LevelLabel:    "Nivel",
-	TowardLabel:   "hacia",
+	XPLabel:       "XP",
 	StreakLabel:   "Racha",
 	DaysSuffix:    "días",
 	LearnedSuffix: "palabras aprendidas",

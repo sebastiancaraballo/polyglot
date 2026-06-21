@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Experience points (XP): a single per-profile counter that grows with every interaction — quiz answers, flashcard grades, and kana trainer answers (correct answers earn more; flashcards scale by recall grade), plus a one-time bonus for completing onboarding. The total is shown on the menu badge and the stats screen.
+
 ### Changed
 - Screens now render inside a fixed-size frame whose dimensions depend only on the terminal size, so the border no longer grows or shrinks with its content (e.g. when a quiz reveals an answer) or when moving between sections.
+
+### Removed
+- The JLPT progress indicator (menu badge and stats screen). The hardcoded N5 → N4 level didn't reflect real proficiency; XP and the words-learned count replace it as accurate progress signals.
 
 ## [0.0.1] - 2026-06-20
 

@@ -32,6 +32,8 @@ type Storage interface {
 	GetStats(ctx context.Context, profileID int64) (model.Stats, error)
 	// SaveStats replaces the aggregate stats for a profile.
 	SaveStats(ctx context.Context, profileID int64, stats model.Stats) error
+	// AddXP atomically increments a profile's cumulative experience points.
+	AddXP(ctx context.Context, profileID int64, amount int) error
 
 	// CountLearnedCards returns how many cards the profile has reviewed at least
 	// once successfully (reps > 0).

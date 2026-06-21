@@ -10,6 +10,7 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
 	"github.com/sebastiancaraballo/polyglot/internal/storage"
+	"github.com/sebastiancaraballo/polyglot/internal/study"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
 )
 
@@ -121,7 +122,11 @@ func (m Model) answer() Model {
 }
 
 func (m Model) finish() (tea.Model, tea.Cmd) {
-	if err := m.deps.Store.SetOnboarded(context.Background(), m.deps.ProfileID); err != nil {
+	ctx := context.Background()
+	if err := m.deps.Store.SetOnboarded(ctx, m.deps.ProfileID); err != nil {
+		m.err = err
+	}
+	if err := m.deps.Store.AddXP(ctx, m.deps.ProfileID, study.OnboardingXP); err != nil {
 		m.err = err
 	}
 	return m, nav.Back()

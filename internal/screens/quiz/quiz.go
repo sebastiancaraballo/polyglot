@@ -176,6 +176,9 @@ func (m *Model) persist(card model.Card, correct bool) error {
 	if err := m.deps.Store.SaveCardState(ctx, m.deps.ProfileID, state); err != nil {
 		return err
 	}
+	if err := m.deps.Store.AddXP(ctx, m.deps.ProfileID, study.XPForAnswer(correct)); err != nil {
+		return err
+	}
 	if !m.streakApplied {
 		stats, err := m.deps.Store.GetStats(ctx, m.deps.ProfileID)
 		if err != nil {

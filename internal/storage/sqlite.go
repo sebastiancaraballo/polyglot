@@ -95,7 +95,7 @@ func (s *SQLiteStore) CreateProfile(ctx context.Context, name string) (model.Pro
 		return model.Profile{}, fmt.Errorf("read profile id: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO stats (profile_id, streak, best_streak, last_studied_at) VALUES (?, 0, 0, NULL)`,
+		`INSERT INTO stats (profile_id, streak, best_streak, last_studied_at, xp) VALUES (?, 0, 0, NULL, 0)`,
 		id,
 	); err != nil {
 		return model.Profile{}, fmt.Errorf("init stats: %w", err)
@@ -211,7 +211,7 @@ func (s *SQLiteStore) SaveCardState(ctx context.Context, profileID int64, state 
 // GetStats returns the aggregate stats for a profile, or ErrNotFound.
 func (s *SQLiteStore) GetStats(ctx context.Context, profileID int64) (model.Stats, error) {
 	row := s.db.QueryRowContext(ctx,
-		`SELECT streak, best_streak, last_studied_at FROM stats WHERE profile_id = ?`,
+		`SELECT streak, best_streak, last_studied_at, xp FROM stats WHERE profile_id = ?`,
 		profileID,
 	)
 
@@ -219,7 +219,7 @@ func (s *SQLiteStore) GetStats(ctx context.Context, profileID int64) (model.Stat
 		stats         model.Stats
 		lastStudiedAt sql.NullString
 	)
-	err := row.Scan(&stats.Streak, &stats.BestStreak, &lastStudiedAt)
+	err := row.Scan(&stats.Streak, &stats.BestStreak, &lastStudiedAt, &stats.XP)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.Stats{}, ErrNotFound
 	}
@@ -241,11 +241,23 @@ func (s *SQLiteStore) SaveStats(ctx context.Context, profileID int64, stats mode
 		lastStudiedAt = stats.LastStudiedAt.UTC().Format(timeLayout)
 	}
 	res, err := s.db.ExecContext(ctx,
-		`UPDATE stats SET streak = ?, best_streak = ?, last_studied_at = ? WHERE profile_id = ?`,
-		stats.Streak, stats.BestStreak, lastStudiedAt, profileID,
+		`UPDATE stats SET streak = ?, best_streak = ?, last_studied_at = ?, xp = ? WHERE profile_id = ?`,
+		stats.Streak, stats.BestStreak, lastStudiedAt, stats.XP, profileID,
 	)
 	if err != nil {
 		return fmt.Errorf("update stats: %w", err)
+	}
+	return requireAffected(res)
+}
+
+// AddXP atomically increments a profile's cumulative experience points.
+func (s *SQLiteStore) AddXP(ctx context.Context, profileID int64, amount int) error {
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE stats SET xp = xp + ? WHERE profile_id = ?`,
+		amount, profileID,
+	)
+	if err != nil {
+		return fmt.Errorf("add xp: %w", err)
 	}
 	return requireAffected(res)
 }

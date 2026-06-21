@@ -7,4 +7,5 @@ type Stats struct {
 	Streak        int
 	BestStreak    int
 	LastStudiedAt time.Time // zero value means the profile has never studied
+	XP            int       // cumulative experience points earned across all activity
 }

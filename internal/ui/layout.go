@@ -79,27 +79,3 @@ func wrapLine(line string, width int) []string {
 	}
 	return append(lines, current)
 }
-
-// ProgressBar renders a fixed-width bar for a percentage in [0, 100] using block
-// characters. The caller is responsible for styling/coloring the result.
-func ProgressBar(percent, width int) string {
-	if width <= 0 {
-		return ""
-	}
-	if percent < 0 {
-		percent = 0
-	}
-	if percent > 100 {
-		percent = 100
-	}
-	filled := percent * width / 100
-	bar := make([]rune, 0, width)
-	for i := 0; i < width; i++ {
-		if i < filled {
-			bar = append(bar, '█')
-		} else {
-			bar = append(bar, '░')
-		}
-	}
-	return string(bar)
-}

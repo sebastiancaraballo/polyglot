@@ -10,7 +10,7 @@ import (
 )
 
 func TestMenuGolden(t *testing.T) {
-	summary := Summary{Level: "N5", NextLevel: "N4", Percent: 40, Streak: 5, Learned: 8, Total: 20}
+	summary := Summary{XP: 1240, Streak: 5, Learned: 8, Total: 20}
 	m := New(ui.PlainTheme(), i18n.ES, summary, "test")
 	golden.RequireEqual(t, []byte(m.View().Content))
 }
