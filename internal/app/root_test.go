@@ -20,7 +20,7 @@ func TestWipeAndResetClearsData(t *testing.T) {
 	}
 
 	// Seed an onboarded profile with progress.
-	profile, err := store.CreateProfile(ctx, "tester")
+	profile, err := store.CreateProfile(ctx, "tester", "")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}

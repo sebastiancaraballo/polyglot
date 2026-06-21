@@ -44,7 +44,7 @@ func TestProfileLifecycle(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 
-	created, err := store.CreateProfile(ctx, "Sebastián")
+	created, err := store.CreateProfile(ctx, "Sebastián", "")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestCardStateRoundTrip(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 
-	profile, err := store.CreateProfile(ctx, "learner")
+	profile, err := store.CreateProfile(ctx, "learner", "")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestStatsRoundTrip(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 
-	profile, err := store.CreateProfile(ctx, "learner")
+	profile, err := store.CreateProfile(ctx, "learner", "")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}
@@ -195,7 +195,7 @@ func TestAddXP(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 
-	profile, err := store.CreateProfile(ctx, "learner")
+	profile, err := store.CreateProfile(ctx, "learner", "")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}
@@ -224,7 +224,7 @@ func TestCountLearnedCards(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 
-	profile, err := store.CreateProfile(ctx, "learner")
+	profile, err := store.CreateProfile(ctx, "learner", "")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}
@@ -251,11 +251,11 @@ func TestCardStateCascadeIsolation(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 
-	a, err := store.CreateProfile(ctx, "a")
+	a, err := store.CreateProfile(ctx, "a", "")
 	if err != nil {
 		t.Fatalf("CreateProfile a: %v", err)
 	}
-	b, err := store.CreateProfile(ctx, "b")
+	b, err := store.CreateProfile(ctx, "b", "")
 	if err != nil {
 		t.Fatalf("CreateProfile b: %v", err)
 	}

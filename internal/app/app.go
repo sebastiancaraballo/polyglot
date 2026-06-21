@@ -68,5 +68,5 @@ func ensureProfile(ctx context.Context, store storage.Storage) (model.Profile, e
 	if len(profiles) > 0 {
 		return profiles[0], nil
 	}
-	return store.CreateProfile(ctx, defaultProfileName)
+	return store.CreateProfile(ctx, defaultProfileName, "")
 }
