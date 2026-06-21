@@ -147,7 +147,7 @@ func (m Model) View() tea.View {
 	} else {
 		content = m.questionView()
 	}
-	view := tea.NewView(ui.Center(m.width, m.height, m.theme.Box.Render(content)))
+	view := tea.NewView(ui.Frame(m.theme, m.width, m.height, content))
 	view.AltScreen = true
 	return view
 }
