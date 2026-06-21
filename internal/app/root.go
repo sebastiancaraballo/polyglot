@@ -14,6 +14,7 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/screens/menu"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/onboarding"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/quiz"
+	"github.com/sebastiancaraballo/polyglot/internal/screens/settings"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/stats"
 	"github.com/sebastiancaraballo/polyglot/internal/storage"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
@@ -27,6 +28,7 @@ type appContext struct {
 	theme   ui.Theme
 	msgs    i18n.Messages
 	version string
+	dbPath  string
 }
 
 // rootModel is the top-level Bubble Tea model. It tracks terminal size and
@@ -60,6 +62,8 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.route(msg.Screen)
 	case nav.BackMsg:
 		return m.route(nav.Menu)
+	case nav.WipeDataMsg:
+		return m.wipeAndReset()
 	}
 	var cmd tea.Cmd
 	m.screen, cmd = m.screen.Update(msg)
@@ -68,6 +72,28 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m rootModel) View() tea.View {
 	return m.screen.View()
+}
+
+// wipeAndReset deletes all local data, recreates a fresh default profile, and
+// returns to onboarding. It owns this flow because a leaf screen cannot close and
+// reopen the shared storage connection. On a fatal re-open failure it quits, since
+// the application can no longer persist anything.
+func (m rootModel) wipeAndReset() (tea.Model, tea.Cmd) {
+	_ = m.ctx.store.Close()
+	if err := storage.Remove(m.ctx.dbPath); err != nil {
+		return m, tea.Quit
+	}
+	store, err := storage.Open(m.ctx.dbPath)
+	if err != nil {
+		return m, tea.Quit
+	}
+	profile, err := ensureProfile(context.Background(), store)
+	if err != nil {
+		return m, tea.Quit
+	}
+	m.ctx.store = store
+	m.ctx.profile = profile
+	return m.route(nav.Onboarding)
 }
 
 // route switches to a new screen, seeding it with the current terminal size.
@@ -106,6 +132,8 @@ func (m rootModel) build(s nav.Screen) tea.Model {
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
 			ProfileID: m.ctx.profile.ID,
 		})
+	case nav.Settings:
+		return settings.New(settings.Deps{Theme: m.ctx.theme, Msgs: m.ctx.msgs})
 	default:
 		return menu.New(m.ctx.theme, m.ctx.msgs, m.ctx.summary(), m.ctx.version)
 	}

@@ -19,6 +19,7 @@ The application ships as a **single self-contained binary** — no runtime to in
 - ✓ **Multiple-choice quizzes** — quick reinforcement.
 - ▤ **Progress, XP & streaks** — earn experience points for every answer, keep a daily streak, and track words learned.
 - ◎ **Local profiles** — multiple learners on the same machine, each with their own progress.
+- ⚙ **Settings** — delete all app data (with confirmation) to start fresh.
 - ※ **Accessible** — responsive layout, high-contrast theme, `NO_COLOR` support, keyboard-first.
 
 Typing/romaji input is planned for v1.1.

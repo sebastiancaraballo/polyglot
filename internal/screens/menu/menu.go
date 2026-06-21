@@ -54,6 +54,7 @@ func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Mo
 			{"▣", msgs.ItemFlashcards, nav.Flashcards, false},
 			{"✓", msgs.ItemQuiz, nav.Quiz, false},
 			{"▤", msgs.ItemStats, nav.Stats, false},
+			{"⚙", msgs.ItemSettings, nav.Settings, false},
 			{"⏻", msgs.ItemQuit, nav.Menu, true},
 		},
 	}

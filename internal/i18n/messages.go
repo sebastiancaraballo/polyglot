@@ -12,8 +12,17 @@ type Messages struct {
 	ItemFlashcards string
 	ItemQuiz       string
 	ItemStats      string
+	ItemSettings   string
 	ItemQuit       string
 	MenuHelp       string
+
+	// Settings
+	SettingsTitle    string
+	DeleteAllData    string
+	DeleteAllWarning string
+	ConfirmDelete    string
+	CancelLabel      string
+	ConfirmHelp      string
 
 	// Progress badge
 	XPLabel       string // "XP"
@@ -88,8 +97,16 @@ var ES = Messages{
 	ItemFlashcards: "Flashcards (repaso espaciado)",
 	ItemQuiz:       "Quiz de opción múltiple",
 	ItemStats:      "Mis estadísticas",
+	ItemSettings:   "Ajustes",
 	ItemQuit:       "Salir",
 	MenuHelp:       "↑/↓ moverse · ENTER elegir · Q salir",
+
+	SettingsTitle:    "Ajustes",
+	DeleteAllData:    "Borrar todos los datos",
+	DeleteAllWarning: "Esto borra todos los perfiles, progreso y estadísticas. No se puede deshacer.",
+	ConfirmDelete:    "Sí, borrar todo",
+	CancelLabel:      "Cancelar",
+	ConfirmHelp:      "↑/↓ elegir · ENTER confirmar · ESC cancelar",
 
 	XPLabel:       "XP",
 	StreakLabel:   "Racha",

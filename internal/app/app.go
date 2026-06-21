@@ -50,6 +50,7 @@ func Run(version string) error {
 		theme:   ui.DefaultTheme(),
 		msgs:    i18n.Default,
 		version: version,
+		dbPath:  dbPath,
 	})
 
 	if _, err := tea.NewProgram(root).Run(); err != nil {
