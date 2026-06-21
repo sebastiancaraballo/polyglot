@@ -24,7 +24,7 @@ type Deps struct {
 	Course    *content.Course
 }
 
-// Model is the statistics screen: JLPT progress, streak, and kana totals.
+// Model is the statistics screen: XP, streak, words learned, and kana totals.
 type Model struct {
 	deps Deps
 
