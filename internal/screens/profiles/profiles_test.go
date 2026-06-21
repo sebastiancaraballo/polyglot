@@ -28,11 +28,11 @@ func newTestModel(t *testing.T) (Model, int64, int64) {
 	t.Helper()
 	store := newStore(t)
 	ctx := context.Background()
-	first, err := store.CreateProfile(ctx, "Ana", "initials:0")
+	first, err := store.CreateProfile(ctx, "Ana")
 	if err != nil {
 		t.Fatalf("CreateProfile first: %v", err)
 	}
-	second, err := store.CreateProfile(ctx, "Mei", "identicon:1")
+	second, err := store.CreateProfile(ctx, "Mei")
 	if err != nil {
 		t.Fatalf("CreateProfile second: %v", err)
 	}

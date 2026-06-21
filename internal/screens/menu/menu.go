@@ -7,7 +7,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/sebastiancaraballo/polyglot/internal/avatar"
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
@@ -17,7 +16,6 @@ import (
 // number of words learned).
 type Summary struct {
 	Name    string
-	Avatar  string
 	XP      int
 	Streak  int
 	Learned int
@@ -52,6 +50,7 @@ func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Mo
 		msgs:    msgs,
 		summary: summary,
 		version: version,
+		cursor:  1,
 		items: []item{
 			{"◇", msgs.ItemKana, nav.Kana, false},
 			{"▣", msgs.ItemFlashcards, nav.Flashcards, false},
@@ -152,7 +151,7 @@ func (m Model) profileHeader() string {
 	if m.cursor == 0 {
 		marker = "▸ "
 	}
-	content := fmt.Sprintf("%s⇄ [%s] %s · %s", marker, avatar.InlineSpec(m.summary.Avatar, name), name, m.msgs.SwitchProfile)
+	content := fmt.Sprintf("%s⇄ %s · %s", marker, name, m.msgs.SwitchProfile)
 	if m.cursor == 0 {
 		return m.theme.Selected.Render(content)
 	}

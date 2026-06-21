@@ -75,9 +75,8 @@ func (s *SQLiteStore) Close() error {
 	return s.db.Close()
 }
 
-// CreateProfile inserts a new profile (with its text-avatar spec) along with an
-// empty stats row.
-func (s *SQLiteStore) CreateProfile(ctx context.Context, name, avatar string) (model.Profile, error) {
+// CreateProfile inserts a new profile along with an empty stats row.
+func (s *SQLiteStore) CreateProfile(ctx context.Context, name string) (model.Profile, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return model.Profile{}, fmt.Errorf("begin tx: %w", err)
@@ -86,8 +85,8 @@ func (s *SQLiteStore) CreateProfile(ctx context.Context, name, avatar string) (m
 
 	now := time.Now().UTC()
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO profiles (name, avatar, onboarded, created_at) VALUES (?, ?, 0, ?)`,
-		name, avatar, now.Format(timeLayout),
+		`INSERT INTO profiles (name, onboarded, created_at) VALUES (?, 0, ?)`,
+		name, now.Format(timeLayout),
 	)
 	if err != nil {
 		return model.Profile{}, fmt.Errorf("insert profile: %w", err)
@@ -106,7 +105,7 @@ func (s *SQLiteStore) CreateProfile(ctx context.Context, name, avatar string) (m
 		return model.Profile{}, fmt.Errorf("commit: %w", err)
 	}
 
-	return model.Profile{ID: id, Name: name, Avatar: avatar, Onboarded: false, CreatedAt: now}, nil
+	return model.Profile{ID: id, Name: name, Onboarded: false, CreatedAt: now}, nil
 }
 
 // DeleteProfile removes a profile and, via ON DELETE CASCADE, its stats and card
@@ -122,7 +121,7 @@ func (s *SQLiteStore) DeleteProfile(ctx context.Context, id int64) error {
 // ListProfiles returns all profiles ordered by creation time then id.
 func (s *SQLiteStore) ListProfiles(ctx context.Context) ([]model.Profile, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, name, avatar, onboarded, created_at FROM profiles ORDER BY created_at, id`,
+		`SELECT id, name, onboarded, created_at FROM profiles ORDER BY created_at, id`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("query profiles: %w", err)
@@ -146,7 +145,7 @@ func (s *SQLiteStore) ListProfiles(ctx context.Context) ([]model.Profile, error)
 // GetProfile returns the profile with the given id, or ErrNotFound.
 func (s *SQLiteStore) GetProfile(ctx context.Context, id int64) (model.Profile, error) {
 	row := s.db.QueryRowContext(ctx,
-		`SELECT id, name, avatar, onboarded, created_at FROM profiles WHERE id = ?`, id,
+		`SELECT id, name, onboarded, created_at FROM profiles WHERE id = ?`, id,
 	)
 	p, err := scanProfile(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -330,7 +329,7 @@ func scanProfile(s rowScanner) (model.Profile, error) {
 		p         model.Profile
 		createdAt string
 	)
-	if err := s.Scan(&p.ID, &p.Name, &p.Avatar, &p.Onboarded, &createdAt); err != nil {
+	if err := s.Scan(&p.ID, &p.Name, &p.Onboarded, &createdAt); err != nil {
 		return model.Profile{}, err
 	}
 	parsed, err := parseTime(createdAt)

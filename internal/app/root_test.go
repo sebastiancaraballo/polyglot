@@ -33,7 +33,7 @@ func TestWipeAndResetClearsData(t *testing.T) {
 	}
 
 	// Seed an onboarded profile with progress.
-	profile, err := store.CreateProfile(ctx, "tester", "")
+	profile, err := store.CreateProfile(ctx, "tester")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestProfileCreatedWithoutTutorialSetsOnboardedAndMenu(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 
-	profile, err := store.CreateProfile(ctx, "Mei", "identicon:0")
+	profile, err := store.CreateProfile(ctx, "Mei")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}
@@ -128,11 +128,11 @@ func TestDeleteActiveProfileSwitchesToRemainingProfile(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 
-	first, err := store.CreateProfile(ctx, "Ana", "initials:0")
+	first, err := store.CreateProfile(ctx, "Ana")
 	if err != nil {
 		t.Fatalf("CreateProfile first: %v", err)
 	}
-	second, err := store.CreateProfile(ctx, "Mei", "identicon:1")
+	second, err := store.CreateProfile(ctx, "Mei")
 	if err != nil {
 		t.Fatalf("CreateProfile second: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestDeleteLastProfileReturnsToProfileSetup(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 
-	profile, err := store.CreateProfile(ctx, "Ana", "initials:0")
+	profile, err := store.CreateProfile(ctx, "Ana")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}

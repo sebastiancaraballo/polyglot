@@ -9,24 +9,24 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/model"
 )
 
-func TestProfileAvatarRoundTrip(t *testing.T) {
+func TestProfileNameRoundTrip(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 
-	created, err := store.CreateProfile(ctx, "Mei", "identicon:2")
+	created, err := store.CreateProfile(ctx, "Mei")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}
-	if created.Avatar != "identicon:2" {
-		t.Errorf("created avatar = %q, want %q", created.Avatar, "identicon:2")
+	if created.Name != "Mei" {
+		t.Errorf("created name = %q, want %q", created.Name, "Mei")
 	}
 
 	got, err := store.GetProfile(ctx, created.ID)
 	if err != nil {
 		t.Fatalf("GetProfile: %v", err)
 	}
-	if got.Avatar != "identicon:2" || got.Name != "Mei" {
-		t.Errorf("GetProfile = %+v, want name Mei avatar identicon:2", got)
+	if got.Name != "Mei" {
+		t.Errorf("GetProfile = %+v, want name Mei", got)
 	}
 }
 
@@ -34,7 +34,7 @@ func TestDeleteProfileCascades(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 
-	p, err := store.CreateProfile(ctx, "tester", "initials:0")
+	p, err := store.CreateProfile(ctx, "tester")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestActiveProfileID(t *testing.T) {
 		t.Fatalf("fresh GetActiveProfileID = ok %v err %v, want ok=false", ok, err)
 	}
 
-	p, err := store.CreateProfile(ctx, "tester", "")
+	p, err := store.CreateProfile(ctx, "tester")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}

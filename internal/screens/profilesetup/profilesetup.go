@@ -7,21 +7,12 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 
-	"github.com/sebastiancaraballo/polyglot/internal/avatar"
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/model"
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
 	"github.com/sebastiancaraballo/polyglot/internal/storage"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
-)
-
-type step int
-
-const (
-	stepName step = iota
-	stepAvatar
 )
 
 // Deps are the dependencies the profile setup flow needs.
@@ -32,16 +23,13 @@ type Deps struct {
 	Tutorial bool
 }
 
-// Model is the profile creation flow: it asks for a name, lets the learner choose
-// one generated text avatar, creates the profile, and reports it to the router.
+// Model is the profile creation flow: it asks for a name, creates the profile,
+// and reports it to the router.
 type Model struct {
 	deps Deps
 
-	step      step
 	name      string
 	submitted bool
-	choices   []avatar.Choice
-	selected  int
 	err       error
 
 	width, height int
@@ -68,24 +56,12 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c":
 		return m, tea.Quit
-	}
-
-	switch m.step {
-	case stepAvatar:
-		return m.handleAvatar(msg)
-	default:
-		return m.handleName(msg)
-	}
-}
-
-func (m Model) handleName(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
 	case "esc":
 		if !m.deps.Tutorial {
 			return m, nav.Back()
 		}
 	case "enter":
-		return m.submitName()
+		return m.createProfile()
 	case "space":
 		m.name += " "
 	case "backspace", "ctrl+h":
@@ -99,57 +75,15 @@ func (m Model) handleName(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) submitName() (tea.Model, tea.Cmd) {
+func (m Model) createProfile() (tea.Model, tea.Cmd) {
 	m.submitted = true
 	name, err := model.NormalizeName(m.name)
 	if err != nil {
 		return m, nil
 	}
 	m.name = name
-	m.choices = avatar.Options(name)
-	m.selected = 0
-	m.step = stepAvatar
-	m.err = nil
-	return m, nil
-}
 
-func (m Model) handleAvatar(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc":
-		m.step = stepName
-		m.err = nil
-	case "left", "h", "up", "k":
-		if m.selected > 0 {
-			m.selected--
-		}
-	case "right", "l", "down", "j":
-		if m.selected < len(m.choices)-1 {
-			m.selected++
-		}
-	case "1", "2", "3", "4", "5":
-		i := int(msg.String()[0] - '1')
-		if i < len(m.choices) {
-			m.selected = i
-		}
-	}
-	if ui.IsConfirmKey(msg) {
-		return m.createProfile()
-	}
-	return m, nil
-}
-
-func (m Model) createProfile() (tea.Model, tea.Cmd) {
-	name, err := model.NormalizeName(m.name)
-	if err != nil {
-		m.step = stepName
-		m.submitted = true
-		return m, nil
-	}
-	m.name = name
-	if len(m.choices) == 0 {
-		m.choices = avatar.Options(m.name)
-	}
-	p, err := m.deps.Store.CreateProfile(context.Background(), m.name, m.choices[m.selected].Spec)
+	p, err := m.deps.Store.CreateProfile(context.Background(), m.name)
 	if err != nil {
 		m.err = err
 		return m, nil
@@ -159,14 +93,7 @@ func (m Model) createProfile() (tea.Model, tea.Cmd) {
 
 // View implements tea.Model.
 func (m Model) View() tea.View {
-	var content string
-	switch m.step {
-	case stepAvatar:
-		content = m.avatarView()
-	default:
-		content = m.nameView()
-	}
-	view := tea.NewView(ui.Frame(m.deps.Theme, m.width, m.height, content))
+	view := tea.NewView(ui.Frame(m.deps.Theme, m.width, m.height, m.nameView()))
 	view.AltScreen = true
 	return view
 }
@@ -193,6 +120,12 @@ func (m Model) nameView() string {
 		b.WriteString("\n")
 	}
 
+	if m.err != nil {
+		b.WriteString("\n")
+		b.WriteString(t.Error.Render(msgs.ProfileCreateError))
+		b.WriteString("\n")
+	}
+
 	b.WriteString("\n")
 	help := msgs.ProfileNameHelpFirst
 	if !m.deps.Tutorial {
@@ -200,46 +133,6 @@ func (m Model) nameView() string {
 	}
 	b.WriteString(t.Help.Render(help))
 	return b.String()
-}
-
-func (m Model) avatarView() string {
-	t := m.deps.Theme
-	msgs := m.deps.Msgs
-
-	var b strings.Builder
-	b.WriteString(t.Title.Render(msgs.ProfileAvatarTitle))
-	b.WriteString("\n\n")
-	b.WriteString(msgs.ProfileAvatarPrompt)
-	b.WriteString("\n\n")
-	b.WriteString(m.avatarOptions())
-
-	if m.err != nil {
-		b.WriteString("\n\n")
-		b.WriteString(t.Error.Render(msgs.ProfileCreateError))
-	}
-
-	b.WriteString("\n\n")
-	b.WriteString(t.Help.Render(msgs.ProfileAvatarHelp))
-	return b.String()
-}
-
-func (m Model) avatarOptions() string {
-	blocks := make([]string, 0, len(m.choices))
-	for i, choice := range m.choices {
-		marker := "  "
-		if i == m.selected {
-			marker = "▸ "
-		}
-		block := fmt.Sprintf("%s%d\n%s", marker, i+1, choice.Tile)
-		if i == m.selected {
-			block = m.deps.Theme.Selected.Render(block)
-		} else {
-			block = m.deps.Theme.Normal.Render(block)
-		}
-		block = lipgloss.NewStyle().MarginRight(1).Render(block)
-		blocks = append(blocks, block)
-	}
-	return lipgloss.JoinHorizontal(lipgloss.Top, blocks...)
 }
 
 func (m Model) validationText() string {
