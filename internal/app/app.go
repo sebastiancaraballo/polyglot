@@ -4,6 +4,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	tea "charm.land/bubbletea/v2"
@@ -14,10 +15,6 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/storage"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
 )
-
-// defaultProfileName is used when bootstrapping the first profile. Proper profile
-// selection arrives with the onboarding flow.
-const defaultProfileName = "Estudiante"
 
 // Run starts the Polyglot application. The version string is displayed in the UI.
 func Run(version string) error {
@@ -38,7 +35,7 @@ func Run(version string) error {
 	}
 	defer func() { _ = store.Close() }()
 
-	profile, err := ensureProfile(ctx, store)
+	profile, err := resolveProfile(ctx, store)
 	if err != nil {
 		return err
 	}
@@ -59,14 +56,30 @@ func Run(version string) error {
 	return nil
 }
 
-// ensureProfile returns the first existing profile or creates a default one.
-func ensureProfile(ctx context.Context, store storage.Storage) (model.Profile, error) {
+// resolveProfile returns the persisted active profile, the first existing profile,
+// or the zero Profile when this is a first run with no profiles yet.
+func resolveProfile(ctx context.Context, store storage.Storage) (model.Profile, error) {
+	if id, ok, err := store.GetActiveProfileID(ctx); err != nil {
+		return model.Profile{}, err
+	} else if ok {
+		profile, err := store.GetProfile(ctx, id)
+		if err == nil {
+			return profile, nil
+		}
+		if !errors.Is(err, storage.ErrNotFound) {
+			return model.Profile{}, err
+		}
+	}
+
 	profiles, err := store.ListProfiles(ctx)
 	if err != nil {
 		return model.Profile{}, err
 	}
-	if len(profiles) > 0 {
-		return profiles[0], nil
+	if len(profiles) == 0 {
+		return model.Profile{}, nil
 	}
-	return store.CreateProfile(ctx, defaultProfileName, "")
+	if err := store.SetActiveProfileID(ctx, profiles[0].ID); err != nil {
+		return model.Profile{}, err
+	}
+	return profiles[0], nil
 }

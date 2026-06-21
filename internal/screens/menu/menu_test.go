@@ -12,7 +12,7 @@ import (
 )
 
 func newTestMenu() Model {
-	summary := Summary{XP: 1240, Streak: 5, Learned: 8, Total: 20}
+	summary := Summary{Name: "Sebastián", Avatar: "initials:0", XP: 1240, Streak: 5, Learned: 8, Total: 20}
 	return New(ui.NewTheme(true), i18n.ES, summary, "test")
 }
 
@@ -48,7 +48,7 @@ func TestMenuCursorClamped(t *testing.T) {
 
 func TestMenuQuitItem(t *testing.T) {
 	m := newTestMenu()
-	m.cursor = len(m.items) - 1 // Quit
+	m.cursor = len(m.items) // Quit
 	_, cmd := m.choose()
 	if cmd == nil {
 		t.Fatal("selecting Quit should return a command")
@@ -68,7 +68,7 @@ func TestMenuQuitKey(t *testing.T) {
 
 func TestMenuNavigates(t *testing.T) {
 	m := newTestMenu()
-	m.cursor = 0 // kana
+	m.cursor = 1 // kana
 	_, cmd := m.choose()
 	if cmd == nil {
 		t.Fatal("selecting a study screen should return a navigation command")
@@ -97,7 +97,7 @@ func TestMenuUsesTextSymbols(t *testing.T) {
 
 func TestMenuSpaceNavigates(t *testing.T) {
 	m := newTestMenu()
-	m.cursor = 0 // kana
+	m.cursor = 1 // kana
 
 	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 	if cmd == nil {
@@ -115,9 +115,26 @@ func TestMenuSpaceNavigates(t *testing.T) {
 func TestMenuViewShowsProgress(t *testing.T) {
 	m := newTestMenu()
 	content := m.View().Content
-	for _, want := range []string{"Polyglot", "es → ja", i18n.ES.XPLabel, "1240", i18n.ES.StreakLabel, i18n.ES.ItemKana} {
+	for _, want := range []string{"Polyglot", "es → ja", "Sebastián", i18n.ES.SwitchProfile, i18n.ES.XPLabel, "1240", i18n.ES.StreakLabel, i18n.ES.ItemKana} {
 		if !strings.Contains(content, want) {
 			t.Errorf("view is missing %q", want)
 		}
+	}
+}
+
+func TestMenuProfileHeaderNavigatesToProfiles(t *testing.T) {
+	m := newTestMenu()
+	m.cursor = 0
+
+	_, cmd := m.choose()
+	if cmd == nil {
+		t.Fatal("selecting the profile header should return a navigation command")
+	}
+	msg, ok := cmd().(nav.GoToMsg)
+	if !ok {
+		t.Fatalf("expected nav.GoToMsg, got %T", cmd())
+	}
+	if msg.Screen != nav.Profiles {
+		t.Errorf("navigated to %v, want Profiles", msg.Screen)
 	}
 }

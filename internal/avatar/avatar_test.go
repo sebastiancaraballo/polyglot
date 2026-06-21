@@ -38,6 +38,16 @@ func TestInline(t *testing.T) {
 	}
 }
 
+func TestInlineSpecUsesIdenticonShape(t *testing.T) {
+	got := InlineSpec("identicon:1", "Mei")
+	if got == Inline("Mei") {
+		t.Errorf("InlineSpec identicon = %q, want shape distinct from initials", got)
+	}
+	if strings.TrimSpace(got) == "" {
+		t.Error("InlineSpec identicon should not be blank")
+	}
+}
+
 func TestIdenticonShapeAndSymmetry(t *testing.T) {
 	tile := tile("identicon:1", "Mei")
 	lines := strings.Split(tile, "\n")

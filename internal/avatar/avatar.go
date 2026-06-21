@@ -44,6 +44,31 @@ func Render(t ui.Theme, spec, name string) string {
 // Inline returns a compact one-line token (the initials) for list rows.
 func Inline(name string) string { return initials(name) }
 
+// InlineSpec returns a compact one-line representation of the stored avatar spec.
+// Initials stay as initials; identicons use their center row so the chosen shape is
+// still visible in dense UI such as menus and switchers.
+func InlineSpec(spec, name string) string {
+	kind, _ := parseSpec(spec)
+	if kind != "identicon" {
+		return initials(name)
+	}
+	lines := strings.Split(tile(spec, name), "\n")
+	if len(lines) == 0 {
+		return initials(name)
+	}
+	for i := len(lines) / 2; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) != "" {
+			return strings.TrimRight(lines[i], " ")
+		}
+	}
+	for i := 0; i < len(lines)/2; i++ {
+		if strings.TrimSpace(lines[i]) != "" {
+			return strings.TrimRight(lines[i], " ")
+		}
+	}
+	return initials(name)
+}
+
 func tile(spec, name string) string {
 	kind, variant := parseSpec(spec)
 	if kind == "identicon" {

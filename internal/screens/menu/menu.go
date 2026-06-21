@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"github.com/sebastiancaraballo/polyglot/internal/avatar"
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
@@ -15,6 +16,8 @@ import (
 // Summary is the progress data shown in the menu header (XP, streak, and the
 // number of words learned).
 type Summary struct {
+	Name    string
+	Avatar  string
 	XP      int
 	Streak  int
 	Learned int
@@ -77,7 +80,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor--
 			}
 		case "down", "j":
-			if m.cursor < len(m.items)-1 {
+			if m.cursor < len(m.items) {
 				m.cursor++
 			}
 		}
@@ -89,7 +92,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) choose() (tea.Model, tea.Cmd) {
-	it := m.items[m.cursor]
+	if m.cursor == 0 {
+		return m, nav.GoTo(nav.Profiles)
+	}
+	it := m.items[m.cursor-1]
 	if it.quit {
 		return m, tea.Quit
 	}
@@ -103,6 +109,8 @@ func (m Model) View() tea.View {
 	header := fmt.Sprintf("%s  %s", m.msgs.AppName, m.msgs.Tagline)
 	b.WriteString(m.theme.Title.Render(header))
 	b.WriteString("\n")
+	b.WriteString(m.profileHeader())
+	b.WriteString("\n")
 	b.WriteString(m.theme.Subtle.Render(m.badge()))
 	b.WriteString("\n\n")
 	b.WriteString(m.msgs.MenuPrompt)
@@ -110,7 +118,7 @@ func (m Model) View() tea.View {
 
 	for i, it := range m.items {
 		line := fmt.Sprintf("%s  %s", it.icon, it.label)
-		if i == m.cursor {
+		if i+1 == m.cursor {
 			b.WriteString(m.theme.Selected.Render("▸ " + line))
 		} else {
 			b.WriteString(m.theme.Normal.Render("  " + line))
@@ -133,4 +141,20 @@ func (m Model) badge() string {
 		m.msgs.StreakLabel, m.summary.Streak, m.msgs.DaysSuffix,
 		m.summary.Learned, m.msgs.LearnedSuffix)
 	return lipgloss.JoinVertical(lipgloss.Left, xp, streak)
+}
+
+func (m Model) profileHeader() string {
+	name := m.summary.Name
+	if name == "" {
+		name = m.msgs.ProfileNamePlaceholder
+	}
+	marker := "  "
+	if m.cursor == 0 {
+		marker = "▸ "
+	}
+	content := fmt.Sprintf("%s⇄ [%s] %s · %s", marker, avatar.InlineSpec(m.summary.Avatar, name), name, m.msgs.SwitchProfile)
+	if m.cursor == 0 {
+		return m.theme.Selected.Render(content)
+	}
+	return m.theme.Normal.Render(content)
 }

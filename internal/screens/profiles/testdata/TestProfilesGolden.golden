@@ -1,14 +1,14 @@
 ╭──────────────────────────────────────────────────────────────╮
 │                                                              │
-│   Borrar mi perfil                                           │
+│   Perfiles                                                   │
 │                                                              │
-│   Esto borra solo el perfil actual y su progreso. No se      │
-│   puede deshacer.                                            │
+│   ▸ [A] Ana  ● actual                                        │
+│     [  ██  ██] Mei                                           │
+│     ＋ Crear nuevo perfil                                    │
 │                                                              │
-│   ▸ Cancelar                                                 │
-│     Sí, borrar mi perfil                                     │
+│   ↑/↓ mover · ENTER elegir · ESC menú                        │
 │                                                              │
-│   ↑/↓ elegir · ENTER confirmar · ESC cancelar                │
+│                                                              │
 │                                                              │
 │                                                              │
 │                                                              │

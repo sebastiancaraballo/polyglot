@@ -29,13 +29,28 @@ func TestSelectingDeleteOpensConfirmation(t *testing.T) {
 	}
 }
 
-func TestConfirmYesEmitsWipeData(t *testing.T) {
+func TestConfirmYesEmitsDeleteProfile(t *testing.T) {
 	m := newTestModel()
 	next, _ := m.Update(enter())                                      // open confirmation
 	next, _ = next.(Model).Update(tea.KeyPressMsg{Code: tea.KeyDown}) // move to "Yes"
 	if !next.(Model).confirmYes {
 		t.Fatal("down should move the cursor to Yes")
 	}
+	_, cmd := next.(Model).Update(enter())
+	if cmd == nil {
+		t.Fatal("confirming Yes should return a command")
+	}
+	if _, ok := cmd().(nav.DeleteProfileMsg); !ok {
+		t.Fatalf("expected nav.DeleteProfileMsg, got %T", cmd())
+	}
+}
+
+func TestConfirmAllDataEmitsWipeData(t *testing.T) {
+	m := newTestModel()
+	m.cursor = 1
+	next, _ := m.Update(enter())                                      // open confirmation
+	next, _ = next.(Model).Update(tea.KeyPressMsg{Code: tea.KeyDown}) // move to "Yes"
+
 	_, cmd := next.(Model).Update(enter())
 	if cmd == nil {
 		t.Fatal("confirming Yes should return a command")

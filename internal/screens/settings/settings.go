@@ -18,15 +18,15 @@ type Deps struct {
 	Msgs  i18n.Messages
 }
 
-// Model is the settings screen. It shows a list of actions and, for the
-// destructive "delete all app data" action, an explicit confirmation step whose
-// selection defaults to "Cancel".
+// Model is the settings screen. It shows a list of destructive actions, each with
+// an explicit confirmation step whose selection defaults to "Cancel".
 type Model struct {
 	deps Deps
 
-	cursor     int  // index into the action list
-	confirming bool // true while showing the delete confirmation
-	confirmYes bool // true when the confirmation cursor is on "Yes, delete"
+	cursor        int  // index into the action list
+	confirming    bool // true while showing the delete confirmation
+	confirmAction int  // index of the action being confirmed
+	confirmYes    bool // true when the confirmation cursor is on "Yes, delete"
 
 	width, height int
 }
@@ -72,8 +72,8 @@ func (m Model) handleList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	if ui.IsConfirmKey(msg) {
-		// The only action is the destructive one; open its confirmation.
 		m.confirming = true
+		m.confirmAction = m.cursor
 		m.confirmYes = false // default selection is "Cancel"
 	}
 	return m, nil
@@ -90,17 +90,38 @@ func (m Model) handleConfirm(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 	if ui.IsConfirmKey(msg) {
 		if m.confirmYes {
-			return m, nav.WipeData()
+			return m, actions[m.confirmAction].cmd()
 		}
 		m.confirming = false
 	}
 	return m, nil
 }
 
-// actions lists the settings entries. Today there is only the destructive one;
-// future settings (romaji, theme, …) extend this list.
-var actions = []struct{ label func(i18n.Messages) string }{
-	{func(m i18n.Messages) string { return m.DeleteAllData }},
+type action struct {
+	label   func(i18n.Messages) string
+	title   func(i18n.Messages) string
+	warning func(i18n.Messages) string
+	confirm func(i18n.Messages) string
+	cmd     func() tea.Cmd
+}
+
+// actions lists the settings entries. All destructive actions use the same
+// confirmation UI and differ only in copy and emitted navigation message.
+var actions = []action{
+	{
+		label:   func(m i18n.Messages) string { return m.DeleteProfile },
+		title:   func(m i18n.Messages) string { return m.DeleteProfile },
+		warning: func(m i18n.Messages) string { return m.DeleteProfileWarning },
+		confirm: func(m i18n.Messages) string { return m.ConfirmDeleteProfile },
+		cmd:     nav.DeleteProfile,
+	},
+	{
+		label:   func(m i18n.Messages) string { return m.DeleteAllData },
+		title:   func(m i18n.Messages) string { return m.DeleteAllData },
+		warning: func(m i18n.Messages) string { return m.DeleteAllWarning },
+		confirm: func(m i18n.Messages) string { return m.ConfirmDelete },
+		cmd:     nav.WipeData,
+	},
 }
 
 // View implements tea.Model.
@@ -137,10 +158,11 @@ func (m Model) listView() string {
 
 func (m Model) confirmView() string {
 	t := m.deps.Theme
+	action := actions[m.confirmAction]
 	var b strings.Builder
-	b.WriteString(t.Title.Render(m.deps.Msgs.DeleteAllData))
+	b.WriteString(t.Title.Render(action.title(m.deps.Msgs)))
 	b.WriteString("\n\n")
-	b.WriteString(t.Error.Render(m.deps.Msgs.DeleteAllWarning))
+	b.WriteString(t.Error.Render(action.warning(m.deps.Msgs)))
 	b.WriteString("\n\n")
 
 	options := []struct {
@@ -148,7 +170,7 @@ func (m Model) confirmView() string {
 		yes   bool
 	}{
 		{m.deps.Msgs.CancelLabel, false},
-		{m.deps.Msgs.ConfirmDelete, true},
+		{action.confirm(m.deps.Msgs), true},
 	}
 	for _, opt := range options {
 		selected := opt.yes == m.confirmYes
