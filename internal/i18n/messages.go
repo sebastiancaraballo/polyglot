@@ -37,9 +37,6 @@ type Messages struct {
 	ProfileNameInvalid     string
 	ProfileNameHelpFirst   string
 	ProfileNameHelpCancel  string
-	ProfileAvatarTitle     string
-	ProfileAvatarPrompt    string
-	ProfileAvatarHelp      string
 	ProfileCreateError     string
 	ProfilesTitle          string
 	ProfileCreateNew       string
@@ -141,11 +138,8 @@ var ES = Messages{
 	ProfileNameEmpty:       "Escribe un nombre.",
 	ProfileNameTooLongFmt:  "Máximo %d caracteres.",
 	ProfileNameInvalid:     "Usa letras, espacios o puntuación de nombre.",
-	ProfileNameHelpFirst:   "Escribe tu nombre · ENTER continuar",
-	ProfileNameHelpCancel:  "Escribe tu nombre · ENTER continuar · ESC cancelar",
-	ProfileAvatarTitle:     "Elige tu avatar",
-	ProfileAvatarPrompt:    "Estos avatares se generan desde tu nombre.",
-	ProfileAvatarHelp:      "←/→ mover · 1-5 elegir · ENTER confirmar · ESC volver",
+	ProfileNameHelpFirst:   "Escribe tu nombre · ENTER crear perfil",
+	ProfileNameHelpCancel:  "Escribe tu nombre · ENTER crear perfil · ESC cancelar",
 	ProfileCreateError:     "No pude crear el perfil.",
 	ProfilesTitle:          "Perfiles",
 	ProfileCreateNew:       "＋ Crear nuevo perfil",

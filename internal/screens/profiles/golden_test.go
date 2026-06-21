@@ -20,11 +20,11 @@ func TestProfilesGolden(t *testing.T) {
 	t.Cleanup(func() { _ = store.Close() })
 
 	ctx := context.Background()
-	first, err := store.CreateProfile(ctx, "Ana", "initials:0")
+	first, err := store.CreateProfile(ctx, "Ana")
 	if err != nil {
 		t.Fatalf("CreateProfile first: %v", err)
 	}
-	if _, err := store.CreateProfile(ctx, "Mei", "identicon:1"); err != nil {
+	if _, err := store.CreateProfile(ctx, "Mei"); err != nil {
 		t.Fatalf("CreateProfile second: %v", err)
 	}
 

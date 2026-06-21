@@ -13,9 +13,8 @@ var ErrNotFound = errors.New("storage: not found")
 // Storage persists learner profiles and their progress. Implementations must be
 // safe for sequential use by a single running application instance.
 type Storage interface {
-	// CreateProfile creates a new profile (with its text-avatar spec and an empty
-	// stats row) and returns it.
-	CreateProfile(ctx context.Context, name, avatar string) (model.Profile, error)
+	// CreateProfile creates a new profile (with an empty stats row) and returns it.
+	CreateProfile(ctx context.Context, name string) (model.Profile, error)
 	// DeleteProfile removes a profile and its stats and card states.
 	DeleteProfile(ctx context.Context, id int64) error
 	// ListProfiles returns all profiles ordered by creation time.

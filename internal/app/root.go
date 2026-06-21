@@ -258,7 +258,6 @@ func (c appContext) summary() menu.Summary {
 
 	return menu.Summary{
 		Name:    c.profile.Name,
-		Avatar:  c.profile.Avatar,
 		XP:      stats.XP,
 		Streak:  stats.Streak,
 		Learned: learned,

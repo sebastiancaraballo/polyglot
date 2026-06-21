@@ -2,12 +2,10 @@ package profiles
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/sebastiancaraballo/polyglot/internal/avatar"
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/model"
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
@@ -133,7 +131,7 @@ func (m Model) View() tea.View {
 }
 
 func (m Model) profileLine(p model.Profile) string {
-	line := fmt.Sprintf("[%s] %s", avatar.InlineSpec(p.Avatar, p.Name), p.Name)
+	line := p.Name
 	if p.ID == m.deps.ActiveID {
 		line += "  ● " + m.deps.Msgs.ActiveProfileLabel
 	}

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Experience points (XP): a single per-profile counter that grows with every interaction — quiz answers, flashcard grades, and kana trainer answers (correct answers earn more; flashcards scale by recall grade), plus a one-time bonus for completing onboarding. The total is shown on the menu badge and the stats screen.
-- Named profile setup with Unicode name validation, generated text avatars, active-profile persistence, and a profile switcher reachable from the main menu header.
+- Named profile setup with Unicode name validation, active-profile persistence, and a profile switcher reachable from the main menu header.
 - Settings actions for deleting only the active profile or deleting all app data, both behind explicit confirmations defaulting to Cancel. Wiping all data now returns to first-run profile setup.
 
 ### Changed

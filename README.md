@@ -18,7 +18,7 @@ The application ships as a **single self-contained binary** — no runtime to in
 - ◇ **Kana trainer** — learn hiragana and katakana.
 - ✓ **Multiple-choice quizzes** — quick reinforcement.
 - ▤ **Progress, XP & streaks** — earn experience points for every answer, keep a daily streak, and track words learned.
-- ◎ **Local profiles** — named learners with text avatars, a profile switcher, and per-profile progress.
+- ◎ **Local profiles** — named learners with a profile switcher and per-profile progress.
 - ⚙ **Settings** — delete the active profile or all app data (with confirmation) to start fresh.
 - ※ **Accessible** — responsive layout, high-contrast theme, `NO_COLOR` support, keyboard-first.
 
@@ -44,9 +44,9 @@ go install github.com/sebastiancaraballo/polyglot/cmd/polyglot@latest
 polyglot
 ```
 
-On first run you'll create a named profile, choose a text avatar, and go through a short
-onboarding that teaches the keyboard controls with a guided exercise. Use the profile
-header in the main menu to switch learners or create another profile.
+On first run you'll create a named profile and go through a short onboarding that teaches
+the keyboard controls with a guided exercise. Use the profile header in the main menu to
+switch learners or create another profile.
 
 ## Development
 

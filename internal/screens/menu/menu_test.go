@@ -12,7 +12,7 @@ import (
 )
 
 func newTestMenu() Model {
-	summary := Summary{Name: "Sebastián", Avatar: "initials:0", XP: 1240, Streak: 5, Learned: 8, Total: 20}
+	summary := Summary{Name: "Sebastián", XP: 1240, Streak: 5, Learned: 8, Total: 20}
 	return New(ui.NewTheme(true), i18n.ES, summary, "test")
 }
 
@@ -27,22 +27,30 @@ func TestMenuNavigationMovesCursor(t *testing.T) {
 	m := newTestMenu()
 
 	down, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
-	if got := down.(Model).cursor; got != 1 {
-		t.Fatalf("cursor after down = %d, want 1", got)
+	if got := down.(Model).cursor; got != 2 {
+		t.Fatalf("cursor after down = %d, want 2", got)
 	}
 
 	up, _ := down.(Model).Update(tea.KeyPressMsg{Code: tea.KeyUp})
-	if got := up.(Model).cursor; got != 0 {
-		t.Fatalf("cursor after up = %d, want 0", got)
+	if got := up.(Model).cursor; got != 1 {
+		t.Fatalf("cursor after up = %d, want 1", got)
 	}
 }
 
 func TestMenuCursorClamped(t *testing.T) {
 	m := newTestMenu()
+	m.cursor = 0
 	// Pressing up at the top should not move past 0.
 	up, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	if got := up.(Model).cursor; got != 0 {
 		t.Fatalf("cursor = %d, want 0", got)
+	}
+}
+
+func TestMenuDefaultsToKana(t *testing.T) {
+	m := newTestMenu()
+	if m.cursor != 1 {
+		t.Fatalf("default cursor = %d, want 1 for Kana", m.cursor)
 	}
 }
 

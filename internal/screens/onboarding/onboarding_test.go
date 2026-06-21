@@ -21,7 +21,7 @@ func newTestModel(t *testing.T) (Model, *storage.SQLiteStore, int64) {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 
-	profile, err := store.CreateProfile(context.Background(), "tester", "")
+	profile, err := store.CreateProfile(context.Background(), "tester")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}

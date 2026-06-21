@@ -8,7 +8,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/sebastiancaraballo/polyglot/internal/avatar"
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
 	"github.com/sebastiancaraballo/polyglot/internal/storage"
@@ -32,41 +31,15 @@ func TestSubmitInvalidNameStaysOnNameStep(t *testing.T) {
 		t.Fatalf("invalid submit returned command %T", cmd())
 	}
 	got := next.(Model)
-	if got.step != stepName {
-		t.Fatalf("step = %v, want stepName", got.step)
-	}
 	if !strings.Contains(got.View().Content, i18n.ES.ProfileNameEmpty) {
 		t.Error("view should show the empty-name validation message")
-	}
-}
-
-func TestSubmitValidNameMovesToAvatarStep(t *testing.T) {
-	m := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: newStore(t), Tutorial: true})
-	m.name = "  José Niño  "
-
-	next, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	if cmd != nil {
-		t.Fatalf("valid name returned command %T before avatar selection", cmd())
-	}
-	got := next.(Model)
-	if got.step != stepAvatar {
-		t.Fatalf("step = %v, want stepAvatar", got.step)
-	}
-	if got.name != "José Niño" {
-		t.Errorf("normalized name = %q, want José Niño", got.name)
-	}
-	if len(got.choices) != len(avatar.Options("José Niño")) {
-		t.Errorf("choices = %d, want generated avatar options", len(got.choices))
 	}
 }
 
 func TestCreateProfileEmitsProfileCreated(t *testing.T) {
 	store := newStore(t)
 	m := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, Tutorial: false})
-	m.name = "Mei"
-	m.choices = avatar.Options("Mei")
-	m.step = stepAvatar
-	m.selected = 1
+	m.name = "  Mei  "
 
 	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil {
@@ -84,7 +57,7 @@ func TestCreateProfileEmitsProfileCreated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetProfile: %v", err)
 	}
-	if profile.Name != "Mei" || profile.Avatar != "identicon:0" {
-		t.Errorf("profile = %+v, want name Mei avatar identicon:0", profile)
+	if profile.Name != "Mei" {
+		t.Errorf("profile = %+v, want name Mei", profile)
 	}
 }

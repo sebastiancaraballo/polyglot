@@ -23,7 +23,7 @@ func TestStatsGolden(t *testing.T) {
 	t.Cleanup(func() { _ = store.Close() })
 
 	ctx := context.Background()
-	profile, err := store.CreateProfile(ctx, "tester", "")
+	profile, err := store.CreateProfile(ctx, "tester")
 	if err != nil {
 		t.Fatalf("CreateProfile: %v", err)
 	}
