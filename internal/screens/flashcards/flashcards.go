@@ -226,7 +226,7 @@ func (m Model) gradeOptions(card model.Card) string {
 		days := srs.PreviewInterval(state, l.grade, now)
 		parts = append(parts, fmt.Sprintf("[%s] %s (%s)", l.key, l.label, m.formatInterval(days)))
 	}
-	return strings.Join(parts, "  ")
+	return strings.Join(parts, "\n")
 }
 
 func (m Model) formatInterval(days int) string {
