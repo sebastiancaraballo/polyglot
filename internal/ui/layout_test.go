@@ -22,3 +22,9 @@ func TestWrapTextPreservesExistingLineBreaks(t *testing.T) {
 		t.Fatalf("WrapText() = %q", got)
 	}
 }
+
+func TestFrameContentWidthMatchesFrameInterior(t *testing.T) {
+	if got := FrameContentWidth(PlainTheme(), 80); got != 56 {
+		t.Fatalf("FrameContentWidth() = %d, want 56", got)
+	}
+}

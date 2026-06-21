@@ -3,9 +3,11 @@ package kana
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/model"
@@ -67,4 +69,44 @@ func TestAnsweringAwardsXP(t *testing.T) {
 	if stats.XP <= 0 {
 		t.Errorf("XP after a correct answer = %d, want > 0", stats.XP)
 	}
+}
+
+func TestKanaTilePositionStableAfterAnswer(t *testing.T) {
+	m := Model{
+		deps: Deps{
+			Theme: ui.PlainTheme(),
+			Msgs:  i18n.ES,
+		},
+		deck: []model.KanaItem{{Char: "ミ", Romaji: "mi", Type: model.Katakana}},
+		options: []string{
+			"mu",
+			"sa",
+			"mi",
+			"ne",
+		},
+		correct:  2,
+		selected: 0,
+		width:    80,
+		height:   24,
+	}
+
+	before := kanaTileColumn(t, m.questionView())
+	m.selected = 3
+	m.answered = true
+	after := kanaTileColumn(t, m.questionView())
+
+	if before != after {
+		t.Fatalf("tile column moved from %d to %d after answering", before, after)
+	}
+}
+
+func kanaTileColumn(t *testing.T, view string) int {
+	t.Helper()
+	for _, line := range strings.Split(view, "\n") {
+		if idx := strings.IndexRune(line, '╭'); idx >= 0 {
+			return lipgloss.Width(line[:idx])
+		}
+	}
+	t.Fatal("view does not contain kana tile")
+	return 0
 }
