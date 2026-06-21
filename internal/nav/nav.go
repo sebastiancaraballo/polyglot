@@ -15,6 +15,7 @@ const (
 	Quiz
 	Stats
 	Onboarding
+	Settings
 )
 
 // GoToMsg requests navigation to a screen.
@@ -31,4 +32,13 @@ type BackMsg struct{}
 // Back returns a command that requests navigation back to the main menu.
 func Back() tea.Cmd {
 	return func() tea.Msg { return BackMsg{} }
+}
+
+// WipeDataMsg requests deletion of all local app data. It is handled by the
+// router, which owns the storage connection and application context.
+type WipeDataMsg struct{}
+
+// WipeData returns a command that requests deletion of all local app data.
+func WipeData() tea.Cmd {
+	return func() tea.Msg { return WipeDataMsg{} }
 }

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,4 +21,16 @@ func DefaultPath() (string, error) {
 		return "", fmt.Errorf("create app dir %q: %w", appDir, err)
 	}
 	return filepath.Join(appDir, "polyglot.db"), nil
+}
+
+// Remove deletes the database at path along with its WAL and shared-memory
+// sidecar files. Missing files are not an error, so it is safe to call when the
+// database was never created. The caller must close any open connection first.
+func Remove(path string) error {
+	for _, p := range []string{path, path + "-wal", path + "-shm"} {
+		if err := os.Remove(p); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("remove %q: %w", p, err)
+		}
+	}
+	return nil
 }

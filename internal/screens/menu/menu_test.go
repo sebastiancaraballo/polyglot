@@ -84,7 +84,7 @@ func TestMenuNavigates(t *testing.T) {
 
 func TestMenuUsesTextSymbols(t *testing.T) {
 	m := newTestMenu()
-	want := []string{"◇", "▣", "✓", "▤", "⏻"}
+	want := []string{"◇", "▣", "✓", "▤", "⚙", "⏻"}
 	if len(m.items) != len(want) {
 		t.Fatalf("items = %d, want %d", len(m.items), len(want))
 	}
