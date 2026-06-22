@@ -18,6 +18,10 @@ type Messages struct {
 
 	// Settings
 	SettingsTitle        string
+	SettingsHelp         string
+	ShowRomajiLabel      string
+	OptionOn             string
+	OptionOff            string
 	DeleteProfile        string
 	DeleteProfileWarning string
 	ConfirmDeleteProfile string
@@ -121,6 +125,10 @@ var ES = Messages{
 	MenuHelp:       "↑/↓ moverse · ENTER elegir/cambiar perfil · Q salir",
 
 	SettingsTitle:        "Ajustes",
+	SettingsHelp:         "↑/↓ moverse · ENTER cambiar/confirmar · ESC volver",
+	ShowRomajiLabel:      "Mostrar romaji",
+	OptionOn:             "Sí",
+	OptionOff:            "No",
 	DeleteProfile:        "Borrar mi perfil",
 	DeleteProfileWarning: "Esto borra solo el perfil actual y su progreso. No se puede deshacer.",
 	ConfirmDeleteProfile: "Sí, borrar mi perfil",

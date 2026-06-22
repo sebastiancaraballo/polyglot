@@ -105,7 +105,7 @@ func (s *SQLiteStore) CreateProfile(ctx context.Context, name string) (model.Pro
 		return model.Profile{}, fmt.Errorf("commit: %w", err)
 	}
 
-	return model.Profile{ID: id, Name: name, Onboarded: false, CreatedAt: now}, nil
+	return model.Profile{ID: id, Name: name, Onboarded: false, ShowRomaji: true, CreatedAt: now}, nil
 }
 
 // DeleteProfile removes a profile and, via ON DELETE CASCADE, its stats and card
@@ -121,7 +121,7 @@ func (s *SQLiteStore) DeleteProfile(ctx context.Context, id int64) error {
 // ListProfiles returns all profiles ordered by creation time then id.
 func (s *SQLiteStore) ListProfiles(ctx context.Context) ([]model.Profile, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, name, onboarded, created_at FROM profiles ORDER BY created_at, id`,
+		`SELECT id, name, onboarded, show_romaji, created_at FROM profiles ORDER BY created_at, id`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("query profiles: %w", err)
@@ -145,7 +145,7 @@ func (s *SQLiteStore) ListProfiles(ctx context.Context) ([]model.Profile, error)
 // GetProfile returns the profile with the given id, or ErrNotFound.
 func (s *SQLiteStore) GetProfile(ctx context.Context, id int64) (model.Profile, error) {
 	row := s.db.QueryRowContext(ctx,
-		`SELECT id, name, onboarded, created_at FROM profiles WHERE id = ?`, id,
+		`SELECT id, name, onboarded, show_romaji, created_at FROM profiles WHERE id = ?`, id,
 	)
 	p, err := scanProfile(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -164,6 +164,17 @@ func (s *SQLiteStore) SetOnboarded(ctx context.Context, profileID int64) error {
 	)
 	if err != nil {
 		return fmt.Errorf("update onboarded: %w", err)
+	}
+	return requireAffected(res)
+}
+
+// SetShowRomaji sets whether a profile displays romaji alongside Japanese.
+func (s *SQLiteStore) SetShowRomaji(ctx context.Context, profileID int64, enabled bool) error {
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE profiles SET show_romaji = ? WHERE id = ?`, enabled, profileID,
+	)
+	if err != nil {
+		return fmt.Errorf("update show_romaji: %w", err)
 	}
 	return requireAffected(res)
 }
@@ -329,7 +340,7 @@ func scanProfile(s rowScanner) (model.Profile, error) {
 		p         model.Profile
 		createdAt string
 	)
-	if err := s.Scan(&p.ID, &p.Name, &p.Onboarded, &createdAt); err != nil {
+	if err := s.Scan(&p.ID, &p.Name, &p.Onboarded, &p.ShowRomaji, &createdAt); err != nil {
 		return model.Profile{}, err
 	}
 	parsed, err := parseTime(createdAt)

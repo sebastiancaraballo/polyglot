@@ -19,7 +19,7 @@ The application ships as a **single self-contained binary** — no runtime to in
 - ✓ **Multiple-choice quizzes** — quick reinforcement.
 - ▤ **Progress, XP & streaks** — earn experience points for every answer, keep a daily streak, and track words learned.
 - ◎ **Local profiles** — named learners with a profile switcher and per-profile progress.
-- ⚙ **Settings** — delete the active profile or all app data (with confirmation) to start fresh.
+- ⚙ **Settings** — toggle romaji visibility (per profile), and delete the active profile or all app data (with confirmation) to start fresh.
 - ※ **Accessible** — responsive layout, high-contrast theme, `NO_COLOR` support, keyboard-first.
 
 Typing/romaji input is planned for v1.1.

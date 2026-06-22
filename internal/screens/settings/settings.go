@@ -11,28 +11,33 @@ import (
 )
 
 // Deps are the dependencies the settings screen needs. The screen performs no
-// storage work itself: the destructive action emits nav.WipeData and the router
-// (which owns the storage connection) carries it out.
+// storage work itself: each entry emits a nav message (nav.SetShowRomaji,
+// nav.WipeData, …) and the router (which owns the storage connection) carries it
+// out.
 type Deps struct {
-	Theme ui.Theme
-	Msgs  i18n.Messages
+	Theme      ui.Theme
+	Msgs       i18n.Messages
+	ShowRomaji bool
 }
 
-// Model is the settings screen. It shows a list of destructive actions, each with
-// an explicit confirmation step whose selection defaults to "Cancel".
+// Model is the settings screen. The first row is the "show romaji" toggle; the
+// remaining rows are destructive actions, each with an explicit confirmation step
+// whose selection defaults to "Cancel".
 type Model struct {
 	deps Deps
 
-	cursor        int  // index into the action list
+	showRomaji bool // current value of the romaji toggle
+
+	cursor        int  // index into the row list (0 = toggle, 1.. = actions)
 	confirming    bool // true while showing the delete confirmation
-	confirmAction int  // index of the action being confirmed
+	confirmAction int  // index into actions of the action being confirmed
 	confirmYes    bool // true when the confirmation cursor is on "Yes, delete"
 
 	width, height int
 }
 
 // New builds the settings screen.
-func New(deps Deps) Model { return Model{deps: deps} }
+func New(deps Deps) Model { return Model{deps: deps, showRomaji: deps.ShowRomaji} }
 
 // Init implements tea.Model.
 func (m Model) Init() tea.Cmd { return nil }
@@ -67,13 +72,17 @@ func (m Model) handleList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.cursor--
 		}
 	case "down", "j":
-		if m.cursor < len(actions)-1 {
+		if m.cursor < len(actions) { // rows: 0 = toggle, 1..len(actions) = actions
 			m.cursor++
 		}
 	}
 	if ui.IsConfirmKey(msg) {
+		if m.cursor == 0 {
+			m.showRomaji = !m.showRomaji
+			return m, nav.SetShowRomaji(m.showRomaji)
+		}
 		m.confirming = true
-		m.confirmAction = m.cursor
+		m.confirmAction = m.cursor - 1
 		m.confirmYes = false // default selection is "Cancel"
 	}
 	return m, nil
@@ -141,19 +150,31 @@ func (m Model) listView() string {
 	b.WriteString(t.Title.Render(m.deps.Msgs.SettingsTitle))
 	b.WriteString("\n\n")
 
+	b.WriteString(m.renderRow(t, 0, m.romajiLabel()))
 	for i, a := range actions {
-		line := a.label(m.deps.Msgs)
-		if i == m.cursor {
-			b.WriteString(t.Selected.Render("▸ " + line))
-		} else {
-			b.WriteString(t.Normal.Render("  " + line))
-		}
-		b.WriteString("\n")
+		b.WriteString(m.renderRow(t, i+1, a.label(m.deps.Msgs)))
 	}
 
 	b.WriteString("\n")
-	b.WriteString(t.Help.Render(m.deps.Msgs.BackHelp))
+	b.WriteString(t.Help.Render(m.deps.Msgs.SettingsHelp))
 	return b.String()
+}
+
+// renderRow renders a single settings row, highlighting it when the cursor is on it.
+func (m Model) renderRow(t ui.Theme, index int, line string) string {
+	if index == m.cursor {
+		return t.Selected.Render("▸ "+line) + "\n"
+	}
+	return t.Normal.Render("  "+line) + "\n"
+}
+
+// romajiLabel renders the toggle row, e.g. "Mostrar romaji: Sí".
+func (m Model) romajiLabel() string {
+	value := m.deps.Msgs.OptionOff
+	if m.showRomaji {
+		value = m.deps.Msgs.OptionOn
+	}
+	return m.deps.Msgs.ShowRomajiLabel + ": " + value
 }
 
 func (m Model) confirmView() string {

@@ -11,14 +11,42 @@ import (
 )
 
 func newTestModel() Model {
-	return New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES})
+	return New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, ShowRomaji: true})
 }
 
 func enter() tea.KeyPressMsg { return tea.KeyPressMsg{Code: tea.KeyEnter} }
 func esc() tea.KeyPressMsg   { return tea.KeyPressMsg{Code: tea.KeyEscape} }
+func down() tea.KeyPressMsg  { return tea.KeyPressMsg{Code: tea.KeyDown} }
+
+// atDeleteProfile returns a model with the cursor on the "delete profile" row,
+// which sits just below the romaji toggle.
+func atDeleteProfile() Model {
+	m := newTestModel()
+	next, _ := m.Update(down())
+	return next.(Model)
+}
+
+func TestToggleRomajiEmitsMsg(t *testing.T) {
+	m := newTestModel() // toggle starts on (ShowRomaji: true)
+	next, cmd := m.Update(enter())
+	got := next.(Model)
+	if got.showRomaji {
+		t.Error("enter on the toggle should flip the displayed value to off")
+	}
+	if cmd == nil {
+		t.Fatal("toggling should emit a command")
+	}
+	msg, ok := cmd().(nav.SetShowRomajiMsg)
+	if !ok {
+		t.Fatalf("expected nav.SetShowRomajiMsg, got %T", cmd())
+	}
+	if msg.Enabled {
+		t.Error("toggling from on should emit Enabled=false")
+	}
+}
 
 func TestSelectingDeleteOpensConfirmation(t *testing.T) {
-	m := newTestModel()
+	m := atDeleteProfile()
 	next, _ := m.Update(enter())
 	got := next.(Model)
 	if !got.confirming {
@@ -30,9 +58,9 @@ func TestSelectingDeleteOpensConfirmation(t *testing.T) {
 }
 
 func TestConfirmYesEmitsDeleteProfile(t *testing.T) {
-	m := newTestModel()
-	next, _ := m.Update(enter())                                      // open confirmation
-	next, _ = next.(Model).Update(tea.KeyPressMsg{Code: tea.KeyDown}) // move to "Yes"
+	m := atDeleteProfile()
+	next, _ := m.Update(enter())          // open confirmation
+	next, _ = next.(Model).Update(down()) // move to "Yes"
 	if !next.(Model).confirmYes {
 		t.Fatal("down should move the cursor to Yes")
 	}
@@ -47,9 +75,9 @@ func TestConfirmYesEmitsDeleteProfile(t *testing.T) {
 
 func TestConfirmAllDataEmitsWipeData(t *testing.T) {
 	m := newTestModel()
-	m.cursor = 1
-	next, _ := m.Update(enter())                                      // open confirmation
-	next, _ = next.(Model).Update(tea.KeyPressMsg{Code: tea.KeyDown}) // move to "Yes"
+	m.cursor = 2                          // 0 = toggle, 1 = delete profile, 2 = delete all data
+	next, _ := m.Update(enter())          // open confirmation
+	next, _ = next.(Model).Update(down()) // move to "Yes"
 
 	_, cmd := next.(Model).Update(enter())
 	if cmd == nil {
@@ -61,7 +89,7 @@ func TestConfirmAllDataEmitsWipeData(t *testing.T) {
 }
 
 func TestConfirmDefaultCancelDoesNotWipe(t *testing.T) {
-	m := newTestModel()
+	m := atDeleteProfile()
 	next, _ := m.Update(enter()) // open confirmation (default Cancel)
 	res, cmd := next.(Model).Update(enter())
 	if cmd != nil {
@@ -84,7 +112,7 @@ func TestEscFromListGoesBack(t *testing.T) {
 }
 
 func TestEscFromConfirmCancels(t *testing.T) {
-	m := newTestModel()
+	m := atDeleteProfile()
 	next, _ := m.Update(enter()) // open confirmation
 	res, cmd := next.(Model).Update(esc())
 	if cmd != nil {

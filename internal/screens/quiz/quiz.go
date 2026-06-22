@@ -25,11 +25,12 @@ const (
 
 // Deps are the dependencies a quiz needs.
 type Deps struct {
-	Theme     ui.Theme
-	Msgs      i18n.Messages
-	Store     storage.Storage
-	ProfileID int64
-	Cards     []model.Card
+	Theme      ui.Theme
+	Msgs       i18n.Messages
+	Store      storage.Storage
+	ProfileID  int64
+	Cards      []model.Card
+	ShowRomaji bool
 }
 
 // Model is the multiple-choice vocabulary quiz screen.
@@ -39,6 +40,7 @@ type Model struct {
 
 	deck    []model.Card
 	pool    []string
+	romaji  map[string]string // Japanese form -> romaji, for the answer options
 	index   int
 	options []string
 	correct int
@@ -59,8 +61,10 @@ func New(deps Deps) Model {
 	m := Model{deps: deps, rng: rng}
 
 	m.pool = make([]string, 0, len(deps.Cards))
+	m.romaji = make(map[string]string, len(deps.Cards))
 	for _, c := range deps.Cards {
 		m.pool = append(m.pool, c.JP)
+		m.romaji[c.JP] = c.Romaji
 	}
 	m.deck = append([]model.Card(nil), deps.Cards...)
 	m.rng.Shuffle(len(m.deck), func(i, j int) { m.deck[i], m.deck[j] = m.deck[j], m.deck[i] })
@@ -218,7 +222,13 @@ func (m Model) questionView() string {
 	b.WriteString("\n\n")
 
 	for i, opt := range m.options {
-		line := fmt.Sprintf(" %d) %s", i+1, opt)
+		label := opt
+		if m.deps.ShowRomaji {
+			if r := m.romaji[opt]; r != "" {
+				label = fmt.Sprintf("%s (%s)", opt, r)
+			}
+		}
+		line := fmt.Sprintf(" %d) %s", i+1, label)
 		switch {
 		case m.answered && i == m.correct:
 			b.WriteString(t.Success.Render("✓" + line))

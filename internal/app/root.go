@@ -85,6 +85,8 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.deleteActiveProfile()
 	case nav.WipeDataMsg:
 		return m.wipeAndReset()
+	case nav.SetShowRomajiMsg:
+		return m.setShowRomaji(msg.Enabled)
 	}
 	var cmd tea.Cmd
 	m.screen, cmd = m.screen.Update(msg)
@@ -112,6 +114,19 @@ func (m rootModel) wipeAndReset() (tea.Model, tea.Cmd) {
 	m.ctx.profile = model.Profile{}
 	m.setupTutorial = true
 	return m.route(nav.ProfileSetup)
+}
+
+// setShowRomaji persists the active profile's romaji preference and updates the
+// shared context so subsequently-built screens pick it up. The settings screen
+// stays mounted; it already reflects the new value locally.
+func (m rootModel) setShowRomaji(enabled bool) (tea.Model, tea.Cmd) {
+	if m.ctx.profile.ID != 0 {
+		if err := m.ctx.store.SetShowRomaji(context.Background(), m.ctx.profile.ID, enabled); err != nil {
+			return m, tea.Quit
+		}
+	}
+	m.ctx.profile.ShowRomaji = enabled
+	return m, nil
 }
 
 func (m rootModel) profileCreated(msg nav.ProfileCreatedMsg) (tea.Model, tea.Cmd) {
@@ -196,11 +211,13 @@ func (m rootModel) build(s nav.Screen) tea.Model {
 		return flashcards.New(flashcards.Deps{
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
 			ProfileID: m.ctx.profile.ID, Cards: m.ctx.allCards(),
+			ShowRomaji: m.ctx.profile.ShowRomaji,
 		})
 	case nav.Quiz:
 		return quiz.New(quiz.Deps{
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
 			ProfileID: m.ctx.profile.ID, Cards: m.ctx.allCards(),
+			ShowRomaji: m.ctx.profile.ShowRomaji,
 		})
 	case nav.Stats:
 		return stats.New(stats.Deps{
@@ -213,7 +230,9 @@ func (m rootModel) build(s nav.Screen) tea.Model {
 			ProfileID: m.ctx.profile.ID,
 		})
 	case nav.Settings:
-		return settings.New(settings.Deps{Theme: m.ctx.theme, Msgs: m.ctx.msgs})
+		return settings.New(settings.Deps{
+			Theme: m.ctx.theme, Msgs: m.ctx.msgs, ShowRomaji: m.ctx.profile.ShowRomaji,
+		})
 	case nav.ProfileSetup:
 		return profilesetup.New(profilesetup.Deps{
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
