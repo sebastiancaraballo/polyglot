@@ -81,3 +81,12 @@ type WipeDataMsg struct{}
 func WipeData() tea.Cmd {
 	return func() tea.Msg { return WipeDataMsg{} }
 }
+
+// SetShowRomajiMsg requests persisting the active profile's romaji preference. It
+// is handled by the router, which owns the active profile and storage context.
+type SetShowRomajiMsg struct{ Enabled bool }
+
+// SetShowRomaji returns a command that requests persisting the romaji preference.
+func SetShowRomaji(enabled bool) tea.Cmd {
+	return func() tea.Msg { return SetShowRomajiMsg{Enabled: enabled} }
+}

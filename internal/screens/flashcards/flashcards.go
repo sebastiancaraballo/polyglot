@@ -22,11 +22,12 @@ const sessionLimit = 20
 
 // Deps are the dependencies a flashcards session needs.
 type Deps struct {
-	Theme     ui.Theme
-	Msgs      i18n.Messages
-	Store     storage.Storage
-	ProfileID int64
-	Cards     []model.Card
+	Theme      ui.Theme
+	Msgs       i18n.Messages
+	Store      storage.Storage
+	ProfileID  int64
+	Cards      []model.Card
+	ShowRomaji bool
 }
 
 // gradeKeys maps number keys to spaced-repetition grades.
@@ -179,8 +180,10 @@ func (m Model) cardView() string {
 
 	b.WriteString(t.Title.Render(card.JP))
 	b.WriteString("\n")
-	b.WriteString(t.Subtle.Render(card.Romaji))
-	b.WriteString("\n")
+	if m.deps.ShowRomaji {
+		b.WriteString(t.Subtle.Render(card.Romaji))
+		b.WriteString("\n")
+	}
 	if card.Notes != "" {
 		b.WriteString(t.Subtle.Render(ui.WrapText(card.Notes, m.noteWidth())))
 		b.WriteString("\n")

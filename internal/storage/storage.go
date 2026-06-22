@@ -23,6 +23,8 @@ type Storage interface {
 	GetProfile(ctx context.Context, id int64) (model.Profile, error)
 	// SetOnboarded marks a profile as having completed onboarding.
 	SetOnboarded(ctx context.Context, profileID int64) error
+	// SetShowRomaji sets whether a profile displays romaji alongside Japanese.
+	SetShowRomaji(ctx context.Context, profileID int64, enabled bool) error
 
 	// GetActiveProfileID returns the persisted active profile id; ok is false when
 	// none has been set.

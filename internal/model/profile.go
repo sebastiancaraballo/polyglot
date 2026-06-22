@@ -8,5 +8,8 @@ type Profile struct {
 	ID        int64
 	Name      string
 	Onboarded bool
-	CreatedAt time.Time
+	// ShowRomaji controls whether romaji is displayed alongside Japanese in the
+	// study screens. New profiles default to true.
+	ShowRomaji bool
+	CreatedAt  time.Time
 }

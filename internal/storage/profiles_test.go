@@ -59,6 +59,41 @@ func TestDeleteProfileCascades(t *testing.T) {
 	}
 }
 
+func TestShowRomaji(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	p, err := store.CreateProfile(ctx, "tester")
+	if err != nil {
+		t.Fatalf("CreateProfile: %v", err)
+	}
+	if !p.ShowRomaji {
+		t.Errorf("new profile ShowRomaji = false, want true (default on)")
+	}
+
+	if err := store.SetShowRomaji(ctx, p.ID, false); err != nil {
+		t.Fatalf("SetShowRomaji: %v", err)
+	}
+	got, err := store.GetProfile(ctx, p.ID)
+	if err != nil {
+		t.Fatalf("GetProfile: %v", err)
+	}
+	if got.ShowRomaji {
+		t.Errorf("ShowRomaji after disable = true, want false")
+	}
+
+	if err := store.SetShowRomaji(ctx, p.ID, true); err != nil {
+		t.Fatalf("SetShowRomaji re-enable: %v", err)
+	}
+	if got, _ := store.GetProfile(ctx, p.ID); !got.ShowRomaji {
+		t.Errorf("ShowRomaji after re-enable = false, want true")
+	}
+
+	if err := store.SetShowRomaji(ctx, 9999, false); !errors.Is(err, ErrNotFound) {
+		t.Errorf("SetShowRomaji unknown = %v, want ErrNotFound", err)
+	}
+}
+
 func TestActiveProfileID(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()

@@ -9,7 +9,35 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/model"
 	"github.com/sebastiancaraballo/polyglot/internal/srs"
+	"github.com/sebastiancaraballo/polyglot/internal/ui"
 )
+
+func revealedModel(showRomaji bool) Model {
+	card := model.Card{ID: "test:1", Source: "Gracias", JP: "ありがとう", Romaji: "arigatou"}
+	return Model{
+		deps:     Deps{Theme: ui.PlainTheme(), Msgs: i18n.ES, ShowRomaji: showRomaji},
+		queue:    []model.Card{card},
+		states:   map[string]model.CardState{card.ID: srs.NewCard(card.ID)},
+		revealed: true,
+	}
+}
+
+func TestRevealShowsRomajiWhenEnabled(t *testing.T) {
+	got := revealedModel(true).cardView()
+	if !strings.Contains(got, "arigatou") {
+		t.Fatalf("expected romaji on the reveal, got %q", got)
+	}
+}
+
+func TestRevealHidesRomajiWhenDisabled(t *testing.T) {
+	got := revealedModel(false).cardView()
+	if strings.Contains(got, "arigatou") {
+		t.Fatalf("romaji should be hidden when disabled, got %q", got)
+	}
+	if !strings.Contains(got, "ありがとう") {
+		t.Fatalf("japanese word should still show, got %q", got)
+	}
+}
 
 func TestSpaceRevealsFlashcard(t *testing.T) {
 	card := model.Card{ID: "test:1", Source: "Gracias", JP: "ありがとう", Romaji: "arigatou"}
