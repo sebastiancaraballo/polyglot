@@ -56,6 +56,10 @@ symbols/text), keep romaji visible alongside Japanese.
   `Changed` / `Fixed` sections following Keep a Changelog).
 - **Versioning:** Semantic Versioning. Keep `CHANGELOG.md` updated
   ([Keep a Changelog](https://keepachangelog.com/) format).
+- **Project board:** when a PR is merged, move its corresponding item in the GitHub
+  Project (Projects v3, user project #3) from its current status (e.g. `Todo`) to
+  `Done`. Use the `gh` GraphQL API (`updateProjectV2ItemFieldValue` on the Status
+  field) to set it.
 
 ### Worktrees
 
@@ -68,6 +72,16 @@ symbols/text), keep romaji visible alongside Japanese.
   is not part of this workflow. If running the app locally from a worktree ever
   becomes necessary, add a data-directory override first so it doesn't share the
   real database.
+- **At the end of an implementation done in a worktree, always finish the reply
+  with the copy-paste command to run the app from that worktree**, so it's easy to
+  try locally:
+
+  ```sh
+  cd ../polyglot-<feature> && go run ./cmd/polyglot
+  ```
+
+  (Note: this uses the real database at `os.UserConfigDir()/polyglot` per the
+  caveat above.)
 
 ## Common commands
 
