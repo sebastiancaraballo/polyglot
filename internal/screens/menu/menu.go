@@ -3,14 +3,36 @@ package menu
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"github.com/sebastiancaraballo/polyglot/internal/art"
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
 )
+
+// Animation cadence for the header globe: it rests facing Japan, then spins a
+// full turn, then rests again.
+const (
+	frameInterval = 160 * time.Millisecond
+	restDuration  = 25 * time.Second
+	columnGap     = 7
+)
+
+// restHold is how many ticks the globe pauses on the resting frame (Japan).
+var restHold = int(restDuration / frameInterval)
+
+// animSeq hands every menu instance a distinct animation id so that a tick left
+// in flight by a previous menu can't drive a newer one (which would speed the
+// animation up after navigating away and back).
+var animSeq int
+
+// tickMsg advances the header globe animation. id ties it to the menu instance
+// that scheduled it.
+type tickMsg struct{ id int }
 
 // Summary is the progress data shown in the menu header (XP, streak, and the
 // number of words learned).
@@ -39,20 +61,31 @@ type Model struct {
 	items  []item
 	cursor int
 
+	// Header globe animation.
+	animate bool
+	animID  int
+	frame   int
+	holding int
+
 	width  int
 	height int
 }
 
 // New builds a menu model.
 func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Model {
+	animSeq++
 	return Model{
 		theme:   theme,
 		msgs:    msgs,
 		summary: summary,
 		version: version,
 		cursor:  1,
+		// Honor reduced-motion preferences: keep the globe static (resting on
+		// Japan) when color is disabled, which also keeps it readable.
+		animate: !ui.NoColor() && len(art.GlobeFrames) > 1,
+		animID:  animSeq,
 		items: []item{
-			{"◇", msgs.ItemKana, nav.Kana, false},
+			{"あ", msgs.ItemKana, nav.Kana, false},
 			{"▣", msgs.ItemFlashcards, nav.Flashcards, false},
 			{"✓", msgs.ItemQuiz, nav.Quiz, false},
 			{"▤", msgs.ItemStats, nav.Stats, false},
@@ -63,13 +96,29 @@ func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Mo
 }
 
 // Init implements tea.Model.
-func (m Model) Init() tea.Cmd { return nil }
+func (m Model) Init() tea.Cmd {
+	if m.animate {
+		return m.tick()
+	}
+	return nil
+}
+
+func (m Model) tick() tea.Cmd {
+	id := m.animID
+	return tea.Tick(frameInterval, func(time.Time) tea.Msg { return tickMsg{id: id} })
+}
 
 // Update implements tea.Model.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+	case tickMsg:
+		if !m.animate || msg.id != m.animID {
+			return m, nil // a stale tick from an earlier menu instance; let it die.
+		}
+		m.step()
+		return m, m.tick()
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
@@ -90,6 +139,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// step advances the globe animation one frame, pausing on the resting frame
+// (Japan) for restHold ticks between turns.
+func (m *Model) step() {
+	if m.frame == 0 && m.holding < restHold {
+		m.holding++
+		return
+	}
+	m.frame = (m.frame + 1) % len(art.GlobeFrames)
+	if m.frame == 0 {
+		m.holding = 0
+	}
+}
+
 func (m Model) choose() (tea.Model, tea.Cmd) {
 	if m.cursor == 0 {
 		return m, nav.GoTo(nav.Profiles)
@@ -103,18 +165,59 @@ func (m Model) choose() (tea.Model, tea.Cmd) {
 
 // View implements tea.Model.
 func (m Model) View() tea.View {
+	view := tea.NewView(ui.Frame(m.theme, m.width, m.height, m.content()))
+	view.AltScreen = true
+	return view
+}
+
+func (m Model) content() string {
+	main := m.mainColumns()
+	help := m.theme.Help.Render(m.msgs.MenuHelp)
+	contentHeight := ui.FrameContentHeight(m.theme, m.height)
+	if contentHeight <= 0 {
+		return main + "\n" + help
+	}
+
+	mainHeight := lipgloss.Height(main)
+	helpHeight := lipgloss.Height(help)
+	available := contentHeight - helpHeight
+	if available <= mainHeight {
+		return main + "\n" + help
+	}
+
+	topPad := (available - mainHeight) / 2
+	bottomPad := available - mainHeight - topPad
+
 	var b strings.Builder
+	b.WriteString(strings.Repeat("\n", topPad))
+	b.WriteString(main)
+	b.WriteString(strings.Repeat("\n", bottomPad+1))
+	b.WriteString(help)
+	return b.String()
+}
 
-	header := fmt.Sprintf("%s  %s", m.msgs.AppName, m.msgs.Tagline)
-	b.WriteString(m.theme.Title.Render(header))
-	b.WriteString("\n")
-	b.WriteString(m.profileHeader())
-	b.WriteString("\n")
-	b.WriteString(m.theme.Subtle.Render(m.badge()))
-	b.WriteString("\n\n")
-	b.WriteString(m.msgs.MenuPrompt)
-	b.WriteString("\n\n")
+// mainColumns lays the rotating globe beside the app name, progress, active
+// profile, and menu options.
+func (m Model) mainColumns() string {
+	globe := m.theme.Accent.Render(art.GlobeFrames[m.frame])
+	info := lipgloss.JoinVertical(lipgloss.Left,
+		m.titleLine(),
+		m.xpLine(),
+		m.streakLine(),
+		m.profileLine(),
+		"",
+		m.menuItems(),
+	)
+	height := max(lipgloss.Height(globe), lipgloss.Height(info))
+	return lipgloss.JoinHorizontal(lipgloss.Top,
+		centerBlockVertically(globe, height),
+		m.columnGap(globe, info),
+		centerBlockVertically(info, height),
+	)
+}
 
+func (m Model) menuItems() string {
+	var b strings.Builder
 	for i, it := range m.items {
 		line := fmt.Sprintf("%s  %s", it.icon, it.label)
 		if i+1 == m.cursor {
@@ -122,27 +225,63 @@ func (m Model) View() tea.View {
 		} else {
 			b.WriteString(m.theme.Normal.Render("  " + line))
 		}
-		b.WriteString("\n")
+		if i < len(m.items)-1 {
+			b.WriteString("\n")
+		}
+	}
+	return b.String()
+}
+
+func (m Model) columnGap(globe, info string) string {
+	gap := columnGap
+	contentWidth := ui.FrameContentWidth(m.theme, m.width)
+	if contentWidth > 0 {
+		maxGap := contentWidth - lipgloss.Width(globe) - lipgloss.Width(info)
+		if maxGap < 1 {
+			maxGap = 1
+		}
+		gap = min(gap, maxGap)
+	}
+	return strings.Repeat(" ", gap)
+}
+
+func centerBlockVertically(content string, height int) string {
+	contentHeight := lipgloss.Height(content)
+	if height <= contentHeight {
+		return content
 	}
 
-	b.WriteString("\n")
-	b.WriteString(m.theme.Help.Render(m.msgs.MenuHelp))
+	width := lipgloss.Width(content)
+	topPad := (height - contentHeight) / 2
+	bottomPad := height - contentHeight - topPad
+	blank := strings.Repeat(" ", width)
 
-	view := tea.NewView(ui.Frame(m.theme, m.width, m.height, b.String()))
-	view.AltScreen = true
-	return view
+	lines := make([]string, 0, height)
+	for range topPad {
+		lines = append(lines, blank)
+	}
+	lines = append(lines, strings.Split(content, "\n")...)
+	for range bottomPad {
+		lines = append(lines, blank)
+	}
+	return strings.Join(lines, "\n")
 }
 
-// badge renders the experience-point total and study streak.
-func (m Model) badge() string {
-	xp := fmt.Sprintf("★ %s: %d", m.msgs.XPLabel, m.summary.XP)
-	streak := fmt.Sprintf("▲ %s: %d %s · %d %s",
-		m.msgs.StreakLabel, m.summary.Streak, m.msgs.DaysSuffix,
-		m.summary.Learned, m.msgs.LearnedSuffix)
-	return lipgloss.JoinVertical(lipgloss.Left, xp, streak)
+func (m Model) titleLine() string {
+	name := m.theme.Title.Render(fmt.Sprintf("%s  v%s", m.msgs.AppName, m.version))
+	return name + "  " + m.theme.Subtle.Render(m.msgs.Tagline)
 }
 
-func (m Model) profileHeader() string {
+func (m Model) xpLine() string {
+	return m.theme.Subtle.Render(fmt.Sprintf("★ %s: %d", m.msgs.XPLabel, m.summary.XP))
+}
+
+func (m Model) streakLine() string {
+	return m.theme.Subtle.Render(fmt.Sprintf("▲ %s: %d %s",
+		m.msgs.StreakLabel, m.summary.Streak, m.msgs.DaysSuffix))
+}
+
+func (m Model) profileLine() string {
 	name := m.summary.Name
 	if name == "" {
 		name = m.msgs.ProfileNamePlaceholder

@@ -92,7 +92,7 @@ func TestMenuNavigates(t *testing.T) {
 
 func TestMenuUsesTextSymbols(t *testing.T) {
 	m := newTestMenu()
-	want := []string{"◇", "▣", "✓", "▤", "⚙", "⏻"}
+	want := []string{"あ", "▣", "✓", "▤", "⚙", "⏻"}
 	if len(m.items) != len(want) {
 		t.Fatalf("items = %d, want %d", len(m.items), len(want))
 	}
@@ -126,6 +126,11 @@ func TestMenuViewShowsProgress(t *testing.T) {
 	for _, want := range []string{"Polyglot", "es → ja", "Sebastián", i18n.ES.SwitchProfile, i18n.ES.XPLabel, "1240", i18n.ES.StreakLabel, i18n.ES.ItemKana} {
 		if !strings.Contains(content, want) {
 			t.Errorf("view is missing %q", want)
+		}
+	}
+	for _, unwanted := range []string{"¿Qué quieres estudiar hoy?", "8/20"} {
+		if strings.Contains(content, unwanted) {
+			t.Errorf("view includes %q", unwanted)
 		}
 	}
 }
