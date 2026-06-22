@@ -19,6 +19,7 @@ import (
 const (
 	frameInterval = 160 * time.Millisecond
 	restDuration  = 25 * time.Second
+	columnGap     = 7
 )
 
 // restHold is how many ticks the globe pauses on the resting frame (Japan).
@@ -84,7 +85,7 @@ func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Mo
 		animate: !ui.NoColor() && len(art.GlobeFrames) > 1,
 		animID:  animSeq,
 		items: []item{
-			{"◇", msgs.ItemKana, nav.Kana, false},
+			{"あ", msgs.ItemKana, nav.Kana, false},
 			{"▣", msgs.ItemFlashcards, nav.Flashcards, false},
 			{"✓", msgs.ItemQuiz, nav.Quiz, false},
 			{"▤", msgs.ItemStats, nav.Stats, false},
@@ -164,13 +165,59 @@ func (m Model) choose() (tea.Model, tea.Cmd) {
 
 // View implements tea.Model.
 func (m Model) View() tea.View {
+	view := tea.NewView(ui.Frame(m.theme, m.width, m.height, m.content()))
+	view.AltScreen = true
+	return view
+}
+
+func (m Model) content() string {
+	main := m.mainColumns()
+	help := m.theme.Help.Render(m.msgs.MenuHelp)
+	contentHeight := ui.FrameContentHeight(m.theme, m.height)
+	if contentHeight <= 0 {
+		return main + "\n" + help
+	}
+
+	mainHeight := lipgloss.Height(main)
+	helpHeight := lipgloss.Height(help)
+	available := contentHeight - helpHeight
+	if available <= mainHeight {
+		return main + "\n" + help
+	}
+
+	topPad := (available - mainHeight) / 2
+	bottomPad := available - mainHeight - topPad
+
 	var b strings.Builder
+	b.WriteString(strings.Repeat("\n", topPad))
+	b.WriteString(main)
+	b.WriteString(strings.Repeat("\n", bottomPad+1))
+	b.WriteString(help)
+	return b.String()
+}
 
-	b.WriteString(m.header())
-	b.WriteString("\n\n")
-	b.WriteString(m.theme.Accent.Render("│") + "   " + m.msgs.MenuPrompt)
-	b.WriteString("\n\n")
+// mainColumns lays the rotating globe beside the app name, progress, active
+// profile, and menu options.
+func (m Model) mainColumns() string {
+	globe := m.theme.Accent.Render(art.GlobeFrames[m.frame])
+	info := lipgloss.JoinVertical(lipgloss.Left,
+		m.titleLine(),
+		m.xpLine(),
+		m.streakLine(),
+		m.profileLine(),
+		"",
+		m.menuItems(),
+	)
+	height := max(lipgloss.Height(globe), lipgloss.Height(info))
+	return lipgloss.JoinHorizontal(lipgloss.Top,
+		centerBlockVertically(globe, height),
+		m.columnGap(globe, info),
+		centerBlockVertically(info, height),
+	)
+}
 
+func (m Model) menuItems() string {
+	var b strings.Builder
 	for i, it := range m.items {
 		line := fmt.Sprintf("%s  %s", it.icon, it.label)
 		if i+1 == m.cursor {
@@ -178,27 +225,46 @@ func (m Model) View() tea.View {
 		} else {
 			b.WriteString(m.theme.Normal.Render("  " + line))
 		}
-		b.WriteString("\n")
+		if i < len(m.items)-1 {
+			b.WriteString("\n")
+		}
 	}
-
-	b.WriteString(m.theme.Help.Render(m.msgs.MenuHelp))
-
-	view := tea.NewView(ui.Frame(m.theme, m.width, m.height, b.String()))
-	view.AltScreen = true
-	return view
+	return b.String()
 }
 
-// header lays the rotating globe beside the app name, progress, and the active
-// profile.
-func (m Model) header() string {
-	globe := m.theme.Accent.Render(art.GlobeFrames[m.frame])
-	info := lipgloss.JoinVertical(lipgloss.Left,
-		m.titleLine(),
-		m.xpLine(),
-		m.streakLine(),
-		m.profileLine(),
-	)
-	return lipgloss.JoinHorizontal(lipgloss.Top, globe, "   ", info)
+func (m Model) columnGap(globe, info string) string {
+	gap := columnGap
+	contentWidth := ui.FrameContentWidth(m.theme, m.width)
+	if contentWidth > 0 {
+		maxGap := contentWidth - lipgloss.Width(globe) - lipgloss.Width(info)
+		if maxGap < 1 {
+			maxGap = 1
+		}
+		gap = min(gap, maxGap)
+	}
+	return strings.Repeat(" ", gap)
+}
+
+func centerBlockVertically(content string, height int) string {
+	contentHeight := lipgloss.Height(content)
+	if height <= contentHeight {
+		return content
+	}
+
+	width := lipgloss.Width(content)
+	topPad := (height - contentHeight) / 2
+	bottomPad := height - contentHeight - topPad
+	blank := strings.Repeat(" ", width)
+
+	lines := make([]string, 0, height)
+	for range topPad {
+		lines = append(lines, blank)
+	}
+	lines = append(lines, strings.Split(content, "\n")...)
+	for range bottomPad {
+		lines = append(lines, blank)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (m Model) titleLine() string {
@@ -211,9 +277,8 @@ func (m Model) xpLine() string {
 }
 
 func (m Model) streakLine() string {
-	return m.theme.Subtle.Render(fmt.Sprintf("▲ %s: %d %s · ✓ %d/%d",
-		m.msgs.StreakLabel, m.summary.Streak, m.msgs.DaysSuffix,
-		m.summary.Learned, m.summary.Total))
+	return m.theme.Subtle.Render(fmt.Sprintf("▲ %s: %d %s",
+		m.msgs.StreakLabel, m.summary.Streak, m.msgs.DaysSuffix))
 }
 
 func (m Model) profileLine() string {

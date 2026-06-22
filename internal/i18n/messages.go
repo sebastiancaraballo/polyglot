@@ -7,7 +7,6 @@ type Messages struct {
 	Tagline string // "es → ja"
 
 	// Menu
-	MenuPrompt     string
 	ItemKana       string
 	ItemFlashcards string
 	ItemQuiz       string
@@ -112,9 +111,8 @@ var ES = Messages{
 	AppName: "Polyglot",
 	Tagline: "es → ja",
 
-	MenuPrompt:     "¿Qué quieres estudiar hoy?",
 	ItemKana:       "Entrenador de Kana",
-	ItemFlashcards: "Flashcards (repaso espaciado)",
+	ItemFlashcards: "Flashcards",
 	ItemQuiz:       "Quiz de opción múltiple",
 	ItemStats:      "Mis estadísticas",
 	ItemSettings:   "Ajustes",

@@ -28,3 +28,9 @@ func TestFrameContentWidthMatchesFrameInterior(t *testing.T) {
 		t.Fatalf("FrameContentWidth() = %d, want 56", got)
 	}
 }
+
+func TestFrameContentHeightMatchesFrameInterior(t *testing.T) {
+	if got := FrameContentHeight(PlainTheme(), 40); got != 18 {
+		t.Fatalf("FrameContentHeight() = %d, want 18", got)
+	}
+}
