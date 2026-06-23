@@ -12,6 +12,7 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/flashcards"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/kana"
+	"github.com/sebastiancaraballo/polyglot/internal/screens/kanachart"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/menu"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/onboarding"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/profiles"
@@ -206,6 +207,10 @@ func (m rootModel) build(s nav.Screen) tea.Model {
 		return kana.New(kana.Deps{
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
 			ProfileID: m.ctx.profile.ID, Items: m.ctx.course.Kana,
+		})
+	case nav.KanaChart:
+		return kanachart.New(kanachart.Deps{
+			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Kana: m.ctx.course.Kana,
 		})
 	case nav.Flashcards:
 		return flashcards.New(flashcards.Deps{

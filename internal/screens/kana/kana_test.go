@@ -42,6 +42,39 @@ func newTestModel(t *testing.T) (Model, storage.Storage, int64) {
 	return m, store, profile.ID
 }
 
+func TestPickerStartsFilteredSession(t *testing.T) {
+	items := []model.KanaItem{
+		{Char: "あ", Romaji: "a", Type: model.Hiragana, Category: model.Base},
+		{Char: "が", Romaji: "ga", Type: model.Hiragana, Category: model.Dakuten},
+		{Char: "ぱ", Romaji: "pa", Type: model.Hiragana, Category: model.Handakuten},
+		{Char: "きゃ", Romaji: "kya", Type: model.Hiragana, Category: model.Combo},
+		{Char: "ア", Romaji: "a", Type: model.Katakana, Category: model.Base},
+	}
+	m := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Items: items})
+	if !m.picking {
+		t.Fatal("trainer should open on the group picker")
+	}
+
+	// Move to "Hiragana · Dakuten / Handakuten" (index 2) and start.
+	var tm tea.Model = m
+	tm, _ = tm.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+	tm, _ = tm.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+	tm, _ = tm.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+
+	got := tm.(Model)
+	if got.picking {
+		t.Fatal("confirming a group should start the session")
+	}
+	if len(got.deck) != 2 {
+		t.Fatalf("dakuten/handakuten deck size = %d, want 2", len(got.deck))
+	}
+	for _, it := range got.deck {
+		if it.Category != model.Dakuten && it.Category != model.Handakuten {
+			t.Errorf("deck contains out-of-group item %q (%s)", it.Char, it.Category)
+		}
+	}
+}
+
 func TestSpaceAnswersKanaQuestion(t *testing.T) {
 	m, _, _ := newTestModel(t)
 

@@ -8,6 +8,7 @@ type Messages struct {
 
 	// Menu
 	ItemKana       string
+	ItemKanaChart  string
 	ItemFlashcards string
 	ItemQuiz       string
 	ItemStats      string
@@ -62,8 +63,17 @@ type Messages struct {
 	ScoreLabel   string
 
 	// Kana trainer
-	KanaTitle  string
-	KanaPrompt string
+	KanaTitle    string
+	KanaPrompt   string
+	KanaGroupAll string
+	KanaPickHelp string
+
+	// Kana chart
+	KanaChartTitle string
+	KanaChartHelp  string
+	KanaBasic      string
+	KanaVoiced     string
+	KanaCombo      string
 
 	// Quiz
 	QuizTitle       string
@@ -116,6 +126,7 @@ var ES = Messages{
 	Tagline: "es → ja",
 
 	ItemKana:       "Entrenador de Kana",
+	ItemKanaChart:  "Tabla de Kana",
 	ItemFlashcards: "Flashcards",
 	ItemQuiz:       "Quiz de opción múltiple",
 	ItemStats:      "Mis estadísticas",
@@ -165,8 +176,16 @@ var ES = Messages{
 	SessionDone:  "¡Sesión completada!",
 	ScoreLabel:   "Aciertos",
 
-	KanaTitle:  "Entrenador de Kana",
-	KanaPrompt: "¿Cómo se lee?",
+	KanaTitle:    "Entrenador de Kana",
+	KanaPrompt:   "¿Cómo se lee?",
+	KanaGroupAll: "Todo",
+	KanaPickHelp: "↑/↓ moverse · ENTER empezar · ESC volver",
+
+	KanaChartTitle: "Tabla de Kana",
+	KanaChartHelp:  "← → cambiar página · ESC volver",
+	KanaBasic:      "Básico",
+	KanaVoiced:     "Dakuten / Handakuten",
+	KanaCombo:      "Combinaciones",
 
 	QuizTitle:       "Quiz",
 	QuizQuestionFmt: "¿Cómo se dice \"%s\" en japonés?",

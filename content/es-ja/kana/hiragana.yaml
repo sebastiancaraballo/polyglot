@@ -1,5 +1,6 @@
 type: hiragana
 items:
+  # Base (gojūon)
   - { char: "あ", romaji: "a" }
   - { char: "い", romaji: "i" }
   - { char: "う", romaji: "u" }
@@ -46,3 +47,67 @@ items:
   - { char: "わ", romaji: "wa" }
   - { char: "を", romaji: "wo" }
   - { char: "ん", romaji: "n" }
+
+  # Dakuten (voiced)
+  - { char: "が", romaji: "ga", category: dakuten }
+  - { char: "ぎ", romaji: "gi", category: dakuten }
+  - { char: "ぐ", romaji: "gu", category: dakuten }
+  - { char: "げ", romaji: "ge", category: dakuten }
+  - { char: "ご", romaji: "go", category: dakuten }
+  - { char: "ざ", romaji: "za", category: dakuten }
+  - { char: "じ", romaji: "ji", category: dakuten }
+  - { char: "ず", romaji: "zu", category: dakuten }
+  - { char: "ぜ", romaji: "ze", category: dakuten }
+  - { char: "ぞ", romaji: "zo", category: dakuten }
+  - { char: "だ", romaji: "da", category: dakuten }
+  - { char: "ぢ", romaji: "ji", category: dakuten }
+  - { char: "づ", romaji: "zu", category: dakuten }
+  - { char: "で", romaji: "de", category: dakuten }
+  - { char: "ど", romaji: "do", category: dakuten }
+  - { char: "ば", romaji: "ba", category: dakuten }
+  - { char: "び", romaji: "bi", category: dakuten }
+  - { char: "ぶ", romaji: "bu", category: dakuten }
+  - { char: "べ", romaji: "be", category: dakuten }
+  - { char: "ぼ", romaji: "bo", category: dakuten }
+
+  # Handakuten (semi-voiced)
+  - { char: "ぱ", romaji: "pa", category: handakuten }
+  - { char: "ぴ", romaji: "pi", category: handakuten }
+  - { char: "ぷ", romaji: "pu", category: handakuten }
+  - { char: "ぺ", romaji: "pe", category: handakuten }
+  - { char: "ぽ", romaji: "po", category: handakuten }
+
+  # Combinations (yōon)
+  - { char: "きゃ", romaji: "kya", category: combo }
+  - { char: "きゅ", romaji: "kyu", category: combo }
+  - { char: "きょ", romaji: "kyo", category: combo }
+  - { char: "しゃ", romaji: "sha", category: combo }
+  - { char: "しゅ", romaji: "shu", category: combo }
+  - { char: "しょ", romaji: "sho", category: combo }
+  - { char: "ちゃ", romaji: "cha", category: combo }
+  - { char: "ちゅ", romaji: "chu", category: combo }
+  - { char: "ちょ", romaji: "cho", category: combo }
+  - { char: "にゃ", romaji: "nya", category: combo }
+  - { char: "にゅ", romaji: "nyu", category: combo }
+  - { char: "にょ", romaji: "nyo", category: combo }
+  - { char: "ひゃ", romaji: "hya", category: combo }
+  - { char: "ひゅ", romaji: "hyu", category: combo }
+  - { char: "ひょ", romaji: "hyo", category: combo }
+  - { char: "みゃ", romaji: "mya", category: combo }
+  - { char: "みゅ", romaji: "myu", category: combo }
+  - { char: "みょ", romaji: "myo", category: combo }
+  - { char: "りゃ", romaji: "rya", category: combo }
+  - { char: "りゅ", romaji: "ryu", category: combo }
+  - { char: "りょ", romaji: "ryo", category: combo }
+  - { char: "ぎゃ", romaji: "gya", category: combo }
+  - { char: "ぎゅ", romaji: "gyu", category: combo }
+  - { char: "ぎょ", romaji: "gyo", category: combo }
+  - { char: "じゃ", romaji: "ja", category: combo }
+  - { char: "じゅ", romaji: "ju", category: combo }
+  - { char: "じょ", romaji: "jo", category: combo }
+  - { char: "びゃ", romaji: "bya", category: combo }
+  - { char: "びゅ", romaji: "byu", category: combo }
+  - { char: "びょ", romaji: "byo", category: combo }
+  - { char: "ぴゃ", romaji: "pya", category: combo }
+  - { char: "ぴゅ", romaji: "pyu", category: combo }
+  - { char: "ぴょ", romaji: "pyo", category: combo }

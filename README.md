@@ -15,7 +15,8 @@ The application ships as a **single self-contained binary** — no runtime to in
 ## Features (v1)
 
 - ▣ **Spaced-repetition flashcards (SRS)** — review vocabulary on an optimal schedule.
-- ◇ **Kana trainer** — learn hiragana and katakana.
+- ◇ **Kana trainer** — learn hiragana and katakana, including dakuten/handakuten and combinations; pick a group to focus each session.
+- ▦ **Kana chart** — browse every kana with its romaji, paging through hiragana and katakana with ← / →.
 - ✓ **Multiple-choice quizzes** — quick reinforcement.
 - ▤ **Progress, XP & streaks** — earn experience points for every answer, keep a daily streak, and track words learned.
 - ◎ **Local profiles** — named learners with a profile switcher and per-profile progress.
