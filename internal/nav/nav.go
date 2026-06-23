@@ -18,6 +18,7 @@ const (
 	Settings
 	ProfileSetup
 	Profiles
+	KanaChart
 )
 
 // GoToMsg requests navigation to a screen.

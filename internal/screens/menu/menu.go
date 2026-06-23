@@ -86,6 +86,7 @@ func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Mo
 		animID:  animSeq,
 		items: []item{
 			{"あ", msgs.ItemKana, nav.Kana, false},
+			{"▦", msgs.ItemKanaChart, nav.KanaChart, false},
 			{"▣", msgs.ItemFlashcards, nav.Flashcards, false},
 			{"✓", msgs.ItemQuiz, nav.Quiz, false},
 			{"▤", msgs.ItemStats, nav.Stats, false},

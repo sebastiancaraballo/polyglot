@@ -36,6 +36,43 @@ func Frame(theme Theme, width, height int, content string) string {
 	return Center(width, height, box.Render(content))
 }
 
+// FillFrame renders content like Frame but lets the frame grow to fill the
+// terminal height (instead of the shared fixed height), for a screen that needs
+// more vertical room than the others — currently the kana chart. The width still
+// matches Frame so the border lines up horizontally with every other screen.
+func FillFrame(theme Theme, width, height int, content string) string {
+	w := frameWidth
+	if width > 0 && width-2 < w {
+		w = width - 2
+	}
+	h := frameHeight
+	if height > 0 {
+		h = height - 2
+	}
+	if h < 1 {
+		h = frameHeight
+	}
+	box := theme.Box.
+		Width(w).
+		Height(h).
+		MaxWidth(w).
+		MaxHeight(h)
+	return Center(width, height, box.Render(content))
+}
+
+// FillFrameContentHeight returns the content height available inside FillFrame.
+func FillFrameContentHeight(theme Theme, height int) int {
+	h := frameHeight
+	if height > 0 {
+		h = height - 2
+	}
+	contentHeight := h - theme.Box.GetVerticalFrameSize()
+	if contentHeight < 0 {
+		return 0
+	}
+	return contentHeight
+}
+
 // FrameContentWidth returns the display width available for content inside
 // Frame's border and padding.
 func FrameContentWidth(theme Theme, width int) int {

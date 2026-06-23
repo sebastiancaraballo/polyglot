@@ -119,8 +119,9 @@ func parseLesson(fsys fs.FS, file string) (model.Lesson, error) {
 type kanaFile struct {
 	Type  string `yaml:"type"`
 	Items []struct {
-		Char   string `yaml:"char"`
-		Romaji string `yaml:"romaji"`
+		Char     string `yaml:"char"`
+		Romaji   string `yaml:"romaji"`
+		Category string `yaml:"category"`
 	} `yaml:"items"`
 }
 
@@ -168,7 +169,14 @@ func parseKana(fsys fs.FS, file string) ([]model.KanaItem, error) {
 		if it.Char == "" || it.Romaji == "" {
 			return nil, fmt.Errorf("%s: item %d is missing char or romaji", file, i+1)
 		}
-		items = append(items, model.KanaItem{Char: it.Char, Romaji: it.Romaji, Type: kt})
+		category := model.KanaCategory(it.Category)
+		if it.Category == "" {
+			category = model.Base
+		}
+		if !category.Valid() {
+			return nil, fmt.Errorf("%s: item %d has invalid category %q", file, i+1, it.Category)
+		}
+		items = append(items, model.KanaItem{Char: it.Char, Romaji: it.Romaji, Type: kt, Category: category})
 	}
 	return items, nil
 }

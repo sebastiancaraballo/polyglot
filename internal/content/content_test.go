@@ -91,6 +91,64 @@ func TestEmbeddedCourseUsesPronunciationRomajiForLongVowels(t *testing.T) {
 	}
 }
 
+func TestEmbeddedKanaCategories(t *testing.T) {
+	course, err := LoadEmbedded(DefaultPair)
+	if err != nil {
+		t.Fatalf("LoadEmbedded: %v", err)
+	}
+
+	type key struct {
+		typ model.KanaType
+		cat model.KanaCategory
+	}
+	counts := make(map[key]int)
+	for _, k := range course.Kana {
+		if !k.Category.Valid() {
+			t.Errorf("kana %q has invalid category %q", k.Char, k.Category)
+		}
+		counts[key{k.Type, k.Category}]++
+	}
+
+	for _, typ := range []model.KanaType{model.Hiragana, model.Katakana} {
+		if got := counts[key{typ, model.Base}]; got != 46 {
+			t.Errorf("%s base count = %d, want 46", typ, got)
+		}
+		if got := counts[key{typ, model.Dakuten}]; got != 20 {
+			t.Errorf("%s dakuten count = %d, want 20", typ, got)
+		}
+		if got := counts[key{typ, model.Handakuten}]; got != 5 {
+			t.Errorf("%s handakuten count = %d, want 5", typ, got)
+		}
+		if got := counts[key{typ, model.Combo}]; got != 33 {
+			t.Errorf("%s combo count = %d, want 33", typ, got)
+		}
+	}
+}
+
+func TestKanaCategoryDefaultsToBase(t *testing.T) {
+	course, err := Load(validFS(), "xx")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := course.Kana[0].Category; got != model.Base {
+		t.Errorf("omitted category = %q, want %q", got, model.Base)
+	}
+}
+
+func TestKanaInvalidCategory(t *testing.T) {
+	fsys := fstest.MapFS{
+		"content/xx/lessons/01.yaml": &fstest.MapFile{Data: []byte(
+			"id: a\ntitle: t\njlpt: N5\ncards:\n  - es: Hola\n    jp: こんにちは\n    romaji: konnichiwa\n",
+		)},
+		"content/xx/kana/h.yaml": &fstest.MapFile{Data: []byte(
+			"type: hiragana\nitems:\n  - char: が\n    romaji: ga\n    category: bogus\n",
+		)},
+	}
+	if _, err := Load(fsys, "xx"); err == nil {
+		t.Fatal("expected invalid category error, got nil")
+	}
+}
+
 func validFS() fstest.MapFS {
 	return fstest.MapFS{
 		"content/xx/lessons/01.yaml": &fstest.MapFile{Data: []byte(

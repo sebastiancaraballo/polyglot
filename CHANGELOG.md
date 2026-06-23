@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Named profile setup with Unicode name validation, active-profile persistence, and a profile switcher reachable from the main menu header.
 - Settings actions for deleting only the active profile or deleting all app data, both behind explicit confirmations defaulting to Cancel. Wiping all data now returns to first-run profile setup.
 - Settings: a per-profile "Show romaji" toggle (on by default) controlling whether romaji appears alongside Japanese — it adds romaji to the quiz answer options and governs the flashcard reveal.
+- "Tabla de Kana": a browsable reference chart of every kana with its romaji, navigated with ← / → through six pages (hiragana and katakana, each split into base, dakuten/handakuten, and combinations).
+- Full dakuten (が…), handakuten (ぱ…), and combination/yōon (きゃ…) kana for both hiragana and katakana, tagged with a category.
+- Kana trainer group picker: choose what to practice (everything, or a syllabary split by base / dakuten·handakuten / combinations) before each session.
 
 ### Changed
 - Main menu header redesigned around the globe: the rotating globe and the app/menu content now render as two vertically centered columns, with the keyboard help pinned to the bottom of the frame.

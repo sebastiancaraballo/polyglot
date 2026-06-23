@@ -29,14 +29,25 @@ type Deps struct {
 	Items     []model.KanaItem
 }
 
-// Model is the kana trainer screen: it shows a kana character and asks the
-// learner to choose its romaji reading from four options.
+// group is a selectable practice set in the pre-session picker.
+type group struct {
+	label string
+	match func(model.KanaItem) bool
+}
+
+// Model is the kana trainer screen. It first shows a group picker, then quizzes
+// the chosen kana: it shows a character and asks the learner to choose its romaji
+// reading from four options.
 type Model struct {
 	deps Deps
 	rng  *rand.Rand
 
+	groups      []group // selectable practice sets
+	picking     bool    // true while showing the group picker
+	groupCursor int
+
 	deck []model.KanaItem // shuffled session order
-	pool []string         // all romaji, for distractors
+	pool []string         // romaji of the selected group, for distractors
 
 	index        int
 	options      []string
@@ -49,16 +60,64 @@ type Model struct {
 	width, height int
 }
 
-// New builds a kana trainer from the given dependencies.
+// New builds a kana trainer that opens on the group picker.
 func New(deps Deps) Model {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // not security-sensitive
-	m := Model{deps: deps, rng: rng}
-	m.pool = make([]string, 0, len(deps.Items))
-	for _, it := range deps.Items {
+	return Model{deps: deps, rng: rng, picking: true, groups: buildGroups(deps.Msgs)}
+}
+
+// buildGroups returns the practice sets: everything, then each syllabary split by
+// category, matching the kana chart's pages.
+func buildGroups(msg i18n.Messages) []group {
+	cat := func(typ model.KanaType, cats []model.KanaCategory, label string) group {
+		syllabary := msg.HiraganaLabel
+		if typ == model.Katakana {
+			syllabary = msg.KatakanaLabel
+		}
+		return group{
+			label: fmt.Sprintf("%s · %s", syllabary, label),
+			match: func(it model.KanaItem) bool {
+				if it.Type != typ {
+					return false
+				}
+				for _, c := range cats {
+					if it.Category == c {
+						return true
+					}
+				}
+				return false
+			},
+		}
+	}
+	return []group{
+		{label: msg.KanaGroupAll, match: func(model.KanaItem) bool { return true }},
+		cat(model.Hiragana, []model.KanaCategory{model.Base}, msg.KanaBasic),
+		cat(model.Hiragana, []model.KanaCategory{model.Dakuten, model.Handakuten}, msg.KanaVoiced),
+		cat(model.Hiragana, []model.KanaCategory{model.Combo}, msg.KanaCombo),
+		cat(model.Katakana, []model.KanaCategory{model.Base}, msg.KanaBasic),
+		cat(model.Katakana, []model.KanaCategory{model.Dakuten, model.Handakuten}, msg.KanaVoiced),
+		cat(model.Katakana, []model.KanaCategory{model.Combo}, msg.KanaCombo),
+	}
+}
+
+// startSession filters the chosen group into a fresh shuffled deck and begins.
+func (m Model) startSession() Model {
+	g := m.groups[m.groupCursor]
+	var items []model.KanaItem
+	for _, it := range m.deps.Items {
+		if g.match(it) {
+			items = append(items, it)
+		}
+	}
+	m.pool = make([]string, 0, len(items))
+	for _, it := range items {
 		m.pool = append(m.pool, it.Romaji)
 	}
-	m.deck = append([]model.KanaItem(nil), deps.Items...)
+	m.deck = items
 	m.rng.Shuffle(len(m.deck), func(i, j int) { m.deck[i], m.deck[j] = m.deck[j], m.deck[i] })
+	m.index = 0
+	m.correctCount = 0
+	m.picking = false
 	return m.setQuestion()
 }
 
@@ -96,10 +155,15 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nav.Back()
 	}
 
+	if m.picking {
+		return m.handlePick(msg)
+	}
+
 	switch {
 	case m.finished():
 		if isConfirm(msg) {
-			return New(m.deps), nil // restart
+			m.picking = true // back to the group picker
+			return m, nil
 		}
 	case m.answered:
 		if isConfirm(msg) {
@@ -110,6 +174,23 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	default:
 		m = m.answerKey(msg)
+	}
+	return m, nil
+}
+
+func (m Model) handlePick(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "up", "k":
+		if m.groupCursor > 0 {
+			m.groupCursor--
+		}
+	case "down", "j":
+		if m.groupCursor < len(m.groups)-1 {
+			m.groupCursor++
+		}
+	}
+	if ui.IsConfirmKey(msg) {
+		m = m.startSession()
 	}
 	return m, nil
 }
@@ -156,14 +237,35 @@ func isConfirm(msg tea.KeyPressMsg) bool {
 // View implements tea.Model.
 func (m Model) View() tea.View {
 	var content string
-	if m.finished() {
+	switch {
+	case m.picking:
+		content = m.pickerView()
+	case m.finished():
 		content = m.summaryView()
-	} else {
+	default:
 		content = m.questionView()
 	}
 	view := tea.NewView(ui.Frame(m.deps.Theme, m.width, m.height, content))
 	view.AltScreen = true
 	return view
+}
+
+func (m Model) pickerView() string {
+	t := m.deps.Theme
+	var b strings.Builder
+	b.WriteString(t.Title.Render(m.deps.Msgs.KanaTitle))
+	b.WriteString("\n\n")
+	for i, g := range m.groups {
+		if i == m.groupCursor {
+			b.WriteString(t.Selected.Render("▸ " + g.label))
+		} else {
+			b.WriteString(t.Normal.Render("  " + g.label))
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString("\n")
+	b.WriteString(t.Help.Render(m.deps.Msgs.KanaPickHelp))
+	return b.String()
 }
 
 func (m Model) questionView() string {
