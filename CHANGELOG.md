@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Project manifesto (`MANIFESTO.md`): the vision and principles behind Polyglot — a universal "story-driven" approach (universal spine + cultural skin), the native language as the learner's lens, evidence-based pedagogy, inclusion of low-resource languages, and a fully open (MIT) resource policy. Linked from the README; `CLAUDE.md` gains an "Operating model" section describing the parallel per-pair tracks coordinated through the GitHub Project board.
 - Animated braille globe in the main menu header: a rotating Earth that rests facing Japan (the target language), spins a full turn, then rests again. Frames are generated offline from public-domain Natural Earth coastlines and embedded as braille (`internal/art`); the globe stays static on the resting frame when `NO_COLOR` is set.
 - Experience points (XP): a single per-profile counter that grows with every interaction — quiz answers, flashcard grades, and kana trainer answers (correct answers earn more; flashcards scale by recall grade), plus a one-time bonus for completing onboarding. The total is shown on the menu badge and the stats screen.
 - Named profile setup with Unicode name validation, active-profile persistence, and a profile switcher reachable from the main menu header.

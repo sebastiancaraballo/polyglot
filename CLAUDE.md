@@ -29,6 +29,49 @@ Polyglot is a cross-platform (macOS, Windows, Linux) interactive terminal app fo
 learning languages. v1 focuses on **Spanish → Japanese**. It ships as a single
 self-contained binary. The architecture is built to add more language pairs later.
 
+## Operating model
+
+Development is organized as a set of parallel **tracks**, coordinated through the GitHub
+**Project board** (Projects v3, user project #3) — the single source of truth for what to
+work on next.
+
+### Tracks
+
+- **Core / Platform** (built once; a prerequisite for everything): the engine and shared
+  building blocks — content model/schema, spaced-repetition system, Story Mode framework,
+  mastery gates, and the resource-licensing/attribution tooling. Built once and reused by
+  every language pair.
+- **Language-pair tracks** (parallel, one per pair — e.g. `es→ja`, `ja→es`, …): build the
+  content and cultural skin on top of Core. Each pair is its own learning experience,
+  because the learner's native language (L1) shapes it.
+
+Each track advances in its own git worktree (see [Worktrees](#worktrees)). Board items
+carry the track they belong to.
+
+### Session start ritual
+
+1. Read this file and `MANIFESTO.md` for direction.
+2. Open the Project board and pick the **next task**: the highest-priority item in the
+   active track whose dependencies are met (Core before pair work). If no track is
+   specified, surface the top candidates and confirm before starting.
+3. Claim it — set its Status to **In Progress** via the `gh` GraphQL API.
+4. Follow the [Workflow checklist](#workflow-checklist).
+5. If the roadmap needs a task that isn't on the board yet, propose it (and add the board
+   item) rather than going off-plan silently.
+
+### Pedagogical grounding
+
+Ground learning-design decisions in published standards — the **CEFR** plus the relevant
+per-language proficiency framework (e.g. JLPT for Japanese) and frequency data — and in
+learning science (cognitive load, decoding before reading, retrieval practice, spaced
+repetition), not in intuition. The rationale lives in `MANIFESTO.md`.
+
+### Open-source citizenship
+
+Follow the practices in <https://opensource.guide/>: maintain the project's open-source
+docs (`LICENSE`, `README`, `CONTRIBUTING`, a code of conduct), creating them when missing;
+write clear issues and PRs; be welcoming and document decisions.
+
 ## Language conventions
 
 - **Code, comments, identifiers, commit messages, PRs, and docs: English.**
@@ -49,7 +92,14 @@ self-contained binary. The architecture is built to add more language pairs late
 
 ## Hard constraints
 
-- **License is MIT.** Only add **permissive** dependencies (MIT/BSD/Apache). No copyleft.
+- **License is MIT — and it applies to everything in the repo, not just code.** Only add
+  **permissive** code dependencies *and content/assets*: frequency lists, corpora,
+  dictionaries, fonts, audio, images, lesson text. **Allowed:** Public Domain / CC0,
+  CC BY (with attribution), MIT / BSD / Apache. **Rejected:** non-commercial (CC BY-NC),
+  copyleft / share-alike (CC BY-SA, GPL), and anything with unclear provenance. Record
+  every external asset's source, license, and required attribution (e.g. in `NOTICE`).
+  When a license is unclear or incompatible, stop and flag it — prefer public-domain
+  sources or content we author ourselves; don't assume "it's just facts".
 - **No CGO.** CGO breaks single-binary cross-compilation. Keep all deps pure Go
   (this is why we use `modernc.org/sqlite`, not the cgo SQLite driver).
 - **Never commit a user database** (`*.db` is gitignored).

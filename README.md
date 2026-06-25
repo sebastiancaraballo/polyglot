@@ -9,6 +9,8 @@ add more language pairs later (English → Japanese, Spanish → English, …).
 
 The application ships as a **single self-contained binary** — no runtime to install.
 
+Read the [Manifesto](MANIFESTO.md) for the vision and principles behind Polyglot.
+
 > **Note:** The user interface is in **Spanish** (the learner's source language for v1).
 > The codebase, comments, and identifiers are in English following standard Go practices.
 
