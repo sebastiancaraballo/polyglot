@@ -3,6 +3,7 @@ package license
 import (
 	"os"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -61,9 +62,15 @@ func TestNoticeInSync(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read NOTICE: %v", err)
 	}
-	if string(got) != want {
+	// Compare content, not line endings: git may check NOTICE out with CRLF on
+	// Windows, which is irrelevant to whether it is in sync with the manifest.
+	if normalizeEOL(string(got)) != normalizeEOL(want) {
 		t.Errorf("NOTICE is out of sync with internal/license/assets.yaml; run `go run ./tools/gennotice`")
 	}
+}
+
+func normalizeEOL(s string) string {
+	return strings.ReplaceAll(s, "\r\n", "\n")
 }
 
 func TestPermittedLicense(t *testing.T) {
