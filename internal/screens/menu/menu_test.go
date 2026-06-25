@@ -168,11 +168,24 @@ func TestLockedMenuViewMarksAndExplains(t *testing.T) {
 	m, _ = func() (Model, tea.Cmd) { tm, cmd := m.choose(); return tm.(Model), cmd }()
 
 	content := m.View().Content
-	if !strings.Contains(content, i18n.ES.LockedLabel) {
-		t.Errorf("locked menu view missing the locked label %q", i18n.ES.LockedLabel)
+	if !strings.Contains(content, lockGlyph) {
+		t.Errorf("locked menu view missing the lock glyph %q", lockGlyph)
 	}
 	if !strings.Contains(content, i18n.ES.ReadingLocked) {
 		t.Errorf("locked menu view missing the reading-locked notice")
+	}
+}
+
+func TestLockedItemReplacesIconWithLock(t *testing.T) {
+	m := lockedMenu()
+	for _, it := range m.items {
+		if it.screen == nav.Quiz && !it.locked {
+			t.Fatal("Quiz should be locked in a locked menu")
+		}
+	}
+	// The lock glyph must appear once per locked reading item (Flashcards, Quiz).
+	if got := strings.Count(m.menuItems(), lockGlyph); got != 2 {
+		t.Errorf("lock glyphs in menu = %d, want 2", got)
 	}
 }
 

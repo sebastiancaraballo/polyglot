@@ -17,7 +17,6 @@ type Messages struct {
 	ItemQuit       string
 	SwitchProfile  string
 	MenuHelp       string
-	LockedLabel    string // shown beside a menu item gated behind kana fluency
 	ReadingLocked  string // hint when a learner opens a locked reading activity
 
 	// Settings
@@ -143,7 +142,6 @@ var ES = Messages{
 	ItemQuit:       "Salir",
 	SwitchProfile:  "Cambiar de perfil",
 	MenuHelp:       "↑/↓ moverse · ENTER elegir/cambiar perfil · Q salir",
-	LockedLabel:    "bloqueado",
 	ReadingLocked:  "Aprende a leer los kana con fluidez primero.",
 
 	SettingsTitle:        "Ajustes",

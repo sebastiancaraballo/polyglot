@@ -25,6 +25,10 @@ const (
 // restHold is how many ticks the globe pauses on the resting frame (Japan).
 var restHold = int(restDuration / frameInterval)
 
+// lockGlyph marks a menu item gated behind kana fluency. It is a non-color
+// symbol (it must not rely on color alone) and single display width.
+const lockGlyph = "⊘"
+
 // animSeq hands every menu instance a distinct animation id so that a tick left
 // in flight by a previous menu can't drive a newer one (which would speed the
 // animation up after navigating away and back).
@@ -190,7 +194,7 @@ func (m Model) content() string {
 	// clears it and restores the help text.
 	help := m.theme.Help.Render(m.msgs.MenuHelp)
 	if m.notice != "" {
-		help = m.theme.Subtle.Render("⊘ " + m.notice)
+		help = m.theme.Subtle.Render(lockGlyph + " " + m.notice)
 	}
 	contentHeight := ui.FrameContentHeight(m.theme, m.height)
 	if contentHeight <= 0 {
@@ -238,15 +242,19 @@ func (m Model) mainColumns() string {
 func (m Model) menuItems() string {
 	var b strings.Builder
 	for i, it := range m.items {
-		line := fmt.Sprintf("%s  %s", it.icon, it.label)
+		// A locked item shows the lock glyph in place of its icon — a fixed-width
+		// marker that never wraps the row (which would break the column layout).
+		// The reason is explained in the footer when the learner opens it.
+		icon := it.icon
 		if it.locked {
-			line += "  " + m.theme.Subtle.Render("⊘ "+m.msgs.LockedLabel)
+			icon = lockGlyph
 		}
+		line := fmt.Sprintf("%s  %s", icon, it.label)
 		switch {
 		case i+1 == m.cursor:
 			b.WriteString(m.theme.Selected.Render("▸ " + line))
 		case it.locked:
-			b.WriteString(m.theme.Subtle.Render("  ") + m.theme.Subtle.Render(line))
+			b.WriteString(m.theme.Subtle.Render("  " + line))
 		default:
 			b.WriteString(m.theme.Normal.Render("  " + line))
 		}
