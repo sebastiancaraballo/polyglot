@@ -333,3 +333,47 @@ func TestEmbeddedContentIsKanjiFree(t *testing.T) {
 }
 
 func file(s string) *fstest.MapFile { return &fstest.MapFile{Data: []byte(s)} }
+
+func TestEmbeddedFrequencyList(t *testing.T) {
+	entries, err := LoadEmbeddedFrequency("ja")
+	if err != nil {
+		t.Fatalf("LoadEmbeddedFrequency: %v", err)
+	}
+	if len(entries) == 0 {
+		t.Fatal("expected a non-empty frequency list")
+	}
+
+	seen := make(map[string]bool, len(entries))
+	prevCount := entries[0].Count
+	for i, e := range entries {
+		if e.Rank != i+1 {
+			t.Errorf("entry %d has rank %d, want %d (ranks must be contiguous and ascending)", i, e.Rank, i+1)
+		}
+		if e.Count <= 0 {
+			t.Errorf("entry %q has non-positive count %d", e.Word, e.Count)
+		}
+		if e.Count > prevCount {
+			t.Errorf("entry %q count %d exceeds previous %d (must be non-increasing)", e.Word, e.Count, prevCount)
+		}
+		prevCount = e.Count
+		if e.Word == "" {
+			t.Errorf("entry rank %d has a blank word", e.Rank)
+		}
+		if seen[e.Word] {
+			t.Errorf("duplicate word %q in frequency list", e.Word)
+		}
+		seen[e.Word] = true
+		if !isJapanese(e.Word) {
+			t.Errorf("word %q is not Japanese (kana/kanji)", e.Word)
+		}
+	}
+}
+
+func isJapanese(s string) bool {
+	for _, r := range s {
+		if unicode.In(r, unicode.Hiragana, unicode.Katakana, unicode.Han) {
+			return true
+		}
+	}
+	return false
+}

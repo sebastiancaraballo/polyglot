@@ -1,0 +1,24 @@
+Polyglot
+Copyright (c) 2026 Sebastián Caraballo
+
+Polyglot is MIT-licensed (see LICENSE). This NOTICE lists the third-party assets
+bundled in or derived into this repository, with their licenses and the
+attributions those licenses require. In-house authored content is covered by the
+repository's MIT license and is not listed here.
+
+This file is GENERATED from internal/license/assets.yaml.
+Regenerate it with: go run ./tools/gennotice
+
+----------------------------------------------------------------------------
+Natural Earth 1:110m land polygons
+  License:     Public Domain
+  Source:      https://www.naturalearthdata.com/
+  Attribution: Made with Natural Earth (https://www.naturalearthdata.com/), public domain.
+  Notes:       Fetched at globe-generation time and baked into the braille globe frames.
+
+----------------------------------------------------------------------------
+Tatoeba Project — Japanese sentences
+  License:     CC-BY-2.0-FR
+  Source:      https://tatoeba.org/en/downloads
+  Attribution: Sentences from the Tatoeba Project (https://tatoeba.org), used under CC BY 2.0 FR.
+  Notes:       Corpus the Japanese word-frequency list is derived from; snapshot 2026-06-25. See docs/adr/0001-japanese-frequency-list.md.
