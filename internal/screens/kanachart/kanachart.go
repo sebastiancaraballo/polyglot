@@ -125,7 +125,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 // View implements tea.Model.
 func (m Model) View() tea.View {
-	view := tea.NewView(ui.FillFrame(m.deps.Theme, m.width, m.height, m.content()))
+	view := tea.NewView(ui.FitFrame(m.deps.Theme, m.width, m.height, m.content()))
 	view.AltScreen = true
 	return view
 }
@@ -141,14 +141,25 @@ func (m Model) content() string {
 	help := t.Help.Render(m.deps.Msgs.KanaChartHelp)
 	grid := m.grid(page.items)
 
-	// Header at the top, help at the bottom, and the table centered vertically in
-	// the space between so it uses the full height of the (taller) frame.
-	mid := ui.FillFrameContentHeight(t, m.height) - 2
-	if gh := lipgloss.Height(grid); mid < gh {
-		mid = gh
+	// The table sits just under the header with the help at the bottom; the frame
+	// hugs the content instead of filling the screen. Every page's body is padded
+	// to the tallest page's height (top-anchored) so the frame stays one constant
+	// height as the user pages through the chart.
+	body := lipgloss.PlaceVertical(m.bodyHeight(), lipgloss.Top, grid)
+	return header + "\n\n" + body + "\n\n" + help
+}
+
+// bodyHeight is the display height of the tallest page's grid, used to pad every
+// page's body to the same height so the frame does not grow and shrink as the user
+// pages through the chart.
+func (m Model) bodyHeight() int {
+	h := 0
+	for _, p := range m.pages {
+		if gh := lipgloss.Height(m.grid(p.items)); gh > h {
+			h = gh
+		}
 	}
-	body := lipgloss.PlaceVertical(mid, lipgloss.Center, grid)
-	return header + "\n" + body + "\n" + help
+	return h
 }
 
 // canonicalVowels is the gojūon column order.
@@ -247,7 +258,7 @@ func (m Model) colWidth() int {
 // interlineado is consistent) and is a blank line only when the tallest page would
 // still fit the body spaced, so nothing is ever clipped.
 func (m Model) rowSep() string {
-	budget := ui.FillFrameContentHeight(m.deps.Theme, m.height) - 2 // header + help
+	budget := ui.MaxFrameContentHeight(m.deps.Theme, m.height) - 2 // header + help
 	if 2*m.tallestPage()-1 <= budget {
 		return "\n\n"
 	}

@@ -36,21 +36,22 @@ func Frame(theme Theme, width, height int, content string) string {
 	return Center(width, height, box.Render(content))
 }
 
-// FillFrame renders content like Frame but lets the frame grow to fill the
-// terminal height (instead of the shared fixed height), for a screen that needs
-// more vertical room than the others — currently the kana chart. The width still
-// matches Frame so the border lines up horizontally with every other screen.
-func FillFrame(theme Theme, width, height int, content string) string {
+// FitFrame renders content like Frame but lets the frame grow taller than the
+// shared fixed height to fit its content, for a screen that needs more vertical
+// room than the others — currently the kana chart. The frame hugs the content
+// (capped to the terminal) instead of filling the whole screen, and its width
+// still matches Frame so the border lines up horizontally with every other screen.
+func FitFrame(theme Theme, width, height int, content string) string {
 	w := frameWidth
 	if width > 0 && width-2 < w {
 		w = width - 2
 	}
-	h := frameHeight
-	if height > 0 {
+	h := lipgloss.Height(content) + theme.Box.GetVerticalFrameSize()
+	if height > 0 && height-2 < h {
 		h = height - 2
 	}
 	if h < 1 {
-		h = frameHeight
+		h = 1
 	}
 	box := theme.Box.
 		Width(w).
@@ -60,8 +61,10 @@ func FillFrame(theme Theme, width, height int, content string) string {
 	return Center(width, height, box.Render(content))
 }
 
-// FillFrameContentHeight returns the content height available inside FillFrame.
-func FillFrameContentHeight(theme Theme, height int) int {
+// MaxFrameContentHeight returns the content height available inside a frame that
+// fills the terminal. The kana chart uses it to budget its row spacing against the
+// tallest the frame could ever be.
+func MaxFrameContentHeight(theme Theme, height int) int {
 	h := frameHeight
 	if height > 0 {
 		h = height - 2
