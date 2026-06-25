@@ -24,3 +24,6 @@ coverage.*
 .idea/
 .vscode/
 *.swp
+
+# Compiled offline build tools
+/tools/genfreq/genfreq

@@ -65,3 +65,8 @@ gofmt -l .              # formatting check
 ## License
 
 [MIT](LICENSE) © 2026 Sebastián Caraballo
+
+The MIT license covers the content and data too, not just the code. Third-party
+assets bundled in or derived into the repository, with their licenses and
+required attributions, are listed in [`NOTICE`](NOTICE) (generated from
+`internal/license/assets.yaml`).

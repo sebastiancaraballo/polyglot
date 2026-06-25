@@ -1,0 +1,4 @@
+# Generated text assets must keep LF endings on every platform so byte-oriented
+# checks (e.g. the NOTICE sync test) behave consistently, including on Windows.
+NOTICE text eol=lf
+content/ja/frequency.tsv text eol=lf
