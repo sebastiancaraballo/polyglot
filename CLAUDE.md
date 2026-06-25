@@ -2,6 +2,27 @@
 
 Guidance for working in this repository. Read before making changes.
 
+## Workflow checklist
+
+Follow this order for **every** change. The ★ steps are process steps that nothing
+will compile-fail or auto-catch, so they are the ones most often missed — do not
+skip them. Each item links to its authoritative detail below.
+
+1. ★ **Before editing any file, create a worktree** for the change:
+   `git worktree add ../polyglot-<feature> -b <feature>`. See [Worktrees](#worktrees).
+2. Write code, comments, and commits in English; keep user-facing strings in
+   `internal/i18n` (Spanish). See [Language conventions](#language-conventions).
+3. Keep it pure Go — no CGO, permissive deps only. See [Hard constraints](#hard-constraints).
+4. ★ **Update `CHANGELOG.md` and any affected docs (e.g. README) in the same change.**
+5. ★ **Before finishing, run and pass** `gofmt -l .`, `go vet ./...`, and
+   `go test ./...` (regenerate goldens with `-update`). See [Quality](#quality).
+6. The PR **description must include a Keep a Changelog changelog**. See
+   [Git & GitHub workflow](#git--github-workflow).
+7. ★ **Never merge a PR unless explicitly asked to.**
+8. After a PR is merged, move its board item to `Done`. See [Git & GitHub workflow](#git--github-workflow).
+9. ★ **When the change was made in a worktree, end the reply with the copy-paste
+   run command** for that worktree. See [Worktrees](#worktrees).
+
 ## Project
 
 Polyglot is a cross-platform (macOS, Windows, Linux) interactive terminal app for
@@ -54,6 +75,7 @@ symbols/text), keep romaji visible alongside Japanese.
 - **Commits:** concise imperative title, **no body/description**. One logical change per commit.
 - **Pull requests:** the PR **description must include a changelog** (e.g. `Added` /
   `Changed` / `Fixed` sections following Keep a Changelog).
+- **Merging:** never merge a PR unless explicitly asked to.
 - **Versioning:** Semantic Versioning. Keep `CHANGELOG.md` updated
   ([Keep a Changelog](https://keepachangelog.com/) format).
 - **Project board:** when a PR is merged, move its corresponding item in the GitHub
@@ -63,9 +85,10 @@ symbols/text), keep romaji visible alongside Japanese.
 
 ### Worktrees
 
-- Start each new feature in its own git worktree so the working copy and branch
-  stay isolated: `git worktree add ../polyglot-<feature> -b <feature>`, and
-  `git worktree remove ../polyglot-<feature>` once the PR is merged.
+- **Before touching any file, start the change in its own git worktree** so the
+  working copy and branch stay isolated: `git worktree add ../polyglot-<feature> -b <feature>`,
+  and `git worktree remove ../polyglot-<feature>` once the PR is merged. This is
+  step 1 for every change, including docs-only ones like editing this file.
 - No extra data isolation is configured, and none is needed: tests open their own
   throwaway databases via `t.TempDir()`, and the app's real database
   (`os.UserConfigDir()/polyglot`) is only touched by `go run ./cmd/polyglot`, which
