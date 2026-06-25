@@ -10,6 +10,7 @@ type Messages struct {
 	ItemKana       string
 	ItemKanaChart  string
 	ItemFlashcards string
+	ItemReview     string
 	ItemQuiz       string
 	ItemStats      string
 	ItemSettings   string
@@ -52,7 +53,7 @@ type Messages struct {
 	XPLabel       string // "XP"
 	StreakLabel   string // "Racha"
 	DaysSuffix    string // "días"
-	LearnedSuffix string // "palabras aprendidas"
+	LearnedSuffix string // "tarjetas aprendidas"
 
 	// Shared study UI
 	ChoiceHelp   string
@@ -80,18 +81,19 @@ type Messages struct {
 	QuizQuestionFmt string // "¿Cómo se dice \"%s\" en japonés?"
 	ReviewLabel     string
 
-	// Flashcards
-	FlashTitle    string
-	RevealHelp    string
-	GradePrompt   string
-	GradeAgain    string
-	GradeHard     string
-	GradeGood     string
-	GradeEasy     string
-	ReviewedLabel string
-	NothingDue    string
-	Today         string
-	DayShort      string
+	// Flashcards / Review
+	FlashTitle        string
+	ReviewScreenTitle string
+	RevealHelp        string
+	GradePrompt       string
+	GradeAgain        string
+	GradeHard         string
+	GradeGood         string
+	GradeEasy         string
+	ReviewedLabel     string
+	NothingDue        string
+	Today             string
+	DayShort          string
 
 	// Stats
 	StatsTitle    string
@@ -128,6 +130,7 @@ var ES = Messages{
 	ItemKana:       "Entrenador de Kana",
 	ItemKanaChart:  "Tabla de Kana",
 	ItemFlashcards: "Flashcards",
+	ItemReview:     "Repaso",
 	ItemQuiz:       "Quiz de opción múltiple",
 	ItemStats:      "Mis estadísticas",
 	ItemSettings:   "Ajustes",
@@ -167,7 +170,7 @@ var ES = Messages{
 	XPLabel:       "XP",
 	StreakLabel:   "Racha",
 	DaysSuffix:    "días",
-	LearnedSuffix: "palabras aprendidas",
+	LearnedSuffix: "tarjetas aprendidas",
 
 	ChoiceHelp:   "1-4 elegir · ↑/↓ mover · ENTER confirmar · ESC menú",
 	ContinueHelp: "ENTER continuar · ESC menú",
@@ -191,17 +194,18 @@ var ES = Messages{
 	QuizQuestionFmt: "¿Cómo se dice \"%s\" en japonés?",
 	ReviewLabel:     "Repasa",
 
-	FlashTitle:    "Flashcards",
-	RevealHelp:    "ESPACIO revelar · ESC menú",
-	GradePrompt:   "¿Qué tal lo recordaste?",
-	GradeAgain:    "Otra vez",
-	GradeHard:     "Difícil",
-	GradeGood:     "Bien",
-	GradeEasy:     "Fácil",
-	ReviewedLabel: "Tarjetas repasadas",
-	NothingDue:    "No hay tarjetas para repasar ahora. Vuelve más tarde.",
-	Today:         "hoy",
-	DayShort:      "d",
+	FlashTitle:        "Flashcards",
+	ReviewScreenTitle: "Repaso",
+	RevealHelp:        "ESPACIO revelar · ESC menú",
+	GradePrompt:       "¿Qué tal lo recordaste?",
+	GradeAgain:        "Otra vez",
+	GradeHard:         "Difícil",
+	GradeGood:         "Bien",
+	GradeEasy:         "Fácil",
+	ReviewedLabel:     "Tarjetas repasadas",
+	NothingDue:        "No hay tarjetas para repasar ahora. Vuelve más tarde.",
+	Today:             "hoy",
+	DayShort:          "d",
 
 	StatsTitle:    "Mis estadísticas",
 	BestLabel:     "récord",

@@ -12,6 +12,7 @@ const (
 	Menu Screen = iota
 	Kana
 	Flashcards
+	Review
 	Quiz
 	Stats
 	Onboarding
