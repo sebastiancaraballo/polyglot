@@ -1,0 +1,20 @@
+# Communicative functions — the language-agnostic curriculum spine.
+#
+# These describe what a learner can DO with language, graded by CEFR level, and
+# are shared across every language pair. Per-language lessons reference these IDs
+# to provide a concrete realization (the cultural "skin" over this universal
+# "spine").
+#
+# Descriptions are authored in-house for Polyglot. Do NOT copy proprietary can-do
+# wording from the Japan Foundation or CEFR catalogs — the MIT/permissive content
+# policy applies here too.
+functions:
+  - id: greet-daytime
+    cefr: A1
+    description: "Saludar y despedirse en situaciones cotidianas."
+  - id: basic-courtesy
+    cefr: A1
+    description: "Usar fórmulas básicas de cortesía: agradecer, pedir y responder sí o no."
+  - id: count-0-10
+    cefr: A1
+    description: "Contar y reconocer cantidades del cero al diez."

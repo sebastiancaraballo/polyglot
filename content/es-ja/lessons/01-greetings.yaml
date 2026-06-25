@@ -1,6 +1,7 @@
 id: greetings
 title: "Saludos básicos"
 jlpt: N5
+functions: [greet-daytime, basic-courtesy]
 cards:
   - es: "Hola / Buenas tardes"
     jp: "こんにちは"
