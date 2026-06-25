@@ -21,9 +21,15 @@ type Course struct {
 
 // Load reads, parses, and validates the course for pair from fsys. Paths are
 // resolved as content/<pair>/{lessons,kana}/*.yaml so that the same loader works
-// for the embedded FS and for test filesystems.
+// for the embedded FS and for test filesystems. The language-agnostic function
+// catalog under content/functions/*.yaml is loaded once and used to resolve the
+// communicative functions each lesson references.
 func Load(fsys fs.FS, pair string) (*Course, error) {
-	lessons, err := loadLessons(fsys, pair)
+	catalog, err := loadFunctions(fsys)
+	if err != nil {
+		return nil, err
+	}
+	lessons, err := loadLessons(fsys, pair, catalog)
 	if err != nil {
 		return nil, err
 	}
@@ -31,24 +37,35 @@ func Load(fsys fs.FS, pair string) (*Course, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Every kana a card depends on must be teachable (present in the kana tables).
+	set := kanaSet(kana)
+	for _, lesson := range lessons {
+		for _, card := range lesson.Cards {
+			if err := checkKanaCoverage(card.JP, set); err != nil {
+				return nil, fmt.Errorf("card %q %w", card.ID, err)
+			}
+		}
+	}
 	return &Course{Pair: pair, Lessons: lessons, Kana: kana}, nil
 }
 
 // lessonFile mirrors the on-disk YAML shape of a lesson. The source-language key
 // is "es" for the v1 Spanish → Japanese pair.
 type lessonFile struct {
-	ID    string `yaml:"id"`
-	Title string `yaml:"title"`
-	JLPT  string `yaml:"jlpt"`
-	Cards []struct {
+	ID        string   `yaml:"id"`
+	Title     string   `yaml:"title"`
+	JLPT      string   `yaml:"jlpt"`
+	Functions []string `yaml:"functions"`
+	Cards     []struct {
 		Source string `yaml:"es"`
 		JP     string `yaml:"jp"`
 		Romaji string `yaml:"romaji"`
 		Notes  string `yaml:"notes"`
+		Freq   int    `yaml:"freq"`
 	} `yaml:"cards"`
 }
 
-func loadLessons(fsys fs.FS, pair string) ([]model.Lesson, error) {
+func loadLessons(fsys fs.FS, pair string, catalog model.FunctionCatalog) ([]model.Lesson, error) {
 	dir := path.Join("content", pair, "lessons")
 	files, err := fs.Glob(fsys, path.Join(dir, "*.yaml"))
 	if err != nil {
@@ -59,7 +76,7 @@ func loadLessons(fsys fs.FS, pair string) ([]model.Lesson, error) {
 	seen := make(map[string]bool)
 	lessons := make([]model.Lesson, 0, len(files))
 	for _, file := range files {
-		lesson, err := parseLesson(fsys, file)
+		lesson, err := parseLesson(fsys, file, catalog)
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +92,7 @@ func loadLessons(fsys fs.FS, pair string) ([]model.Lesson, error) {
 	return lessons, nil
 }
 
-func parseLesson(fsys fs.FS, file string) (model.Lesson, error) {
+func parseLesson(fsys fs.FS, file string, catalog model.FunctionCatalog) (model.Lesson, error) {
 	data, err := fs.ReadFile(fsys, file)
 	if err != nil {
 		return model.Lesson{}, fmt.Errorf("read %s: %w", file, err)
@@ -94,22 +111,32 @@ func parseLesson(fsys fs.FS, file string) (model.Lesson, error) {
 	if !level.Valid() {
 		return model.Lesson{}, fmt.Errorf("%s: invalid jlpt level %q", file, lf.JLPT)
 	}
+	for _, fn := range lf.Functions {
+		if _, ok := catalog.Lookup(fn); !ok {
+			return model.Lesson{}, fmt.Errorf("%s: unknown function %q", file, fn)
+		}
+	}
 	if len(lf.Cards) == 0 {
 		return model.Lesson{}, fmt.Errorf("%s: lesson has no cards", file)
 	}
 
-	lesson := model.Lesson{ID: lf.ID, Title: lf.Title, JLPT: level}
+	lesson := model.Lesson{ID: lf.ID, Title: lf.Title, JLPT: level, Functions: lf.Functions}
 	for i, c := range lf.Cards {
 		if c.Source == "" || c.JP == "" || c.Romaji == "" {
 			return model.Lesson{}, fmt.Errorf("%s: card %d is missing es, jp, or romaji", file, i+1)
 		}
+		if c.Freq < 0 {
+			return model.Lesson{}, fmt.Errorf("%s: card %d has negative freq %d", file, i+1, c.Freq)
+		}
 		lesson.Cards = append(lesson.Cards, model.Card{
-			ID:     lf.ID + ":" + strconv.Itoa(i+1),
-			Source: c.Source,
-			JP:     c.JP,
-			Romaji: c.Romaji,
-			Notes:  c.Notes,
-			JLPT:   level,
+			ID:        lf.ID + ":" + strconv.Itoa(i+1),
+			Source:    c.Source,
+			JP:        c.JP,
+			Romaji:    c.Romaji,
+			Notes:     c.Notes,
+			JLPT:      level,
+			Functions: lf.Functions,
+			Freq:      c.Freq,
 		})
 	}
 	return lesson, nil

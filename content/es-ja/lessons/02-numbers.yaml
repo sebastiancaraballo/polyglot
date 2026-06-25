@@ -1,6 +1,7 @@
 id: numbers
 title: "Números del 1 al 10"
 jlpt: N5
+functions: [count-0-10]
 cards:
   - es: "Uno"
     jp: "いち"

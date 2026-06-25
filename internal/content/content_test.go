@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"unicode"
 
 	"github.com/sebastiancaraballo/polyglot/internal/model"
 )
@@ -151,11 +152,14 @@ func TestKanaInvalidCategory(t *testing.T) {
 
 func validFS() fstest.MapFS {
 	return fstest.MapFS{
+		"content/functions/core.yaml": &fstest.MapFile{Data: []byte(
+			"functions:\n  - id: greet-daytime\n    cefr: A1\n    description: Saludar.\n",
+		)},
 		"content/xx/lessons/01.yaml": &fstest.MapFile{Data: []byte(
-			"id: greetings\ntitle: Saludos\njlpt: N5\ncards:\n  - es: Hola\n    jp: こんにちは\n    romaji: konnichiwa\n",
+			"id: greetings\ntitle: Saludos\njlpt: N5\nfunctions: [greet-daytime]\ncards:\n  - es: Hola\n    jp: こんにちは\n    romaji: konnichiwa\n",
 		)},
 		"content/xx/kana/h.yaml": &fstest.MapFile{Data: []byte(
-			"type: hiragana\nitems:\n  - char: あ\n    romaji: a\n",
+			"type: hiragana\nitems:\n  - char: こ\n    romaji: ko\n  - char: ん\n    romaji: n\n  - char: に\n    romaji: ni\n  - char: ち\n    romaji: chi\n  - char: は\n    romaji: wa\n",
 		)},
 	}
 }
@@ -221,3 +225,111 @@ func TestLoadMissingDirectories(t *testing.T) {
 		t.Fatal("expected error when no lessons exist, got nil")
 	}
 }
+
+const validKana = "type: hiragana\nitems:\n  - char: あ\n    romaji: a\n"
+
+func TestLoadCurriculumErrors(t *testing.T) {
+	tests := map[string]fstest.MapFS{
+		"unknown function ref": {
+			"content/functions/core.yaml": file("functions:\n  - id: greet\n    cefr: A1\n    description: d\n"),
+			"content/xx/lessons/01.yaml":  file("id: a\ntitle: t\njlpt: N5\nfunctions: [nope]\ncards:\n  - es: Hola\n    jp: あ\n    romaji: a\n"),
+			"content/xx/kana/h.yaml":      file(validKana),
+		},
+		"invalid cefr": {
+			"content/functions/core.yaml": file("functions:\n  - id: greet\n    cefr: X9\n    description: d\n"),
+			"content/xx/lessons/01.yaml":  file("id: a\ntitle: t\njlpt: N5\ncards:\n  - es: Hola\n    jp: あ\n    romaji: a\n"),
+			"content/xx/kana/h.yaml":      file(validKana),
+		},
+		"duplicate function id": {
+			"content/functions/core.yaml": file("functions:\n  - id: greet\n    cefr: A1\n    description: d\n  - id: greet\n    cefr: A2\n    description: e\n"),
+			"content/xx/lessons/01.yaml":  file("id: a\ntitle: t\njlpt: N5\ncards:\n  - es: Hola\n    jp: あ\n    romaji: a\n"),
+			"content/xx/kana/h.yaml":      file(validKana),
+		},
+		"function missing description": {
+			"content/functions/core.yaml": file("functions:\n  - id: greet\n    cefr: A1\n"),
+			"content/xx/lessons/01.yaml":  file("id: a\ntitle: t\njlpt: N5\ncards:\n  - es: Hola\n    jp: あ\n    romaji: a\n"),
+			"content/xx/kana/h.yaml":      file(validKana),
+		},
+		"negative freq": {
+			"content/xx/lessons/01.yaml": file("id: a\ntitle: t\njlpt: N5\ncards:\n  - es: Hola\n    jp: あ\n    romaji: a\n    freq: -1\n"),
+			"content/xx/kana/h.yaml":     file(validKana),
+		},
+		"card uses unteachable kana": {
+			"content/xx/lessons/01.yaml": file("id: a\ntitle: t\njlpt: N5\ncards:\n  - es: Hola\n    jp: そ\n    romaji: so\n"),
+			"content/xx/kana/h.yaml":     file(validKana),
+		},
+	}
+
+	for name, fsys := range tests {
+		t.Run(name, func(t *testing.T) {
+			if _, err := Load(fsys, "xx"); err == nil {
+				t.Fatal("expected a validation error, got nil")
+			}
+		})
+	}
+}
+
+func TestFreqOptional(t *testing.T) {
+	course, err := Load(validFS(), "xx")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := course.Lessons[0].Cards[0].Freq; got != 0 {
+		t.Errorf("omitted freq = %d, want 0", got)
+	}
+}
+
+func TestEmbeddedLessonsReferenceKnownFunctions(t *testing.T) {
+	course, err := LoadEmbedded(DefaultPair)
+	if err != nil {
+		t.Fatalf("LoadEmbedded: %v", err)
+	}
+	// Load already rejects unresolved function refs, so success implies every
+	// referenced function exists. Assert each lesson declares at least one and
+	// that its cards inherit them.
+	for _, lesson := range course.Lessons {
+		if len(lesson.Functions) == 0 {
+			t.Errorf("lesson %q references no functions", lesson.ID)
+		}
+		for _, card := range lesson.Cards {
+			if len(card.Functions) != len(lesson.Functions) {
+				t.Errorf("card %q functions = %v, want lesson functions %v", card.ID, card.Functions, lesson.Functions)
+			}
+		}
+	}
+}
+
+func TestEmbeddedKanaCoverage(t *testing.T) {
+	course, err := LoadEmbedded(DefaultPair)
+	if err != nil {
+		t.Fatalf("LoadEmbedded: %v", err)
+	}
+	set := kanaSet(course.Kana)
+	for _, lesson := range course.Lessons {
+		for _, card := range lesson.Cards {
+			if err := checkKanaCoverage(card.JP, set); err != nil {
+				t.Errorf("card %q (%s): %v", card.ID, card.JP, err)
+			}
+		}
+	}
+}
+
+func TestEmbeddedContentIsKanjiFree(t *testing.T) {
+	// Kanji dependencies are deferred; the kana-coverage check skips non-kana
+	// runes, so this pins the assumption that current content carries no kanji.
+	course, err := LoadEmbedded(DefaultPair)
+	if err != nil {
+		t.Fatalf("LoadEmbedded: %v", err)
+	}
+	for _, lesson := range course.Lessons {
+		for _, card := range lesson.Cards {
+			for _, r := range card.JP {
+				if unicode.Is(unicode.Han, r) {
+					t.Errorf("card %q contains kanji %q; kanji support is not implemented yet", card.ID, string(r))
+				}
+			}
+		}
+	}
+}
+
+func file(s string) *fstest.MapFile { return &fstest.MapFile{Data: []byte(s)} }
