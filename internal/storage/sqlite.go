@@ -230,6 +230,51 @@ func (s *SQLiteStore) SaveCardState(ctx context.Context, profileID int64, state 
 	return nil
 }
 
+// GetKanaProgress returns the profile's kana automaticity progress, keyed by
+// kana character. Kana the profile has never practiced are absent from the map.
+func (s *SQLiteStore) GetKanaProgress(ctx context.Context, profileID int64) (map[string]model.KanaProgress, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT char, streak, attempts, mastered, best_ms
+		   FROM kana_progress WHERE profile_id = ?`,
+		profileID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query kana progress: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	progress := make(map[string]model.KanaProgress)
+	for rows.Next() {
+		var p model.KanaProgress
+		if err := rows.Scan(&p.Char, &p.Streak, &p.Attempts, &p.Mastered, &p.BestMs); err != nil {
+			return nil, fmt.Errorf("scan kana progress: %w", err)
+		}
+		progress[p.Char] = p
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate kana progress: %w", err)
+	}
+	return progress, nil
+}
+
+// SaveKanaProgress inserts or updates the automaticity progress for one kana.
+func (s *SQLiteStore) SaveKanaProgress(ctx context.Context, profileID int64, p model.KanaProgress) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO kana_progress (profile_id, char, streak, attempts, mastered, best_ms)
+		 VALUES (?, ?, ?, ?, ?, ?)
+		 ON CONFLICT (profile_id, char) DO UPDATE SET
+		   streak = excluded.streak,
+		   attempts = excluded.attempts,
+		   mastered = excluded.mastered,
+		   best_ms = excluded.best_ms`,
+		profileID, p.Char, p.Streak, p.Attempts, p.Mastered, p.BestMs,
+	)
+	if err != nil {
+		return fmt.Errorf("save kana progress: %w", err)
+	}
+	return nil
+}
+
 // GetStats returns the aggregate stats for a profile, or ErrNotFound.
 func (s *SQLiteStore) GetStats(ctx context.Context, profileID int64) (model.Stats, error) {
 	row := s.db.QueryRowContext(ctx,

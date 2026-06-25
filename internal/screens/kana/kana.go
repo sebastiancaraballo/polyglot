@@ -31,16 +31,22 @@ type Deps struct {
 
 // group is a selectable practice set in the pre-session picker.
 type group struct {
-	label string
-	match func(model.KanaItem) bool
+	label  string
+	match  func(model.KanaItem) bool
+	locked bool // gated behind a prior syllabary's fluency
 }
 
 // Model is the kana trainer screen. It first shows a group picker, then quizzes
 // the chosen kana: it shows a character and asks the learner to choose its romaji
-// reading from four options.
+// reading from four options. Answers are timed so the trainer can track progress
+// toward automaticity (fast, accurate recognition), which drives the Foundations
+// decoding gate.
 type Model struct {
 	deps Deps
 	rng  *rand.Rand
+
+	progress map[string]model.KanaProgress // per-kana automaticity, persisted
+	gate     study.Gate                    // decoding gate derived from progress
 
 	groups      []group // selectable practice sets
 	picking     bool    // true while showing the group picker
@@ -55,27 +61,42 @@ type Model struct {
 	selected     int
 	answered     bool
 	correctCount int
+	shownAt      time.Time // when the current question was first shown (for timing)
 	err          error
 
 	width, height int
 }
 
-// New builds a kana trainer that opens on the group picker.
+// New builds a kana trainer that opens on the group picker. It loads the
+// learner's saved kana progress so the picker can show mastery and gate katakana
+// behind hiragana fluency.
 func New(deps Deps) Model {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // not security-sensitive
-	return Model{deps: deps, rng: rng, picking: true, groups: buildGroups(deps.Msgs)}
+	m := Model{deps: deps, rng: rng, picking: true, progress: map[string]model.KanaProgress{}}
+	if deps.Store != nil {
+		if saved, err := deps.Store.GetKanaProgress(context.Background(), deps.ProfileID); err == nil {
+			m.progress = saved
+		} else {
+			m.err = err
+		}
+	}
+	m.gate = study.NewGate(deps.Items, m.progress)
+	m.groups = buildGroups(deps.Msgs, m.gate)
+	return m
 }
 
 // buildGroups returns the practice sets: everything, then each syllabary split by
-// category, matching the kana chart's pages.
-func buildGroups(msg i18n.Messages) []group {
+// category, matching the kana chart's pages. Katakana groups are locked until
+// hiragana is fluent, enforcing "hiragana, then katakana".
+func buildGroups(msg i18n.Messages, gate study.Gate) []group {
 	cat := func(typ model.KanaType, cats []model.KanaCategory, label string) group {
 		syllabary := msg.HiraganaLabel
 		if typ == model.Katakana {
 			syllabary = msg.KatakanaLabel
 		}
 		return group{
-			label: fmt.Sprintf("%s · %s", syllabary, label),
+			label:  fmt.Sprintf("%s · %s", syllabary, label),
+			locked: typ == model.Katakana && !gate.KatakanaUnlocked(),
 			match: func(it model.KanaItem) bool {
 				if it.Type != typ {
 					return false
@@ -128,6 +149,7 @@ func (m Model) setQuestion() Model {
 	m.options, m.correct = study.Options(m.rng, m.deck[m.index].Romaji, m.pool, optionCount)
 	m.selected = 0
 	m.answered = false
+	m.shownAt = time.Now()
 	return m
 }
 
@@ -163,6 +185,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case m.finished():
 		if isConfirm(msg) {
 			m.picking = true // back to the group picker
+			m.groups = buildGroups(m.deps.Msgs, m.gate)
 			return m, nil
 		}
 	case m.answered:
@@ -189,7 +212,7 @@ func (m Model) handlePick(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.groupCursor++
 		}
 	}
-	if ui.IsConfirmKey(msg) {
+	if ui.IsConfirmKey(msg) && !m.groups[m.groupCursor].locked {
 		m = m.startSession()
 	}
 	return m, nil
@@ -227,6 +250,31 @@ func (m Model) reveal() Model {
 	if err := m.deps.Store.AddXP(context.Background(), m.deps.ProfileID, study.XPForAnswer(correct)); err != nil {
 		m.err = err
 	}
+	m = m.recordAnswer(correct)
+	return m
+}
+
+// recordAnswer folds the timed answer into the current kana's automaticity
+// progress, persists it, and refreshes the decoding gate.
+func (m Model) recordAnswer(correct bool) Model {
+	if m.progress == nil {
+		m.progress = map[string]model.KanaProgress{}
+	}
+	var elapsed time.Duration
+	if !m.shownAt.IsZero() {
+		elapsed = time.Since(m.shownAt)
+	}
+	char := m.deck[m.index].Char
+	p := m.progress[char]
+	p.Char = char
+	p = study.GradeKana(p, correct, elapsed)
+	m.progress[char] = p
+	if m.deps.Store != nil {
+		if err := m.deps.Store.SaveKanaProgress(context.Background(), m.deps.ProfileID, p); err != nil {
+			m.err = err
+		}
+	}
+	m.gate = study.NewGate(m.deps.Items, m.progress)
 	return m
 }
 
@@ -256,16 +304,46 @@ func (m Model) pickerView() string {
 	b.WriteString(t.Title.Render(m.deps.Msgs.KanaTitle))
 	b.WriteString("\n\n")
 	for i, g := range m.groups {
-		if i == m.groupCursor {
-			b.WriteString(t.Selected.Render("▸ " + g.label))
-		} else {
-			b.WriteString(t.Normal.Render("  " + g.label))
+		label := g.label + m.groupSuffix(g)
+		switch {
+		case g.locked:
+			b.WriteString(t.Subtle.Render("⊘ " + label))
+		case i == m.groupCursor:
+			b.WriteString(t.Selected.Render("▸ " + label))
+		default:
+			b.WriteString(t.Normal.Render("  " + label))
 		}
 		b.WriteString("\n")
 	}
 	b.WriteString("\n")
-	b.WriteString(t.Help.Render(m.deps.Msgs.KanaPickHelp))
+	if m.groups[m.groupCursor].locked {
+		b.WriteString(t.Subtle.Render(m.deps.Msgs.KanaLockedHint))
+	} else {
+		b.WriteString(t.Help.Render(m.deps.Msgs.KanaPickHelp))
+	}
 	return b.String()
+}
+
+// groupSuffix annotates a picker row with its mastery: a fluent badge when every
+// kana in the group is mastered, otherwise a "mastered/total" count.
+func (m Model) groupSuffix(g group) string {
+	var total, mastered int
+	for _, it := range m.deps.Items {
+		if !g.match(it) {
+			continue
+		}
+		total++
+		if m.progress[it.Char].Mastered {
+			mastered++
+		}
+	}
+	if total == 0 {
+		return ""
+	}
+	if mastered >= total {
+		return "  ✓ " + m.deps.Msgs.KanaFluent
+	}
+	return "  " + fmt.Sprintf(m.deps.Msgs.KanaMasteredFmt, mastered, total)
 }
 
 func (m Model) questionView() string {
@@ -327,6 +405,10 @@ func (m Model) summaryView() string {
 	b.WriteString(t.Title.Render(m.deps.Msgs.SessionDone))
 	b.WriteString("\n\n")
 	fmt.Fprintf(&b, "%s: %d/%d\n\n", m.deps.Msgs.ScoreLabel, m.correctCount, len(m.deck))
+	if m.gate.ReadingUnlocked() {
+		b.WriteString(t.Success.Render("✓ " + m.deps.Msgs.FluentBadge))
+		b.WriteString("\n\n")
+	}
 	b.WriteString(t.Help.Render(m.deps.Msgs.RestartHelp))
 	return b.String()
 }

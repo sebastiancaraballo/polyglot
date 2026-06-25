@@ -25,6 +25,10 @@ const (
 // restHold is how many ticks the globe pauses on the resting frame (Japan).
 var restHold = int(restDuration / frameInterval)
 
+// lockGlyph marks a menu item gated behind kana fluency. It is a non-color
+// symbol (it must not rely on color alone) and single display width.
+const lockGlyph = "⊘"
+
 // animSeq hands every menu instance a distinct animation id so that a tick left
 // in flight by a previous menu can't drive a newer one (which would speed the
 // animation up after navigating away and back).
@@ -42,6 +46,9 @@ type Summary struct {
 	Streak  int
 	Learned int
 	Total   int
+	// ReadingLocked gates the reading activities (Flashcards, Quiz) behind kana
+	// fluency: the Foundations decoding gate. See internal/study.Gate.
+	ReadingLocked bool
 }
 
 type item struct {
@@ -49,6 +56,7 @@ type item struct {
 	label  string
 	screen nav.Screen
 	quit   bool
+	locked bool
 }
 
 // Model is the main menu screen.
@@ -60,6 +68,7 @@ type Model struct {
 
 	items  []item
 	cursor int
+	notice string // transient message, e.g. why a locked item can't be opened
 
 	// Header globe animation.
 	animate bool
@@ -85,14 +94,14 @@ func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Mo
 		animate: !ui.NoColor() && len(art.GlobeFrames) > 1,
 		animID:  animSeq,
 		items: []item{
-			{"あ", msgs.ItemKana, nav.Kana, false},
-			{"▦", msgs.ItemKanaChart, nav.KanaChart, false},
-			{"▣", msgs.ItemFlashcards, nav.Flashcards, false},
-			{"♻", msgs.ItemReview, nav.Review, false},
-			{"✓", msgs.ItemQuiz, nav.Quiz, false},
-			{"▤", msgs.ItemStats, nav.Stats, false},
-			{"⚙", msgs.ItemSettings, nav.Settings, false},
-			{"⏻", msgs.ItemQuit, nav.Menu, true},
+			{"あ", msgs.ItemKana, nav.Kana, false, false},
+			{"▦", msgs.ItemKanaChart, nav.KanaChart, false, false},
+			{"▣", msgs.ItemFlashcards, nav.Flashcards, false, summary.ReadingLocked},
+			{"♻", msgs.ItemReview, nav.Review, false, false},
+			{"✓", msgs.ItemQuiz, nav.Quiz, false, summary.ReadingLocked},
+			{"▤", msgs.ItemStats, nav.Stats, false, false},
+			{"⚙", msgs.ItemSettings, nav.Settings, false, false},
+			{"⏻", msgs.ItemQuit, nav.Menu, true, false},
 		},
 	}
 }
@@ -126,10 +135,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "up", "k":
+			m.notice = ""
 			if m.cursor > 0 {
 				m.cursor--
 			}
 		case "down", "j":
+			m.notice = ""
 			if m.cursor < len(m.items) {
 				m.cursor++
 			}
@@ -159,6 +170,10 @@ func (m Model) choose() (tea.Model, tea.Cmd) {
 		return m, nav.GoTo(nav.Profiles)
 	}
 	it := m.items[m.cursor-1]
+	if it.locked {
+		m.notice = m.msgs.ReadingLocked
+		return m, nil
+	}
 	if it.quit {
 		return m, tea.Quit
 	}
@@ -174,7 +189,13 @@ func (m Model) View() tea.View {
 
 func (m Model) content() string {
 	main := m.mainColumns()
+	// A transient notice replaces the help line (rather than adding a row) so the
+	// fixed-height frame never pushes the footer out of view. Moving the cursor
+	// clears it and restores the help text.
 	help := m.theme.Help.Render(m.msgs.MenuHelp)
+	if m.notice != "" {
+		help = m.theme.Subtle.Render(lockGlyph + " " + m.notice)
+	}
 	contentHeight := ui.FrameContentHeight(m.theme, m.height)
 	if contentHeight <= 0 {
 		return main + "\n" + help
@@ -221,10 +242,20 @@ func (m Model) mainColumns() string {
 func (m Model) menuItems() string {
 	var b strings.Builder
 	for i, it := range m.items {
-		line := fmt.Sprintf("%s  %s", it.icon, it.label)
-		if i+1 == m.cursor {
+		// A locked item shows the lock glyph in place of its icon — a fixed-width
+		// marker that never wraps the row (which would break the column layout).
+		// The reason is explained in the footer when the learner opens it.
+		icon := it.icon
+		if it.locked {
+			icon = lockGlyph
+		}
+		line := fmt.Sprintf("%s  %s", icon, it.label)
+		switch {
+		case i+1 == m.cursor:
 			b.WriteString(m.theme.Selected.Render("▸ " + line))
-		} else {
+		case it.locked:
+			b.WriteString(m.theme.Subtle.Render("  " + line))
+		default:
 			b.WriteString(m.theme.Normal.Render("  " + line))
 		}
 		if i < len(m.items)-1 {

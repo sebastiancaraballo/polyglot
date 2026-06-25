@@ -17,6 +17,7 @@ type Messages struct {
 	ItemQuit       string
 	SwitchProfile  string
 	MenuHelp       string
+	ReadingLocked  string // hint when a learner opens a locked reading activity
 
 	// Settings
 	SettingsTitle        string
@@ -64,10 +65,14 @@ type Messages struct {
 	ScoreLabel   string
 
 	// Kana trainer
-	KanaTitle    string
-	KanaPrompt   string
-	KanaGroupAll string
-	KanaPickHelp string
+	KanaTitle       string
+	KanaPrompt      string
+	KanaGroupAll    string
+	KanaPickHelp    string
+	KanaFluent      string // badge on a fully-mastered group
+	KanaMasteredFmt string // "%d/%d" mastered count
+	KanaLockedHint  string // why a katakana group is locked
+	FluentBadge     string // syllabary-fluency badge on the summary screen
 
 	// Kana chart
 	KanaChartTitle string
@@ -137,6 +142,7 @@ var ES = Messages{
 	ItemQuit:       "Salir",
 	SwitchProfile:  "Cambiar de perfil",
 	MenuHelp:       "↑/↓ moverse · ENTER elegir/cambiar perfil · Q salir",
+	ReadingLocked:  "Aprende a leer los kana con fluidez primero.",
 
 	SettingsTitle:        "Ajustes",
 	SettingsHelp:         "↑/↓ moverse · ENTER cambiar/confirmar · ESC volver",
@@ -179,10 +185,14 @@ var ES = Messages{
 	SessionDone:  "¡Sesión completada!",
 	ScoreLabel:   "Aciertos",
 
-	KanaTitle:    "Entrenador de Kana",
-	KanaPrompt:   "¿Cómo se lee?",
-	KanaGroupAll: "Todo",
-	KanaPickHelp: "↑/↓ moverse · ENTER empezar · ESC volver",
+	KanaTitle:       "Entrenador de Kana",
+	KanaPrompt:      "¿Cómo se lee?",
+	KanaGroupAll:    "Todo",
+	KanaPickHelp:    "↑/↓ moverse · ENTER empezar · ESC volver",
+	KanaFluent:      "fluido",
+	KanaMasteredFmt: "%d/%d",
+	KanaLockedHint:  "Domina el hiragana primero para desbloquear el katakana.",
+	FluentBadge:     "¡Kana fluido! Ya puedes leer todas las palabras y frases.",
 
 	KanaChartTitle: "Tabla de Kana",
 	KanaChartHelp:  "← → cambiar página · ESC volver",

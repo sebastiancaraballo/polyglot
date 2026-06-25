@@ -135,6 +135,69 @@ func TestMenuViewShowsProgress(t *testing.T) {
 	}
 }
 
+func lockedMenu() Model {
+	summary := Summary{Name: "Sebastián", XP: 0, Streak: 0, Learned: 0, Total: 20, ReadingLocked: true}
+	return New(ui.NewTheme(true), i18n.ES, summary, "test")
+}
+
+func itemIndex(m Model, screen nav.Screen) int {
+	for i, it := range m.items {
+		if it.screen == screen {
+			return i
+		}
+	}
+	return -1
+}
+
+func TestLockedReadingItemDoesNotNavigate(t *testing.T) {
+	m := lockedMenu()
+	m.cursor = itemIndex(m, nav.Flashcards) + 1 // cursor is 1-based (0 is the profile header)
+
+	next, cmd := m.choose()
+	if cmd != nil {
+		t.Fatalf("opening a locked item should not navigate, got cmd %T", cmd())
+	}
+	if got := next.(Model).notice; got != i18n.ES.ReadingLocked {
+		t.Errorf("notice = %q, want the reading-locked hint", got)
+	}
+}
+
+func TestLockedMenuViewMarksAndExplains(t *testing.T) {
+	m := lockedMenu()
+	m.cursor = itemIndex(m, nav.Quiz) + 1
+	m, _ = func() (Model, tea.Cmd) { tm, cmd := m.choose(); return tm.(Model), cmd }()
+
+	content := m.View().Content
+	if !strings.Contains(content, lockGlyph) {
+		t.Errorf("locked menu view missing the lock glyph %q", lockGlyph)
+	}
+	if !strings.Contains(content, i18n.ES.ReadingLocked) {
+		t.Errorf("locked menu view missing the reading-locked notice")
+	}
+}
+
+func TestLockedItemReplacesIconWithLock(t *testing.T) {
+	m := lockedMenu()
+	for _, it := range m.items {
+		if it.screen == nav.Quiz && !it.locked {
+			t.Fatal("Quiz should be locked in a locked menu")
+		}
+	}
+	// The lock glyph must appear once per locked reading item (Flashcards, Quiz).
+	if got := strings.Count(m.menuItems(), lockGlyph); got != 2 {
+		t.Errorf("lock glyphs in menu = %d, want 2", got)
+	}
+}
+
+func TestUnlockedMenuHasNoLocks(t *testing.T) {
+	m := newTestMenu() // ReadingLocked defaults to false
+	for _, it := range m.items {
+		if it.locked {
+			t.Fatalf("item %q is locked when reading is unlocked", it.label)
+		}
+	}
+}
+
 func TestMenuProfileHeaderNavigatesToProfiles(t *testing.T) {
 	m := newTestMenu()
 	m.cursor = 0

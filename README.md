@@ -18,7 +18,8 @@ Read the [Manifesto](MANIFESTO.md) for the vision and principles behind Polyglot
 
 - ▣ **Spaced-repetition flashcards (SRS)** — review vocabulary on an optimal schedule.
 - ♻ **Repaso (cross-curriculum review)** — one session that mixes everything currently due across the curriculum (vocabulary and kana), most-overdue first and interleaved.
-- ◇ **Kana trainer** — learn hiragana and katakana, including dakuten/handakuten and combinations; pick a group to focus each session.
+- ◇ **Kana trainer** — learn hiragana and katakana, including dakuten/handakuten and combinations; pick a group to focus each session. Answers are timed and tracked toward *automaticity* (fast, accurate reading).
+- ⊘ **Foundations decoding gate** — following the Simple View of Reading, decoding comes before comprehension: katakana practice unlocks once hiragana is fluent, and reading is **progressive** — the flashcards and quizzes show only words and sentences built from kana you have already mastered, so what you can read grows as you learn (decodable texts).
 - ▦ **Kana chart** — browse every kana with its romaji, paging through hiragana and katakana with ← / →.
 - ✓ **Multiple-choice quizzes** — quick reinforcement.
 - ▤ **Progress, XP & streaks** — earn experience points for every answer, keep a daily streak, and track cards learned.
