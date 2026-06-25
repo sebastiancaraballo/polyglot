@@ -22,6 +22,7 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/screens/settings"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/stats"
 	"github.com/sebastiancaraballo/polyglot/internal/storage"
+	"github.com/sebastiancaraballo/polyglot/internal/study"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
 )
 
@@ -300,12 +301,15 @@ func (c appContext) summary() menu.Summary {
 
 	stats, _ := c.store.GetStats(ctx, c.profile.ID)
 	learned, _ := c.store.CountLearnedCards(ctx, c.profile.ID)
+	progress, _ := c.store.GetKanaProgress(ctx, c.profile.ID)
+	gate := study.NewGate(c.course.Kana, progress)
 
 	return menu.Summary{
-		Name:    c.profile.Name,
-		XP:      stats.XP,
-		Streak:  stats.Streak,
-		Learned: learned,
-		Total:   c.reviewableTotal(),
+		Name:          c.profile.Name,
+		XP:            stats.XP,
+		Streak:        stats.Streak,
+		Learned:       learned,
+		Total:         c.reviewableTotal(),
+		ReadingLocked: !gate.ReadingUnlocked(),
 	}
 }

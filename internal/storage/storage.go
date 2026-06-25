@@ -38,6 +38,12 @@ type Storage interface {
 	// SaveCardState inserts or updates the scheduling state for a card.
 	SaveCardState(ctx context.Context, profileID int64, state model.CardState) error
 
+	// GetKanaProgress returns the profile's kana automaticity progress, keyed by
+	// kana character. Kana the profile has never practiced are absent.
+	GetKanaProgress(ctx context.Context, profileID int64) (map[string]model.KanaProgress, error)
+	// SaveKanaProgress inserts or updates the automaticity progress for one kana.
+	SaveKanaProgress(ctx context.Context, profileID int64, p model.KanaProgress) error
+
 	// GetStats returns the aggregate stats for a profile.
 	GetStats(ctx context.Context, profileID int64) (model.Stats, error)
 	// SaveStats replaces the aggregate stats for a profile.

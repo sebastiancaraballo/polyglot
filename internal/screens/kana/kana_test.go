@@ -104,6 +104,89 @@ func TestAnsweringAwardsXP(t *testing.T) {
 	}
 }
 
+// gateItems is a minimal two-syllabary set whose base gojūon is one kana each,
+// so a single mastered kana makes a syllabary fluent in tests.
+var gateItems = []model.KanaItem{
+	{Char: "あ", Romaji: "a", Type: model.Hiragana, Category: model.Base},
+	{Char: "ア", Romaji: "a", Type: model.Katakana, Category: model.Base},
+}
+
+func katakanaGroupIndex(t *testing.T, m Model) int {
+	t.Helper()
+	for i, g := range m.groups {
+		if strings.HasPrefix(g.label, i18n.ES.KatakanaLabel) {
+			return i
+		}
+	}
+	t.Fatal("no katakana group in picker")
+	return 0
+}
+
+func TestKatakanaLockedUntilHiraganaFluent(t *testing.T) {
+	store, profileID := newStore(t)
+	m := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: gateItems})
+
+	idx := katakanaGroupIndex(t, m)
+	if !m.groups[idx].locked {
+		t.Fatal("katakana should be locked before hiragana fluency")
+	}
+
+	// Confirming a locked group must not start a session.
+	m.groupCursor = idx
+	var tm tea.Model = m
+	tm, _ = tm.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if !tm.(Model).picking {
+		t.Fatal("confirming a locked group should not start a session")
+	}
+}
+
+func TestKatakanaUnlocksAfterHiraganaMastered(t *testing.T) {
+	store, profileID := newStore(t)
+	if err := store.SaveKanaProgress(context.Background(), profileID,
+		model.KanaProgress{Char: "あ", Mastered: true}); err != nil {
+		t.Fatalf("SaveKanaProgress: %v", err)
+	}
+
+	m := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: gateItems})
+	idx := katakanaGroupIndex(t, m)
+	if m.groups[idx].locked {
+		t.Fatal("katakana should unlock once hiragana is fluent")
+	}
+}
+
+func TestAnsweringPersistsKanaProgress(t *testing.T) {
+	store, profileID := newStore(t)
+	m := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: gateItems})
+
+	// Start the hiragana base group and answer the only card correctly.
+	m.groupCursor = 1 // "Hiragana · Básico"
+	m = m.startSession()
+	m.selected = m.correct
+	m = m.reveal()
+
+	got, err := store.GetKanaProgress(context.Background(), profileID)
+	if err != nil {
+		t.Fatalf("GetKanaProgress: %v", err)
+	}
+	if got["あ"].Attempts == 0 {
+		t.Fatalf("answering did not persist kana progress: %+v", got)
+	}
+}
+
+func newStore(t *testing.T) (storage.Storage, int64) {
+	t.Helper()
+	store, err := storage.Open(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	profile, err := store.CreateProfile(context.Background(), "tester")
+	if err != nil {
+		t.Fatalf("CreateProfile: %v", err)
+	}
+	return store, profile.ID
+}
+
 func TestKanaTilePositionStableAfterAnswer(t *testing.T) {
 	m := Model{
 		deps: Deps{
