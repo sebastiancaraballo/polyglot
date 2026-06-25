@@ -8,16 +8,20 @@ import (
 
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/model"
+	"github.com/sebastiancaraballo/polyglot/internal/review"
 	"github.com/sebastiancaraballo/polyglot/internal/srs"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
 )
 
+func scheduled(it review.Item) review.Scheduled {
+	return review.Scheduled{Item: it, State: srs.NewCard(it.CardID)}
+}
+
 func revealedModel(showRomaji bool) Model {
-	card := model.Card{ID: "test:1", Source: "Gracias", JP: "ありがとう", Romaji: "arigatou"}
+	it := review.Item{CardID: "test:1", Strand: review.Vocab, Prompt: "Gracias", Answer: "ありがとう", Secondary: "arigatou"}
 	return Model{
 		deps:     Deps{Theme: ui.PlainTheme(), Msgs: i18n.ES, ShowRomaji: showRomaji},
-		queue:    []model.Card{card},
-		states:   map[string]model.CardState{card.ID: srs.NewCard(card.ID)},
+		queue:    []review.Scheduled{scheduled(it)},
 		revealed: true,
 	}
 }
@@ -40,11 +44,8 @@ func TestRevealHidesRomajiWhenDisabled(t *testing.T) {
 }
 
 func TestSpaceRevealsFlashcard(t *testing.T) {
-	card := model.Card{ID: "test:1", Source: "Gracias", JP: "ありがとう", Romaji: "arigatou"}
-	m := Model{
-		queue:  []model.Card{card},
-		states: map[string]model.CardState{card.ID: srs.NewCard(card.ID)},
-	}
+	it := review.Item{CardID: "test:1", Prompt: "Gracias", Answer: "ありがとう"}
+	m := Model{queue: []review.Scheduled{scheduled(it)}}
 
 	next, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 	got := next.(Model)
@@ -54,13 +55,9 @@ func TestSpaceRevealsFlashcard(t *testing.T) {
 }
 
 func TestGradeOptionsRenderOnePerLine(t *testing.T) {
-	card := model.Card{ID: "test:1"}
-	m := Model{
-		deps:   Deps{Msgs: i18n.ES},
-		states: map[string]model.CardState{card.ID: srs.NewCard(card.ID)},
-	}
+	m := Model{deps: Deps{Msgs: i18n.ES}}
 
-	got := m.gradeOptions(card)
+	got := m.gradeOptions(model.CardState{Ease: model.DefaultEase})
 	lines := strings.Split(got, "\n")
 	if len(lines) != 4 {
 		t.Fatalf("grade options should render one option per line, got %d lines: %q", len(lines), got)

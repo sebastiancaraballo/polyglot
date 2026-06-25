@@ -88,6 +88,7 @@ func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Mo
 			{"あ", msgs.ItemKana, nav.Kana, false},
 			{"▦", msgs.ItemKanaChart, nav.KanaChart, false},
 			{"▣", msgs.ItemFlashcards, nav.Flashcards, false},
+			{"♻", msgs.ItemReview, nav.Review, false},
 			{"✓", msgs.ItemQuiz, nav.Quiz, false},
 			{"▤", msgs.ItemStats, nav.Stats, false},
 			{"⚙", msgs.ItemSettings, nav.Settings, false},

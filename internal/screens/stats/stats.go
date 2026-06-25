@@ -63,6 +63,9 @@ func New(deps Deps) Model {
 	for _, lesson := range deps.Course.Lessons {
 		m.total += len(lesson.Cards)
 	}
+	// Kana now participates in spaced repetition too, so count it toward the
+	// learned/total total to keep the figure coherent with CountLearnedCards.
+	m.total += len(deps.Course.Kana)
 	for _, k := range deps.Course.Kana {
 		switch k.Type {
 		case model.Hiragana:

@@ -3,7 +3,6 @@ package flashcards
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"strings"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/model"
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
+	"github.com/sebastiancaraballo/polyglot/internal/review"
 	"github.com/sebastiancaraballo/polyglot/internal/srs"
 	"github.com/sebastiancaraballo/polyglot/internal/storage"
 	"github.com/sebastiancaraballo/polyglot/internal/study"
@@ -20,14 +20,15 @@ import (
 
 const sessionLimit = 20
 
-// Deps are the dependencies a flashcards session needs.
+// Deps are the dependencies a review session needs.
 type Deps struct {
 	Theme      ui.Theme
 	Msgs       i18n.Messages
 	Store      storage.Storage
 	ProfileID  int64
-	Cards      []model.Card
+	Items      []review.Item
 	ShowRomaji bool
+	Title      string // screen title (vocabulary-only vs. cross-curriculum review)
 }
 
 // gradeKeys maps number keys to spaced-repetition grades.
@@ -38,11 +39,12 @@ var gradeKeys = map[string]srs.Grade{
 	"4": srs.Easy,
 }
 
-// Model is the spaced-repetition flashcard study screen.
+// Model is the flashcard-style review screen. It presents the items currently due
+// — built by the cross-curriculum review queue — one at a time: prompt, then the
+// revealed answer, then a spaced-repetition grade.
 type Model struct {
-	deps   Deps
-	queue  []model.Card
-	states map[string]model.CardState
+	deps  Deps
+	queue []review.Scheduled
 
 	index         int
 	revealed      bool
@@ -53,28 +55,14 @@ type Model struct {
 	width, height int
 }
 
-// New builds a flashcards session containing the cards currently due.
+// New builds a review session containing the items currently due.
 func New(deps Deps) Model {
-	m := Model{deps: deps, states: make(map[string]model.CardState)}
-	now := time.Now()
-	ctx := context.Background()
-
-	for _, card := range deps.Cards {
-		state, err := deps.Store.GetCardState(ctx, deps.ProfileID, card.ID)
-		if err != nil {
-			state = srs.NewCard(card.ID)
-		}
-		if srs.IsDue(state, now) {
-			m.queue = append(m.queue, card)
-			m.states[card.ID] = state
-		}
+	m := Model{deps: deps}
+	q, err := review.BuildQueue(context.Background(), deps.Store, deps.ProfileID, deps.Items, time.Now(), sessionLimit)
+	if err != nil {
+		m.err = err
 	}
-
-	rng := rand.New(rand.NewSource(now.UnixNano())) //nolint:gosec // not security-sensitive
-	rng.Shuffle(len(m.queue), func(i, j int) { m.queue[i], m.queue[j] = m.queue[j], m.queue[i] })
-	if len(m.queue) > sessionLimit {
-		m.queue = m.queue[:sessionLimit]
-	}
+	m.queue = q
 	return m
 }
 
@@ -117,8 +105,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) grade(grade srs.Grade) Model {
-	card := m.queue[m.index]
-	state := srs.Review(m.states[card.ID], grade, time.Now())
+	sched := m.queue[m.index]
+	state := srs.Review(sched.State, grade, time.Now())
 	if err := m.persist(state, grade); err != nil {
 		m.err = err
 	}
@@ -165,12 +153,19 @@ func (m Model) View() tea.View {
 	return view
 }
 
+func (m Model) title() string {
+	if m.deps.Title != "" {
+		return m.deps.Title
+	}
+	return m.deps.Msgs.FlashTitle
+}
+
 func (m Model) cardView() string {
 	t := m.deps.Theme
-	card := m.queue[m.index]
+	item := m.queue[m.index].Item
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s  %d/%d\n\n", t.Title.Render(m.deps.Msgs.FlashTitle), m.index+1, len(m.queue))
-	b.WriteString(t.Accent.Render(card.Source))
+	fmt.Fprintf(&b, "%s  %d/%d\n\n", t.Title.Render(m.title()), m.index+1, len(m.queue))
+	b.WriteString(t.Accent.Render(item.Prompt))
 	b.WriteString("\n\n")
 
 	if !m.revealed {
@@ -178,20 +173,20 @@ func (m Model) cardView() string {
 		return b.String()
 	}
 
-	b.WriteString(t.Title.Render(card.JP))
+	b.WriteString(t.Title.Render(item.Answer))
 	b.WriteString("\n")
-	if m.deps.ShowRomaji {
-		b.WriteString(t.Subtle.Render(card.Romaji))
+	if m.deps.ShowRomaji && item.Secondary != "" {
+		b.WriteString(t.Subtle.Render(item.Secondary))
 		b.WriteString("\n")
 	}
-	if card.Notes != "" {
-		b.WriteString(t.Subtle.Render(ui.WrapText(card.Notes, m.noteWidth())))
+	if item.Notes != "" {
+		b.WriteString(t.Subtle.Render(ui.WrapText(item.Notes, m.noteWidth())))
 		b.WriteString("\n")
 	}
 	b.WriteString("\n")
 	b.WriteString(m.deps.Msgs.GradePrompt)
 	b.WriteString("\n")
-	b.WriteString(m.gradeOptions(card))
+	b.WriteString(m.gradeOptions(m.queue[m.index].State))
 	b.WriteString("\n")
 	b.WriteString(t.Help.Render(m.deps.Msgs.BackHelp))
 	return b.String()
@@ -211,9 +206,8 @@ func (m Model) noteWidth() int {
 	return width
 }
 
-func (m Model) gradeOptions(card model.Card) string {
+func (m Model) gradeOptions(state model.CardState) string {
 	now := time.Now()
-	state := m.states[card.ID]
 	labels := []struct {
 		key   string
 		label string

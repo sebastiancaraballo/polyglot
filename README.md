@@ -17,10 +17,11 @@ Read the [Manifesto](MANIFESTO.md) for the vision and principles behind Polyglot
 ## Features (v1)
 
 - ▣ **Spaced-repetition flashcards (SRS)** — review vocabulary on an optimal schedule.
+- ♻ **Repaso (cross-curriculum review)** — one session that mixes everything currently due across the curriculum (vocabulary and kana), most-overdue first and interleaved.
 - ◇ **Kana trainer** — learn hiragana and katakana, including dakuten/handakuten and combinations; pick a group to focus each session.
 - ▦ **Kana chart** — browse every kana with its romaji, paging through hiragana and katakana with ← / →.
 - ✓ **Multiple-choice quizzes** — quick reinforcement.
-- ▤ **Progress, XP & streaks** — earn experience points for every answer, keep a daily streak, and track words learned.
+- ▤ **Progress, XP & streaks** — earn experience points for every answer, keep a daily streak, and track cards learned.
 - ◎ **Local profiles** — named learners with a profile switcher and per-profile progress.
 - ⚙ **Settings** — toggle romaji visibility (per profile), and delete the active profile or all app data (with confirmation) to start fresh.
 - ※ **Accessible** — responsive layout, high-contrast theme, `NO_COLOR` support, keyboard-first.

@@ -10,6 +10,7 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/model"
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
+	"github.com/sebastiancaraballo/polyglot/internal/review"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/flashcards"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/kana"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/kanachart"
@@ -215,8 +216,14 @@ func (m rootModel) build(s nav.Screen) tea.Model {
 	case nav.Flashcards:
 		return flashcards.New(flashcards.Deps{
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
-			ProfileID: m.ctx.profile.ID, Cards: m.ctx.allCards(),
-			ShowRomaji: m.ctx.profile.ShowRomaji,
+			ProfileID: m.ctx.profile.ID, Items: review.VocabItems(m.ctx.course.Lessons),
+			ShowRomaji: m.ctx.profile.ShowRomaji, Title: m.ctx.msgs.FlashTitle,
+		})
+	case nav.Review:
+		return flashcards.New(flashcards.Deps{
+			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
+			ProfileID: m.ctx.profile.ID, Items: m.ctx.reviewItems(),
+			ShowRomaji: m.ctx.profile.ShowRomaji, Title: m.ctx.msgs.ReviewScreenTitle,
 		})
 	case nav.Quiz:
 		return quiz.New(quiz.Deps{
@@ -272,6 +279,20 @@ func (c appContext) allCards() []model.Card {
 	return cards
 }
 
+// reviewItems is the full cross-curriculum set of schedulable items: vocabulary
+// and kana, interleaved by the review queue.
+func (c appContext) reviewItems() []review.Item {
+	items := review.VocabItems(c.course.Lessons)
+	return append(items, review.KanaItems(c.course.Kana)...)
+}
+
+// reviewableTotal is the number of distinct items that can enter the review queue
+// (vocabulary cards plus kana). It keeps the learned/total progress badge coherent
+// now that kana participates in spaced repetition.
+func (c appContext) reviewableTotal() int {
+	return len(c.allCards()) + len(c.course.Kana)
+}
+
 // summary computes the menu's progress badge. It is best-effort: on a storage
 // error it falls back to zero values rather than failing navigation.
 func (c appContext) summary() menu.Summary {
@@ -285,6 +306,6 @@ func (c appContext) summary() menu.Summary {
 		XP:      stats.XP,
 		Streak:  stats.Streak,
 		Learned: learned,
-		Total:   len(c.allCards()),
+		Total:   c.reviewableTotal(),
 	}
 }
