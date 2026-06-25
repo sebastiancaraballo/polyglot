@@ -14,8 +14,10 @@ skip them. Each item links to its authoritative detail below.
    `internal/i18n` (Spanish). See [Language conventions](#language-conventions).
 3. Keep it pure Go — no CGO, permissive deps only. See [Hard constraints](#hard-constraints).
 4. ★ **Update `CHANGELOG.md` and any affected docs (e.g. README) in the same change.**
-5. ★ **Before finishing, run and pass** `gofmt -l .`, `go vet ./...`, and
-   `go test ./...` (regenerate goldens with `-update`). See [Quality](#quality).
+5. ★ **Before finishing, run and pass** `gofmt -l .`, `go vet ./...`,
+   `golangci-lint run ./...`, and `go test ./...` (regenerate goldens with
+   `-update`). Note: `golangci-lint` (it runs staticcheck) catches issues `go vet`
+   does not, and CI fails on them — run it locally too. See [Quality](#quality).
 6. The PR **description must include a Keep a Changelog changelog**. See
    [Git & GitHub workflow](#git--github-workflow).
 7. ★ **Never merge a PR unless explicitly asked to.**
@@ -163,5 +165,6 @@ go run ./cmd/polyglot     # run the app
 go build ./...            # build
 go test ./...             # tests
 go vet ./...              # static checks
+golangci-lint run ./...  # lint (staticcheck etc.; stricter than go vet, matches CI)
 gofmt -l .               # formatting check
 ```
