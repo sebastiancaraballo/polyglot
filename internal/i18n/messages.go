@@ -192,7 +192,7 @@ var ES = Messages{
 	KanaFluent:      "fluido",
 	KanaMasteredFmt: "%d/%d",
 	KanaLockedHint:  "Domina el hiragana primero para desbloquear el katakana.",
-	FluentBadge:     "¡Lectura fluida! Ya puedes leer palabras y frases.",
+	FluentBadge:     "¡Kana fluido! Ya puedes leer todas las palabras y frases.",
 
 	KanaChartTitle: "Tabla de Kana",
 	KanaChartHelp:  "← → cambiar página · ESC volver",

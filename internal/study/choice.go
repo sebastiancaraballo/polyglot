@@ -1,6 +1,7 @@
 // Package study holds shared study-mode logic used by multiple screens:
 // multiple-choice option generation, study-streak bookkeeping, kana automaticity
-// grading, and the Foundations decoding gate.
+// grading, and the Foundations decoding gate — both the syllabary-ordering gate
+// and the progressive, decodable-texts reading filter.
 package study
 
 import "math/rand"

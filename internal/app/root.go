@@ -215,21 +215,25 @@ func (m rootModel) build(s nav.Screen) tea.Model {
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Kana: m.ctx.course.Kana,
 		})
 	case nav.Flashcards:
+		dec := m.ctx.decoder()
 		return flashcards.New(flashcards.Deps{
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
-			ProfileID: m.ctx.profile.ID, Items: review.VocabItems(m.ctx.course.Lessons),
+			ProfileID:  m.ctx.profile.ID,
+			Items:      decodableItems(review.VocabItems(m.ctx.course.Lessons), dec),
 			ShowRomaji: m.ctx.profile.ShowRomaji, Title: m.ctx.msgs.FlashTitle,
 		})
 	case nav.Review:
+		dec := m.ctx.decoder()
 		return flashcards.New(flashcards.Deps{
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
-			ProfileID: m.ctx.profile.ID, Items: m.ctx.reviewItems(),
+			ProfileID: m.ctx.profile.ID, Items: decodableItems(m.ctx.reviewItems(), dec),
 			ShowRomaji: m.ctx.profile.ShowRomaji, Title: m.ctx.msgs.ReviewScreenTitle,
 		})
 	case nav.Quiz:
+		dec := m.ctx.decoder()
 		return quiz.New(quiz.Deps{
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
-			ProfileID: m.ctx.profile.ID, Cards: m.ctx.allCards(),
+			ProfileID: m.ctx.profile.ID, Cards: decodableCards(m.ctx.allCards(), dec),
 			ShowRomaji: m.ctx.profile.ShowRomaji,
 		})
 	case nav.Stats:
@@ -271,6 +275,38 @@ func (m rootModel) screenForProfile(profile model.Profile) nav.Screen {
 	return nav.Menu
 }
 
+// decoder builds the progressive reading decoder from the active profile's kana
+// progress. It is best-effort: on a storage error the decoder simply treats no
+// kana as mastered (nothing decodable yet).
+func (c appContext) decoder() study.Decoder {
+	progress, _ := c.store.GetKanaProgress(context.Background(), c.profile.ID)
+	return study.NewDecoder(c.course.Kana, progress)
+}
+
+// decodableItems keeps every non-vocabulary item (e.g. kana) and only those
+// vocabulary items the learner can already read with their mastered kana.
+func decodableItems(items []review.Item, dec study.Decoder) []review.Item {
+	out := make([]review.Item, 0, len(items))
+	for _, it := range items {
+		if it.Strand == review.Vocab && !dec.Decodable(it.Answer) {
+			continue
+		}
+		out = append(out, it)
+	}
+	return out
+}
+
+// decodableCards keeps only the cards the learner can already read.
+func decodableCards(cards []model.Card, dec study.Decoder) []model.Card {
+	out := make([]model.Card, 0, len(cards))
+	for _, c := range cards {
+		if dec.Decodable(c.JP) {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
 // allCards flattens every lesson's cards into a single slice.
 func (c appContext) allCards() []model.Card {
 	var cards []model.Card
@@ -301,8 +337,11 @@ func (c appContext) summary() menu.Summary {
 
 	stats, _ := c.store.GetStats(ctx, c.profile.ID)
 	learned, _ := c.store.CountLearnedCards(ctx, c.profile.ID)
-	progress, _ := c.store.GetKanaProgress(ctx, c.profile.ID)
-	gate := study.NewGate(c.course.Kana, progress)
+
+	// Reading is locked only while nothing is decodable yet; once the learner has
+	// mastered enough kana to read at least one card, the reading activities open
+	// and show that growing decodable subset.
+	readable := len(decodableCards(c.allCards(), c.decoder()))
 
 	return menu.Summary{
 		Name:          c.profile.Name,
@@ -310,6 +349,6 @@ func (c appContext) summary() menu.Summary {
 		Streak:        stats.Streak,
 		Learned:       learned,
 		Total:         c.reviewableTotal(),
-		ReadingLocked: !gate.ReadingUnlocked(),
+		ReadingLocked: readable == 0,
 	}
 }

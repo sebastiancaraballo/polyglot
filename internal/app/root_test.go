@@ -8,6 +8,7 @@ import (
 
 	"github.com/sebastiancaraballo/polyglot/internal/content"
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
+	"github.com/sebastiancaraballo/polyglot/internal/model"
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/menu"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/profilesetup"
@@ -117,6 +118,55 @@ func TestProfileCreatedWithoutTutorialSetsOnboardedAndMenu(t *testing.T) {
 	id, ok, err := store.GetActiveProfileID(ctx)
 	if err != nil || !ok || id != profile.ID {
 		t.Fatalf("active profile = (%d, %v, %v), want (%d, true, nil)", id, ok, err, profile.ID)
+	}
+}
+
+func TestProgressiveReadingGate(t *testing.T) {
+	ctx := context.Background()
+	store, err := storage.Open(filepath.Join(t.TempDir(), "polyglot.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+
+	profile, err := store.CreateProfile(ctx, "tester")
+	if err != nil {
+		t.Fatalf("CreateProfile: %v", err)
+	}
+	appCtx := newTestAppContext(t, store)
+	appCtx.profile = profile
+
+	// With no kana mastered, nothing is decodable and reading is locked.
+	if got := appCtx.summary().ReadingLocked; !got {
+		t.Fatal("reading should be locked before any kana is mastered")
+	}
+	if n := len(decodableCards(appCtx.allCards(), appCtx.decoder())); n != 0 {
+		t.Fatalf("decodable cards before mastery = %d, want 0", n)
+	}
+
+	// Master the kana of "こんにちは" (こ ん に ち は). That card becomes readable.
+	for _, c := range []string{"こ", "ん", "に", "ち", "は"} {
+		if err := store.SaveKanaProgress(ctx, profile.ID,
+			model.KanaProgress{Char: c, Mastered: true}); err != nil {
+			t.Fatalf("SaveKanaProgress %q: %v", c, err)
+		}
+	}
+
+	if got := appCtx.summary().ReadingLocked; got {
+		t.Fatal("reading should unlock once at least one card is decodable")
+	}
+	readable := decodableCards(appCtx.allCards(), appCtx.decoder())
+	if len(readable) == 0 {
+		t.Fatal("expected at least one decodable card after mastering its kana")
+	}
+	// The readable subset must be a strict subset: not every card's kana is mastered.
+	if len(readable) == len(appCtx.allCards()) {
+		t.Fatal("expected reading to be partial, not the whole curriculum")
+	}
+	for _, c := range readable {
+		if !appCtx.decoder().Decodable(c.JP) {
+			t.Errorf("card %q in readable set is not decodable", c.JP)
+		}
 	}
 }
 
