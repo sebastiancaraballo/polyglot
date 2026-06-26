@@ -11,5 +11,8 @@ type Profile struct {
 	// ShowRomaji controls whether romaji is displayed alongside Japanese in the
 	// study screens. New profiles default to true.
 	ShowRomaji bool
-	CreatedAt  time.Time
+	// KanaOnboarded records whether the learner has seen the kana trainer's
+	// first-time intro. New profiles default to false.
+	KanaOnboarded bool
+	CreatedAt     time.Time
 }

@@ -48,6 +48,7 @@ type Model struct {
 	progress map[string]model.KanaProgress // per-kana automaticity, persisted
 	gate     study.Gate                    // decoding gate derived from progress
 
+	intro       bool    // true while showing the first-time intro, before the picker
 	groups      []group // selectable practice sets
 	picking     bool    // true while showing the group picker
 	groupCursor int
@@ -67,9 +68,9 @@ type Model struct {
 	width, height int
 }
 
-// New builds a kana trainer that opens on the group picker. It loads the
-// learner's saved kana progress so the picker can show mastery and gate katakana
-// behind hiragana fluency.
+// New builds a kana trainer. It loads the learner's saved kana progress so the
+// picker can show mastery and gate katakana behind hiragana fluency, and opens on
+// a one-time intro the first time the learner visits (otherwise on the picker).
 func New(deps Deps) Model {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // not security-sensitive
 	m := Model{deps: deps, rng: rng, picking: true, progress: map[string]model.KanaProgress{}}
@@ -79,7 +80,14 @@ func New(deps Deps) Model {
 		} else {
 			m.err = err
 		}
+		// Show the intro until the learner has seen it once. Read fresh from the
+		// store: the screen is rebuilt on each visit, so this reflects a dismissal
+		// from an earlier visit without any cross-screen plumbing.
+		if prof, err := deps.Store.GetProfile(context.Background(), deps.ProfileID); err == nil {
+			m.intro = !prof.KanaOnboarded
+		}
 	}
+	m.picking = !m.intro
 	m.gate = study.NewGate(deps.Items, m.progress)
 	m.groups = buildGroups(deps.Msgs, m.gate)
 	return m
@@ -111,7 +119,14 @@ func buildGroups(msg i18n.Messages, gate study.Gate) []group {
 		}
 	}
 	return []group{
-		{label: msg.KanaGroupAll, match: func(model.KanaItem) bool { return true }},
+		// "All" spans both syllabaries, so it includes katakana and must honor the
+		// same gate: it stays locked until hiragana is fluent. Otherwise a learner
+		// could practice katakana through "All" before the gate opens.
+		{
+			label:  msg.KanaGroupAll,
+			locked: !gate.KatakanaUnlocked(),
+			match:  func(model.KanaItem) bool { return true },
+		},
 		cat(model.Hiragana, []model.KanaCategory{model.Base}, msg.KanaBasic),
 		cat(model.Hiragana, []model.KanaCategory{model.Dakuten, model.Handakuten}, msg.KanaVoiced),
 		cat(model.Hiragana, []model.KanaCategory{model.Combo}, msg.KanaCombo),
@@ -177,6 +192,13 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nav.Back()
 	}
 
+	if m.intro {
+		if ui.IsConfirmKey(msg) {
+			m = m.dismissIntro()
+		}
+		return m, nil
+	}
+
 	if m.picking {
 		return m.handlePick(msg)
 	}
@@ -199,6 +221,19 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m = m.answerKey(msg)
 	}
 	return m, nil
+}
+
+// dismissIntro closes the first-time intro, records that it has been seen so it
+// does not reappear, and falls through to the group picker.
+func (m Model) dismissIntro() Model {
+	m.intro = false
+	m.picking = true
+	if m.deps.Store != nil {
+		if err := m.deps.Store.SetKanaOnboarded(context.Background(), m.deps.ProfileID); err != nil {
+			m.err = err
+		}
+	}
+	return m
 }
 
 func (m Model) handlePick(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -286,6 +321,8 @@ func isConfirm(msg tea.KeyPressMsg) bool {
 func (m Model) View() tea.View {
 	var content string
 	switch {
+	case m.intro:
+		content = m.introView()
 	case m.picking:
 		content = m.pickerView()
 	case m.finished():
@@ -296,6 +333,20 @@ func (m Model) View() tea.View {
 	view := tea.NewView(ui.Frame(m.deps.Theme, m.width, m.height, content))
 	view.AltScreen = true
 	return view
+}
+
+// introView is the first-time explanation of the kana trainer: the gated path
+// (hiragana → katakana → reading) and what mastery means.
+func (m Model) introView() string {
+	t := m.deps.Theme
+	var b strings.Builder
+	b.WriteString(t.Title.Render(m.deps.Msgs.KanaIntroTitle))
+	b.WriteString("\n\n")
+	body := ui.WrapText(m.deps.Msgs.KanaIntroBody, ui.FrameContentWidth(t, m.width))
+	b.WriteString(t.Normal.Render(body))
+	b.WriteString("\n\n")
+	b.WriteString(t.Help.Render(m.deps.Msgs.KanaIntroHelp))
+	return b.String()
 }
 
 func (m Model) pickerView() string {
@@ -317,10 +368,13 @@ func (m Model) pickerView() string {
 	}
 	b.WriteString("\n")
 	if m.groups[m.groupCursor].locked {
-		b.WriteString(t.Subtle.Render(m.deps.Msgs.KanaLockedHint))
+		hint := fmt.Sprintf(m.deps.Msgs.KanaUnlockHintFmt, m.gate.Hiragana.Mastered, m.gate.Hiragana.Total)
+		b.WriteString(t.Subtle.Render(hint))
 	} else {
 		b.WriteString(t.Help.Render(m.deps.Msgs.KanaPickHelp))
 	}
+	b.WriteString("\n")
+	b.WriteString(t.Subtle.Render(m.deps.Msgs.KanaMasteryNote))
 	return b.String()
 }
 
