@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/sebastiancaraballo/polyglot/internal/art"
 	"github.com/sebastiancaraballo/polyglot/internal/i18n"
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
@@ -123,7 +124,12 @@ func TestMenuSpaceNavigates(t *testing.T) {
 func TestMenuViewShowsProgress(t *testing.T) {
 	m := newTestMenu()
 	content := m.View().Content
-	for _, want := range []string{"Polyglot", "es → ja", "Sebastián", i18n.ES.SwitchProfile, i18n.ES.XPLabel, "1240", i18n.ES.StreakLabel, i18n.ES.ItemKana} {
+	// The app name is rendered as the block wordmark in the header, not plain text.
+	// Styling wraps each line separately, so match a single (top) wordmark line.
+	if topLine := strings.SplitN(art.Wordmark, "\n", 2)[0]; !strings.Contains(content, topLine) {
+		t.Error("view is missing the app wordmark")
+	}
+	for _, want := range []string{"es → ja", "Sebastián", i18n.ES.SwitchProfile, i18n.ES.XPLabel, "1240", i18n.ES.StreakLabel, i18n.ES.ItemKana} {
 		if !strings.Contains(content, want) {
 			t.Errorf("view is missing %q", want)
 		}
@@ -132,6 +138,18 @@ func TestMenuViewShowsProgress(t *testing.T) {
 		if strings.Contains(content, unwanted) {
 			t.Errorf("view includes %q", unwanted)
 		}
+	}
+}
+
+func TestMenuNarrowWidthFallsBackToTextTitle(t *testing.T) {
+	m := newTestMenu()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 40, Height: 24})
+	content := updated.(Model).View().Content
+	if strings.Contains(content, art.Wordmark) {
+		t.Error("narrow view should drop the block wordmark")
+	}
+	if !strings.Contains(content, i18n.ES.AppName) {
+		t.Errorf("narrow view should keep the plain text title %q", i18n.ES.AppName)
 	}
 }
 
