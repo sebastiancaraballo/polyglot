@@ -188,7 +188,16 @@ func (m Model) View() tea.View {
 }
 
 func (m Model) content() string {
-	main := m.mainColumns()
+	wordmark := m.wordmark()
+	main := m.mainColumns(wordmark == "")
+	if wordmark != "" {
+		// The full-width block wordmark spans the header above the globe/info
+		// columns, standing in for the app name (which the columns then omit to
+		// avoid repeating it), with a blank line separating it from the columns.
+		// To keep the fixed-height frame's footer in view, that blank takes the
+		// place of the columns' internal separator, which mainColumns drops here.
+		main = lipgloss.JoinVertical(lipgloss.Left, wordmark, "", main)
+	}
 	// A transient notice replaces the help line (rather than adding a row) so the
 	// fixed-height frame never pushes the footer out of view. Moving the cursor
 	// clears it and restores the help text.
@@ -219,18 +228,37 @@ func (m Model) content() string {
 	return b.String()
 }
 
+// wordmark renders the compact block-letter app name for the header, or "" when
+// the frame is too narrow to fit it (in which case the columns keep the plain
+// text title instead). A zero width means the size is still unknown, so we show
+// the wordmark optimistically rather than flashing the fallback on first paint.
+func (m Model) wordmark() string {
+	contentWidth := ui.FrameContentWidth(m.theme, m.width)
+	if m.width > 0 && contentWidth < lipgloss.Width(art.Wordmark) {
+		return ""
+	}
+	return m.theme.Title.Render(art.Wordmark)
+}
+
 // mainColumns lays the rotating globe beside the app name, progress, active
-// profile, and menu options.
-func (m Model) mainColumns() string {
+// profile, and menu options. showName keeps the plain text title in the info
+// column; it is dropped when the header already shows the block wordmark.
+func (m Model) mainColumns(showName bool) string {
 	globe := m.theme.Accent.Render(art.GlobeFrames[m.frame])
-	info := lipgloss.JoinVertical(lipgloss.Left,
-		m.titleLine(),
+	rows := []string{
+		m.titleLine(showName),
 		m.xpLine(),
 		m.streakLine(),
 		m.profileLine(),
-		"",
-		m.menuItems(),
-	)
+	}
+	// Separate the progress block from the menu options. When the wordmark header
+	// is shown it already provides that blank (above the columns), so it is
+	// dropped here to keep the fixed-height frame's footer in view.
+	if showName {
+		rows = append(rows, "")
+	}
+	rows = append(rows, m.menuItems())
+	info := lipgloss.JoinVertical(lipgloss.Left, rows...)
 	height := max(lipgloss.Height(globe), lipgloss.Height(info))
 	return lipgloss.JoinHorizontal(lipgloss.Top,
 		centerBlockVertically(globe, height),
@@ -300,7 +328,12 @@ func centerBlockVertically(content string, height int) string {
 	return strings.Join(lines, "\n")
 }
 
-func (m Model) titleLine() string {
+func (m Model) titleLine(showName bool) string {
+	if !showName {
+		// The wordmark above already carries the app name; show only the version
+		// and language pair here so the name isn't repeated.
+		return m.theme.Subtle.Render(fmt.Sprintf("v%s · %s", m.version, m.msgs.Tagline))
+	}
 	name := m.theme.Title.Render(fmt.Sprintf("%s  v%s", m.msgs.AppName, m.version))
 	return name + "  " + m.theme.Subtle.Render(m.msgs.Tagline)
 }

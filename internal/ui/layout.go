@@ -12,7 +12,7 @@ import (
 // them to fit a smaller terminal.
 const (
 	frameWidth  = 64
-	frameHeight = 22
+	frameHeight = 23
 )
 
 // Frame renders content inside the app's border at a fixed size and centers it
