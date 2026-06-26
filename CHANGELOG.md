@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kana trainer group picker: choose what to practice (everything, or a syllabary split by base / dakuten·handakuten / combinations) before each session.
 
 ### Changed
-- README landing rewritten to lead with the project's vision instead of a feature list: added a title banner, a "Vision" section distilled from the Manifesto, and a dedicated "Supported languages" section. Installation and everything below it are unchanged.
+- README landing rewritten to lead with a title banner and a dedicated "Supported languages" section instead of a feature list. Installation and everything below it are unchanged.
 - The learned-progress figure now counts the whole curriculum: its label is "tarjetas aprendidas" (cards learned) and its total includes kana as well as vocabulary, keeping it coherent now that kana is scheduled by spaced repetition.
 - Main menu header redesigned around the globe: the rotating globe and the app/menu content now render as two vertically centered columns, with the keyboard help pinned to the bottom of the frame.
 - Screens now render inside a fixed-size frame whose dimensions depend only on the terminal size, so the border no longer grows or shrinks with its content (e.g. when a quiz reveals an answer) or when moving between sections.

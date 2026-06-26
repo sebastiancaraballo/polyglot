@@ -7,38 +7,13 @@
 ╚═╝      ╚═════╝ ╚══════╝╚═╝    ╚═════╝ ╚══════╝ ╚═════╝    ╚═╝   
 ```
 
-Polyglot is an open-source, cross-platform terminal app for learning languages —
-built so that learning a language feels like stepping into the world that speaks it.
-
-## Vision
-
-Every language expresses the same human core — to greet, to ask, to thank, to hope, to
-say goodbye. Polyglot teaches that **shared human story**, then lets each language's
-culture give it its own voice and color. Adding a language is telling the same story in a
-new world, not starting over from scratch.
-
-- **Learning a language is living that story.** Flashcards, quizzes, and the kana trainer
-  are mechanics inside one narrative; progress is earned through **mastery**, not by
-  clicking "next".
-- **Your native language is the lens.** There is no universal "beginner" — the distance
-  between any two languages is different, so Polyglot treats the learner's native language
-  as a first-class input that shapes pacing and scaffolding.
-- **Grounded in evidence, not intuition.** What to teach, and in what order, follows
-  established standards, word-frequency data, and the science of how people learn.
-- **Built for everyone, including the overlooked.** The same human core is what lets
-  Polyglot reach **low-resource and endangered languages**, each wrapped in its own
-  culture and dignity rather than treated as a lesser cousin of a bigger language.
-- **Free and open, all the way down.** MIT-licensed — and that promise extends to
-  *everything* in the project, not just the code but the lessons, word lists, and assets.
-
-Read the full [Manifesto](MANIFESTO.md).
+Polyglot is an open-source, cross-platform, offline terminal app for learning languages.
 
 ## Supported languages
 
 | | Language pairs |
 | --- | --- |
 | **Available now** | Spanish → Japanese (v1) |
-| **On the roadmap** | More pairs (English → Japanese, Spanish → English, …), reaching toward low-resource languages |
 
 The interface is in **Spanish** for v1 — the learner's source language. The codebase,
 comments, and identifiers are in English, following standard Go practices.
