@@ -25,6 +25,8 @@ type Storage interface {
 	SetOnboarded(ctx context.Context, profileID int64) error
 	// SetShowRomaji sets whether a profile displays romaji alongside Japanese.
 	SetShowRomaji(ctx context.Context, profileID int64, enabled bool) error
+	// SetKanaOnboarded marks a profile as having seen the kana trainer intro.
+	SetKanaOnboarded(ctx context.Context, profileID int64) error
 
 	// GetActiveProfileID returns the persisted active profile id; ok is false when
 	// none has been set.
