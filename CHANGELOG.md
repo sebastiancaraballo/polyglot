@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kana trainer group picker: choose what to practice (everything, or a syllabary split by base / dakuten·handakuten / combinations) before each session.
 
 ### Changed
+- Kana mastery now depends on accuracy only: a kana's streak advances on every correct answer and resets only on an incorrect one — response time no longer gates the streak (`internal/study.GradeKana`). Answer time is still recorded as each kana's best-time stat. The onboarding and picker copy no longer say mastery requires answering "rápido". Removes the opaque speed requirement that could leave a kana un-mastered with no visible reason even when answered correctly.
 - The shared app frame is one row taller, giving every screen a blank line between its content and the bottom keyboard-help line (e.g. after the main menu's "Salir" entry).
 - README landing rewritten to lead with a title banner and a dedicated "Supported languages" section instead of a feature list. Installation and everything below it are unchanged.
 - The learned-progress figure now counts the whole curriculum: its label is "tarjetas aprendidas" (cards learned) and its total includes kana as well as vocabulary, keeping it coherent now that kana is scheduled by spaced repetition.

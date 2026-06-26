@@ -38,14 +38,14 @@ type group struct {
 
 // Model is the kana trainer screen. It first shows a group picker, then quizzes
 // the chosen kana: it shows a character and asks the learner to choose its romaji
-// reading from four options. Answers are timed so the trainer can track progress
-// toward automaticity (fast, accurate recognition), which drives the Foundations
-// decoding gate.
+// reading from four options. A kana is driven to mastery by a run of correct
+// answers, which drives the Foundations decoding gate. Answers are timed only to
+// record each kana's best time as a stat; speed does not affect mastery.
 type Model struct {
 	deps Deps
 	rng  *rand.Rand
 
-	progress map[string]model.KanaProgress // per-kana automaticity, persisted
+	progress map[string]model.KanaProgress // per-kana mastery progress, persisted
 	gate     study.Gate                    // decoding gate derived from progress
 
 	intro       bool    // true while showing the first-time intro, before the picker
@@ -289,8 +289,9 @@ func (m Model) reveal() Model {
 	return m
 }
 
-// recordAnswer folds the timed answer into the current kana's automaticity
-// progress, persists it, and refreshes the decoding gate.
+// recordAnswer folds the answer into the current kana's mastery progress,
+// persists it, and refreshes the decoding gate. The elapsed time is recorded as
+// a stat only; it does not affect the mastery streak.
 func (m Model) recordAnswer(correct bool) Model {
 	if m.progress == nil {
 		m.progress = map[string]model.KanaProgress{}
