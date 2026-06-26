@@ -1,33 +1,47 @@
-# Polyglot
+```
+██████╗  ██████╗ ██╗  ██╗   ██╗ ██████╗ ██╗      ██████╗ ████████╗
+██╔══██╗██╔═══██╗██║  ╚██╗ ██╔╝██╔════╝ ██║     ██╔═══██╗╚══██╔══╝
+██████╔╝██║   ██║██║   ╚████╔╝ ██║  ███╗██║     ██║   ██║   ██║   
+██╔═══╝ ██║   ██║██║    ╚██╔╝  ██║   ██║██║     ██║   ██║   ██║   
+██║     ╚██████╔╝███████╗██║   ╚██████╔╝███████╗╚██████╔╝   ██║   
+╚═╝      ╚═════╝ ╚══════╝╚═╝    ╚═════╝ ╚══════╝ ╚═════╝    ╚═╝   
+```
 
-> An interactive terminal app to learn languages, one terminal session at a time.
+Polyglot is an open-source, cross-platform terminal app for learning languages —
+built so that learning a language feels like stepping into the world that speaks it.
 
-Polyglot is a cross-platform (macOS, Windows, Linux), open-source TUI for learning
-languages. The first version focuses on **Spanish → Japanese**, with spaced-repetition
-flashcards, a kana trainer, and multiple-choice quizzes. The architecture is built to
-add more language pairs later (English → Japanese, Spanish → English, …).
+## Vision
 
-The application ships as a **single self-contained binary** — no runtime to install.
+Every language expresses the same human core — to greet, to ask, to thank, to hope, to
+say goodbye. Polyglot teaches that **shared human story**, then lets each language's
+culture give it its own voice and color. Adding a language is telling the same story in a
+new world, not starting over from scratch.
 
-Read the [Manifesto](MANIFESTO.md) for the vision and principles behind Polyglot.
+- **Learning a language is living that story.** Flashcards, quizzes, and the kana trainer
+  are mechanics inside one narrative; progress is earned through **mastery**, not by
+  clicking "next".
+- **Your native language is the lens.** There is no universal "beginner" — the distance
+  between any two languages is different, so Polyglot treats the learner's native language
+  as a first-class input that shapes pacing and scaffolding.
+- **Grounded in evidence, not intuition.** What to teach, and in what order, follows
+  established standards, word-frequency data, and the science of how people learn.
+- **Built for everyone, including the overlooked.** The same human core is what lets
+  Polyglot reach **low-resource and endangered languages**, each wrapped in its own
+  culture and dignity rather than treated as a lesser cousin of a bigger language.
+- **Free and open, all the way down.** MIT-licensed — and that promise extends to
+  *everything* in the project, not just the code but the lessons, word lists, and assets.
 
-> **Note:** The user interface is in **Spanish** (the learner's source language for v1).
-> The codebase, comments, and identifiers are in English following standard Go practices.
+Read the full [Manifesto](MANIFESTO.md).
 
-## Features (v1)
+## Supported languages
 
-- ▣ **Spaced-repetition flashcards (SRS)** — review vocabulary on an optimal schedule.
-- ♻ **Repaso (cross-curriculum review)** — one session that mixes everything currently due across the curriculum (vocabulary and kana), most-overdue first and interleaved.
-- ◇ **Kana trainer** — learn hiragana and katakana, including dakuten/handakuten and combinations; pick a group to focus each session. Answers are timed and tracked toward *automaticity* (fast, accurate reading).
-- ⊘ **Foundations decoding gate** — following the Simple View of Reading, decoding comes before comprehension: katakana practice unlocks once hiragana is fluent, and reading is **progressive** — the flashcards and quizzes show only words and sentences built from kana you have already mastered, so what you can read grows as you learn (decodable texts).
-- ▦ **Kana chart** — browse every kana with its romaji, paging through hiragana and katakana with ← / →.
-- ✓ **Multiple-choice quizzes** — quick reinforcement.
-- ▤ **Progress, XP & streaks** — earn experience points for every answer, keep a daily streak, and track cards learned.
-- ◎ **Local profiles** — named learners with a profile switcher and per-profile progress.
-- ⚙ **Settings** — toggle romaji visibility (per profile), and delete the active profile or all app data (with confirmation) to start fresh.
-- ※ **Accessible** — responsive layout, high-contrast theme, `NO_COLOR` support, keyboard-first.
+| | Language pairs |
+| --- | --- |
+| **Available now** | Spanish → Japanese (v1) |
+| **On the roadmap** | More pairs (English → Japanese, Spanish → English, …), reaching toward low-resource languages |
 
-Typing/romaji input is planned for v1.1.
+The interface is in **Spanish** for v1 — the learner's source language. The codebase,
+comments, and identifiers are in English, following standard Go practices.
 
 ## Installation
 
