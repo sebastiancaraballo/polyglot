@@ -94,6 +94,34 @@ func TestShowRomaji(t *testing.T) {
 	}
 }
 
+func TestKanaOnboarded(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	p, err := store.CreateProfile(ctx, "tester")
+	if err != nil {
+		t.Fatalf("CreateProfile: %v", err)
+	}
+	if p.KanaOnboarded {
+		t.Errorf("new profile KanaOnboarded = true, want false (default off)")
+	}
+
+	if err := store.SetKanaOnboarded(ctx, p.ID); err != nil {
+		t.Fatalf("SetKanaOnboarded: %v", err)
+	}
+	got, err := store.GetProfile(ctx, p.ID)
+	if err != nil {
+		t.Fatalf("GetProfile: %v", err)
+	}
+	if !got.KanaOnboarded {
+		t.Errorf("KanaOnboarded after set = false, want true")
+	}
+
+	if err := store.SetKanaOnboarded(ctx, 9999); !errors.Is(err, ErrNotFound) {
+		t.Errorf("SetKanaOnboarded unknown = %v, want ErrNotFound", err)
+	}
+}
+
 func TestActiveProfileID(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()

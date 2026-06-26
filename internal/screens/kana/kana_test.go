@@ -124,6 +124,11 @@ func katakanaGroupIndex(t *testing.T, m Model) int {
 
 func TestKatakanaLockedUntilHiraganaFluent(t *testing.T) {
 	store, profileID := newStore(t)
+	// Skip the first-time intro so the picker (and its locked-group guard) is
+	// what the confirm key exercises.
+	if err := store.SetKanaOnboarded(context.Background(), profileID); err != nil {
+		t.Fatalf("SetKanaOnboarded: %v", err)
+	}
 	m := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: gateItems})
 
 	idx := katakanaGroupIndex(t, m)
@@ -151,6 +156,74 @@ func TestKatakanaUnlocksAfterHiraganaMastered(t *testing.T) {
 	idx := katakanaGroupIndex(t, m)
 	if m.groups[idx].locked {
 		t.Fatal("katakana should unlock once hiragana is fluent")
+	}
+}
+
+func TestIntroShownOnFirstVisit(t *testing.T) {
+	store, profileID := newStore(t)
+	m := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: gateItems})
+	if !m.intro {
+		t.Fatal("a first-time visitor should see the intro")
+	}
+	if m.picking {
+		t.Fatal("the picker should not show while the intro is up")
+	}
+}
+
+func TestIntroSkippedWhenAlreadyOnboarded(t *testing.T) {
+	store, profileID := newStore(t)
+	if err := store.SetKanaOnboarded(context.Background(), profileID); err != nil {
+		t.Fatalf("SetKanaOnboarded: %v", err)
+	}
+	m := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: gateItems})
+	if m.intro {
+		t.Fatal("a returning learner should not see the intro again")
+	}
+	if !m.picking {
+		t.Fatal("the picker should show immediately for a returning learner")
+	}
+}
+
+func TestDismissingIntroPersistsAndShowsPicker(t *testing.T) {
+	store, profileID := newStore(t)
+	m := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: gateItems})
+
+	next, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	got := next.(Model)
+	if got.intro {
+		t.Fatal("confirming should dismiss the intro")
+	}
+	if !got.picking {
+		t.Fatal("dismissing the intro should fall through to the picker")
+	}
+
+	prof, err := store.GetProfile(context.Background(), profileID)
+	if err != nil {
+		t.Fatalf("GetProfile: %v", err)
+	}
+	if !prof.KanaOnboarded {
+		t.Fatal("dismissing the intro should persist that it was seen")
+	}
+
+	// A subsequent visit no longer shows the intro.
+	again := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: gateItems})
+	if again.intro {
+		t.Fatal("the intro should not reappear on a later visit")
+	}
+}
+
+func TestLockedGroupHintShowsLiveProgress(t *testing.T) {
+	store, profileID := newStore(t)
+	if err := store.SetKanaOnboarded(context.Background(), profileID); err != nil {
+		t.Fatalf("SetKanaOnboarded: %v", err)
+	}
+	m := New(Deps{Theme: ui.PlainTheme(), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: gateItems})
+	m.groupCursor = katakanaGroupIndex(t, m) // a locked katakana group
+
+	view := m.pickerView()
+	// gateItems has one hiragana base kana, none mastered → "0/1".
+	if !strings.Contains(view, "0/1") {
+		t.Fatalf("locked-group hint should show live hiragana progress; view:\n%s", view)
 	}
 }
 

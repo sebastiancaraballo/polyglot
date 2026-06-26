@@ -65,14 +65,20 @@ type Messages struct {
 	ScoreLabel   string
 
 	// Kana trainer
-	KanaTitle       string
-	KanaPrompt      string
-	KanaGroupAll    string
-	KanaPickHelp    string
-	KanaFluent      string // badge on a fully-mastered group
-	KanaMasteredFmt string // "%d/%d" mastered count
-	KanaLockedHint  string // why a katakana group is locked
-	FluentBadge     string // syllabary-fluency badge on the summary screen
+	KanaTitle         string
+	KanaPrompt        string
+	KanaGroupAll      string
+	KanaPickHelp      string
+	KanaFluent        string // badge on a fully-mastered group
+	KanaMasteredFmt   string // "%d/%d" mastered count
+	KanaUnlockHintFmt string // why a katakana group is locked, with live "%d/%d" hiragana progress
+	KanaMasteryNote   string // explains what "mastered" means, shown under the picker
+	FluentBadge       string // syllabary-fluency badge on the summary screen
+
+	// Kana trainer first-time intro
+	KanaIntroTitle string
+	KanaIntroBody  string // explains the hiragana → katakana → reading path and mastery
+	KanaIntroHelp  string // dismiss help
 
 	// Kana chart
 	KanaChartTitle string
@@ -185,14 +191,25 @@ var ES = Messages{
 	SessionDone:  "¡Sesión completada!",
 	ScoreLabel:   "Aciertos",
 
-	KanaTitle:       "Entrenador de Kana",
-	KanaPrompt:      "¿Cómo se lee?",
-	KanaGroupAll:    "Todo",
-	KanaPickHelp:    "↑/↓ moverse · ENTER empezar · ESC volver",
-	KanaFluent:      "fluido",
-	KanaMasteredFmt: "%d/%d",
-	KanaLockedHint:  "Domina el hiragana primero para desbloquear el katakana.",
-	FluentBadge:     "¡Kana fluido! Ya puedes leer todas las palabras y frases.",
+	KanaTitle:         "Entrenador de Kana",
+	KanaPrompt:        "¿Cómo se lee?",
+	KanaGroupAll:      "Todo",
+	KanaPickHelp:      "↑/↓ moverse · ENTER empezar · ESC volver",
+	KanaFluent:        "fluido",
+	KanaMasteredFmt:   "%d/%d",
+	KanaUnlockHintFmt: "Domina el hiragana para desbloquear el katakana — %d/%d.",
+	KanaMasteryNote:   "Dominar = responder rápido y bien varias veces seguidas.",
+	FluentBadge:       "¡Kana fluido! Ya puedes leer todas las palabras y frases.",
+
+	KanaIntroTitle: "Entrenador de Kana",
+	KanaIntroBody: "El kana es la base para leer japonés. Lo aprenderás en este orden:\n\n" +
+		"1. Hiragana\n" +
+		"2. Katakana\n" +
+		"3. Lectura de palabras y frases\n\n" +
+		"Cada etapa se desbloquea al dominar la anterior. Dominas un kana cuando lo " +
+		"reconoces rápido y bien varias veces seguidas: así la lectura se vuelve " +
+		"automática antes de pasar a leer.",
+	KanaIntroHelp: "ENTER empezar · ESC volver",
 
 	KanaChartTitle: "Tabla de Kana",
 	KanaChartHelp:  "← → cambiar página · ESC volver",
