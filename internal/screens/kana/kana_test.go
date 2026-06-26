@@ -227,6 +227,48 @@ func TestLockedGroupHintShowsLiveProgress(t *testing.T) {
 	}
 }
 
+func allGroupIndex(t *testing.T, m Model) int {
+	t.Helper()
+	for i, g := range m.groups {
+		if g.label == i18n.ES.KanaGroupAll {
+			return i
+		}
+	}
+	t.Fatal("no \"all\" group in picker")
+	return 0
+}
+
+func TestAllGroupGatedLikeKatakana(t *testing.T) {
+	// The "Todo" (All) group spans both syllabaries, so it must honor the same
+	// hiragana→katakana gate as the katakana groups: locked before hiragana
+	// fluency, unlocked after. Otherwise it lets a learner practice katakana
+	// before the gate opens.
+	store, profileID := newStore(t)
+	m := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: gateItems})
+	idx := allGroupIndex(t, m)
+	if !m.groups[idx].locked {
+		t.Fatal("\"all\" group should be locked before hiragana fluency")
+	}
+
+	// Confirming the locked group must not start a session.
+	m.groupCursor = idx
+	var tm tea.Model = m
+	tm, _ = tm.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if !tm.(Model).picking {
+		t.Fatal("confirming the locked \"all\" group should not start a session")
+	}
+
+	// Once hiragana is fluent, the gate opens for the "all" group too.
+	if err := store.SaveKanaProgress(context.Background(), profileID,
+		model.KanaProgress{Char: "あ", Mastered: true}); err != nil {
+		t.Fatalf("SaveKanaProgress: %v", err)
+	}
+	m2 := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: gateItems})
+	if m2.groups[allGroupIndex(t, m2)].locked {
+		t.Fatal("\"all\" group should unlock once hiragana is fluent")
+	}
+}
+
 func TestAnsweringPersistsKanaProgress(t *testing.T) {
 	store, profileID := newStore(t)
 	m := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: gateItems})

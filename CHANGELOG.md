@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Screens now render inside a fixed-size frame whose dimensions depend only on the terminal size, so the border no longer grows or shrinks with its content (e.g. when a quiz reveals an answer) or when moving between sections.
 
 ### Fixed
+- Kana trainer "Todo" (All) group is now gated like the katakana groups: because it spans both syllabaries it stays locked until the hiragana base is fluent, closing a hole where a learner could practice katakana through "Todo" before the hiragana→katakana gate opened.
 - Kana reference chart frame now hugs the table (header on top, table below, help at the bottom) instead of floating the table in the middle of a full-screen frame with large blank margins above and below it.
 - Kana trainer character tile now stays centered when an answer is revealed.
 - Flashcard grading options now render one per line so the labels do not wrap across the frame.

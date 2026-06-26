@@ -119,7 +119,14 @@ func buildGroups(msg i18n.Messages, gate study.Gate) []group {
 		}
 	}
 	return []group{
-		{label: msg.KanaGroupAll, match: func(model.KanaItem) bool { return true }},
+		// "All" spans both syllabaries, so it includes katakana and must honor the
+		// same gate: it stays locked until hiragana is fluent. Otherwise a learner
+		// could practice katakana through "All" before the gate opens.
+		{
+			label:  msg.KanaGroupAll,
+			locked: !gate.KatakanaUnlocked(),
+			match:  func(model.KanaItem) bool { return true },
+		},
 		cat(model.Hiragana, []model.KanaCategory{model.Base}, msg.KanaBasic),
 		cat(model.Hiragana, []model.KanaCategory{model.Dakuten, model.Handakuten}, msg.KanaVoiced),
 		cat(model.Hiragana, []model.KanaCategory{model.Combo}, msg.KanaCombo),
