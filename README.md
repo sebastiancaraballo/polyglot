@@ -1,33 +1,22 @@
-# Polyglot
+```
+██████╗  ██████╗ ██╗  ██╗   ██╗ ██████╗ ██╗      ██████╗ ████████╗
+██╔══██╗██╔═══██╗██║  ╚██╗ ██╔╝██╔════╝ ██║     ██╔═══██╗╚══██╔══╝
+██████╔╝██║   ██║██║   ╚████╔╝ ██║  ███╗██║     ██║   ██║   ██║   
+██╔═══╝ ██║   ██║██║    ╚██╔╝  ██║   ██║██║     ██║   ██║   ██║   
+██║     ╚██████╔╝███████╗██║   ╚██████╔╝███████╗╚██████╔╝   ██║   
+╚═╝      ╚═════╝ ╚══════╝╚═╝    ╚═════╝ ╚══════╝ ╚═════╝    ╚═╝   
+```
 
-> An interactive terminal app to learn languages, one terminal session at a time.
+Polyglot is an open-source, cross-platform, offline terminal app for learning languages.
 
-Polyglot is a cross-platform (macOS, Windows, Linux), open-source TUI for learning
-languages. The first version focuses on **Spanish → Japanese**, with spaced-repetition
-flashcards, a kana trainer, and multiple-choice quizzes. The architecture is built to
-add more language pairs later (English → Japanese, Spanish → English, …).
+## Supported languages
 
-The application ships as a **single self-contained binary** — no runtime to install.
+| | Language pairs |
+| --- | --- |
+| **Available now** | Spanish → Japanese (v1) |
 
-Read the [Manifesto](MANIFESTO.md) for the vision and principles behind Polyglot.
-
-> **Note:** The user interface is in **Spanish** (the learner's source language for v1).
-> The codebase, comments, and identifiers are in English following standard Go practices.
-
-## Features (v1)
-
-- ▣ **Spaced-repetition flashcards (SRS)** — review vocabulary on an optimal schedule.
-- ♻ **Repaso (cross-curriculum review)** — one session that mixes everything currently due across the curriculum (vocabulary and kana), most-overdue first and interleaved.
-- ◇ **Kana trainer** — learn hiragana and katakana, including dakuten/handakuten and combinations; pick a group to focus each session. Answers are timed and tracked toward *automaticity* (fast, accurate reading). A first-time intro explains the gated path, and the picker shows live progress toward unlocking the next stage.
-- ⊘ **Foundations decoding gate** — following the Simple View of Reading, decoding comes before comprehension: katakana practice unlocks once hiragana is fluent, and reading is **progressive** — the flashcards and quizzes show only words and sentences built from kana you have already mastered, so what you can read grows as you learn (decodable texts).
-- ▦ **Kana chart** — browse every kana with its romaji, paging through hiragana and katakana with ← / →.
-- ✓ **Multiple-choice quizzes** — quick reinforcement.
-- ▤ **Progress, XP & streaks** — earn experience points for every answer, keep a daily streak, and track cards learned.
-- ◎ **Local profiles** — named learners with a profile switcher and per-profile progress.
-- ⚙ **Settings** — toggle romaji visibility (per profile), and delete the active profile or all app data (with confirmation) to start fresh.
-- ※ **Accessible** — responsive layout, high-contrast theme, `NO_COLOR` support, keyboard-first.
-
-Typing/romaji input is planned for v1.1.
+The interface is in **Spanish** for v1 — the learner's source language. The codebase,
+comments, and identifiers are in English, following standard Go practices.
 
 ## Installation
 
