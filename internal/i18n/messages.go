@@ -198,7 +198,7 @@ var ES = Messages{
 	KanaFluent:        "fluido",
 	KanaMasteredFmt:   "%d/%d",
 	KanaUnlockHintFmt: "Domina el hiragana para desbloquear el katakana — %d/%d.",
-	KanaMasteryNote:   "Dominar = responder rápido y bien varias veces seguidas.",
+	KanaMasteryNote:   "Dominar = responder bien varias veces seguidas.",
 	FluentBadge:       "¡Kana fluido! Ya puedes leer todas las palabras y frases.",
 
 	KanaIntroTitle: "Entrenador de Kana",
@@ -207,8 +207,8 @@ var ES = Messages{
 		"2. Katakana\n" +
 		"3. Lectura de palabras y frases\n\n" +
 		"Cada etapa se desbloquea al dominar la anterior. Dominas un kana cuando lo " +
-		"reconoces rápido y bien varias veces seguidas: así la lectura se vuelve " +
-		"automática antes de pasar a leer.",
+		"reconoces bien varias veces seguidas: así afianzas la lectura antes de " +
+		"pasar a leer.",
 	KanaIntroHelp: "ENTER empezar · ESC volver",
 
 	KanaChartTitle: "Tabla de Kana",

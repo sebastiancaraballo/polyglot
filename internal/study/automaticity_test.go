@@ -7,16 +7,16 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/model"
 )
 
-func TestGradeKanaMasteryRequiresFastAndAccurateRun(t *testing.T) {
-	fast := FluentResponse - time.Second
+func TestGradeKanaMasteryRequiresAccurateRun(t *testing.T) {
+	const elapsed = time.Second
 	var p model.KanaProgress
 
-	// A run of correct, fast answers reaches mastery exactly at MasteryStreak.
+	// A run of correct answers reaches mastery exactly at MasteryStreak.
 	for i := 1; i <= MasteryStreak; i++ {
-		p = GradeKana(p, true, fast)
+		p = GradeKana(p, true, elapsed)
 		wantMastered := i >= MasteryStreak
 		if p.Mastered != wantMastered {
-			t.Fatalf("after %d fast correct answers: Mastered = %v, want %v", i, p.Mastered, wantMastered)
+			t.Fatalf("after %d correct answers: Mastered = %v, want %v", i, p.Mastered, wantMastered)
 		}
 	}
 	if p.Streak != MasteryStreak {
@@ -27,14 +27,12 @@ func TestGradeKanaMasteryRequiresFastAndAccurateRun(t *testing.T) {
 	}
 }
 
-func TestGradeKanaSlowAnswerDoesNotAdvanceStreak(t *testing.T) {
-	slow := FluentResponse + time.Second
+func TestGradeKanaSlowAnswerStillAdvancesStreak(t *testing.T) {
+	// Response time does not gate the streak: a slow but correct answer counts.
+	slow := 30 * time.Second
 	p := GradeKana(model.KanaProgress{}, true, slow)
-	if p.Streak != 0 {
-		t.Errorf("slow correct answer advanced streak to %d, want 0", p.Streak)
-	}
-	if p.Mastered {
-		t.Error("slow correct answer should not master a kana")
+	if p.Streak != 1 {
+		t.Errorf("slow correct answer advanced streak to %d, want 1", p.Streak)
 	}
 	if p.BestMs == 0 {
 		t.Error("a correct answer should still record a best time")
@@ -42,13 +40,13 @@ func TestGradeKanaSlowAnswerDoesNotAdvanceStreak(t *testing.T) {
 }
 
 func TestGradeKanaWrongAnswerResetsStreakButKeepsMastery(t *testing.T) {
-	fast := FluentResponse - time.Second
+	const elapsed = time.Second
 	var p model.KanaProgress
 	for range MasteryStreak {
-		p = GradeKana(p, true, fast)
+		p = GradeKana(p, true, elapsed)
 	}
 
-	p = GradeKana(p, false, fast)
+	p = GradeKana(p, false, elapsed)
 	if p.Streak != 0 {
 		t.Errorf("wrong answer left streak at %d, want 0", p.Streak)
 	}
@@ -57,10 +55,15 @@ func TestGradeKanaWrongAnswerResetsStreakButKeepsMastery(t *testing.T) {
 	}
 }
 
-func TestGradeKanaUntimedAnswerIsNotFast(t *testing.T) {
+func TestGradeKanaUntimedCorrectAnswerAdvancesStreak(t *testing.T) {
+	// An untimed answer (elapsed == 0) still counts toward mastery; it just does
+	// not record a best time.
 	p := GradeKana(model.KanaProgress{}, true, 0)
-	if p.Streak != 0 {
-		t.Errorf("untimed answer advanced streak to %d, want 0", p.Streak)
+	if p.Streak != 1 {
+		t.Errorf("untimed correct answer advanced streak to %d, want 1", p.Streak)
+	}
+	if p.BestMs != 0 {
+		t.Errorf("untimed answer recorded BestMs = %d, want 0", p.BestMs)
 	}
 }
 
