@@ -46,6 +46,7 @@ type Model struct {
 	deps  Deps
 	queue []review.Scheduled
 
+	heldBackNew   int // new cards deferred by pacing, surfaced so the hold is never silent
 	index         int
 	revealed      bool
 	reviewed      int
@@ -62,7 +63,8 @@ func New(deps Deps) Model {
 	if err != nil {
 		m.err = err
 	}
-	m.queue = q
+	m.queue = q.Items
+	m.heldBackNew = q.HeldBackNew
 	return m
 }
 
@@ -164,7 +166,12 @@ func (m Model) cardView() string {
 	t := m.deps.Theme
 	item := m.queue[m.index].Item
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s  %d/%d\n\n", t.Title.Render(m.title()), m.index+1, len(m.queue))
+	fmt.Fprintf(&b, "%s  %d/%d\n", t.Title.Render(m.title()), m.index+1, len(m.queue))
+	if m.heldBackNew > 0 {
+		b.WriteString(t.Subtle.Render(fmt.Sprintf(m.deps.Msgs.FlashNewHeldFmt, m.heldBackNew)))
+		b.WriteString("\n")
+	}
+	b.WriteString("\n")
 	b.WriteString(t.Accent.Render(item.Prompt))
 	b.WriteString("\n\n")
 
@@ -238,7 +245,12 @@ func (m Model) summaryView() string {
 	var b strings.Builder
 	b.WriteString(t.Title.Render(m.deps.Msgs.SessionDone))
 	b.WriteString("\n\n")
-	fmt.Fprintf(&b, "%s: %d\n\n", m.deps.Msgs.ReviewedLabel, m.reviewed)
+	fmt.Fprintf(&b, "%s: %d\n", m.deps.Msgs.ReviewedLabel, m.reviewed)
+	if m.heldBackNew > 0 {
+		b.WriteString(t.Subtle.Render(fmt.Sprintf(m.deps.Msgs.FlashNewHeldFmt, m.heldBackNew)))
+		b.WriteString("\n")
+	}
+	b.WriteString("\n")
 	b.WriteString(t.Help.Render(m.deps.Msgs.BackHelp))
 	return b.String()
 }

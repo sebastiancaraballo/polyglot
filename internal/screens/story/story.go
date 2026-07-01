@@ -36,6 +36,7 @@ type Deps struct {
 type chapterEntry struct {
 	chapter  model.Chapter
 	progress model.StoryProgress
+	locked   bool // gated behind mastering the previous chapter
 }
 
 // Model is the Katsudoo story runner. It first shows a chapter picker, then
@@ -64,6 +65,17 @@ type Model struct {
 	practiceKind model.PracticeKind
 	practiceCard model.Card     // set when practiceKind == PracticeVocab
 	practiceKana model.KanaItem // set when practiceKind == PracticeKana
+
+	// End-of-chapter challenge state. The challenge reuses the practice
+	// fields above so its answers are graded and persisted through the exact
+	// same paths as practice beats.
+	challenge       []study.ChallengeQuestion // nil = not in a challenge
+	challengeIntro  bool                      // showing the pre-challenge explainer
+	challengeIdx    int
+	challengeRight  int
+	challengeMissed []study.ChallengeQuestion
+	chapterMastered bool // loaded at startChapter; preserved by advance, set by markMastered
+	newlyMastered   bool // mastery was earned this run — gates the unlock announcement
 
 	streakApplied bool
 	err           error
@@ -99,8 +111,12 @@ func (m Model) refreshChapters() Model {
 		}
 	}
 	m.chapters = make([]chapterEntry, 0, len(m.deps.Chapters))
-	for _, c := range m.deps.Chapters {
-		m.chapters = append(m.chapters, chapterEntry{chapter: c, progress: progress[c.ID]})
+	for i, c := range m.deps.Chapters {
+		// Mastery gate: each chapter unlocks by mastering the previous one
+		// (Mastery Learning: advance on demonstrated mastery, not on having
+		// clicked through). The first chapter is always open.
+		locked := i > 0 && !progress[m.deps.Chapters[i-1].ID].Mastered
+		m.chapters = append(m.chapters, chapterEntry{chapter: c, progress: progress[c.ID], locked: locked})
 	}
 	return m
 }
@@ -116,6 +132,12 @@ func (m Model) startChapter(i int) Model {
 	}
 	m.picking = false
 	m.streakApplied = false
+	m.challenge = nil
+	m.challengeIntro = false
+	m.challengeIdx, m.challengeRight = 0, 0
+	m.challengeMissed = nil
+	m.chapterMastered = entry.progress.Mastered
+	m.newlyMastered = false
 	return m.enterBeat()
 }
 
@@ -184,16 +206,108 @@ func filterKana(kana []model.KanaItem, typ model.KanaType) []model.KanaItem {
 	return out
 }
 
-// advance persists that the current beat was seen and moves to the next one.
+// advance persists that the current beat was seen and moves to the next one;
+// finishing the last beat opens the end-of-chapter challenge. Mastered is
+// carried through so replaying an already-mastered chapter never revokes it.
 func (m Model) advance() Model {
 	m.beatIndex++
 	if m.deps.Store != nil {
-		p := model.StoryProgress{ChapterID: m.chapter.ID, BeatIndex: m.beatIndex, Completed: m.finished()}
+		p := model.StoryProgress{ChapterID: m.chapter.ID, BeatIndex: m.beatIndex, Completed: m.finished(), Mastered: m.chapterMastered}
 		if err := m.deps.Store.SaveStoryProgress(context.Background(), m.deps.ProfileID, p); err != nil {
 			m.err = err
 		}
 	}
+	if m.finished() {
+		return m.startChallenge()
+	}
 	return m.enterBeat()
+}
+
+// startChallenge builds the end-of-chapter retrieval challenge. A chapter
+// with no practice beats has nothing to gate on, so completing it counts as
+// mastering it and the challenge is skipped.
+func (m Model) startChallenge() Model {
+	qs := study.BuildChallenge(m.rng, m.chapter, m.deps.Lessons, m.deps.Kana)
+	if len(qs) == 0 {
+		return m.markMastered()
+	}
+	m.challenge = qs
+	m.challengeIntro = true
+	m.challengeIdx, m.challengeRight = 0, 0
+	m.challengeMissed = nil
+	return m
+}
+
+func (m Model) challengeFinished() bool { return m.challengeIdx >= len(m.challenge) }
+
+func (m Model) challengePassed() bool {
+	return study.ChallengePassed(m.challengeRight, len(m.challenge))
+}
+
+// setChallengeQuestion mirrors setPracticeQuestion, reading the current
+// challenge question instead of the current beat, so the answer flows through
+// the same answering and grading paths.
+func (m Model) setChallengeQuestion() Model {
+	q := m.challenge[m.challengeIdx]
+	m.practiceKind = q.Practice
+	switch q.Practice {
+	case model.PracticeVocab:
+		m.practiceCard = q.Card
+		lesson := lessonByID(m.deps.Lessons, q.RefID)
+		if lesson == nil {
+			return m
+		}
+		pool := make([]string, 0, len(lesson.Cards))
+		for _, c := range lesson.Cards {
+			pool = append(pool, c.JP)
+		}
+		m.options, m.correct = study.Options(m.rng, q.Card.JP, pool, optionCount)
+	case model.PracticeKana:
+		m.practiceKana = q.Kana
+		filtered := filterKana(m.deps.Kana, model.KanaType(q.RefID))
+		pool := make([]string, 0, len(filtered))
+		for _, k := range filtered {
+			pool = append(pool, k.Romaji)
+		}
+		m.options, m.correct = study.Options(m.rng, q.Kana.Romaji, pool, optionCount)
+	}
+	m.selected = 0
+	m.answered = false
+	return m
+}
+
+// recordChallengeAnswer tallies the revealed answer and moves to the next
+// question; passing the whole challenge masters the chapter.
+func (m Model) recordChallengeAnswer() Model {
+	if m.selected == m.correct {
+		m.challengeRight++
+	} else {
+		m.challengeMissed = append(m.challengeMissed, m.challenge[m.challengeIdx])
+	}
+	m.challengeIdx++
+	if !m.challengeFinished() {
+		return m.setChallengeQuestion()
+	}
+	if m.challengePassed() {
+		m = m.markMastered()
+	}
+	return m
+}
+
+// markMastered records that the chapter's challenge was passed (or that the
+// chapter has nothing to evaluate). Mastery is never revoked.
+func (m Model) markMastered() Model {
+	if !m.chapterMastered {
+		m.newlyMastered = true
+	}
+	m.chapterMastered = true
+	if m.deps.Store != nil {
+		p := model.StoryProgress{ChapterID: m.chapter.ID, BeatIndex: len(m.chapter.Beats), Completed: true, Mastered: true}
+		if err := m.deps.Store.SaveStoryProgress(context.Background(), m.deps.ProfileID, p); err != nil {
+			m.err = err
+		}
+	}
+	return m
 }
 
 // Init implements tea.Model.
@@ -222,7 +336,24 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.handlePick(msg)
 	}
 
+	// The challenge branches come before the finished() case: during a
+	// challenge, finished() is already true and beatIndex is out of range.
 	switch {
+	case m.challenge != nil && m.challengeIntro:
+		if ui.IsConfirmKey(msg) {
+			m.challengeIntro = false
+			m = m.setChallengeQuestion()
+		}
+	case m.challenge != nil && !m.challengeFinished():
+		if !m.answered {
+			m = m.answerKey(msg)
+		} else if ui.IsConfirmKey(msg) {
+			m = m.recordChallengeAnswer()
+		}
+	case m.challenge != nil && !m.challengePassed():
+		if ui.IsConfirmKey(msg) {
+			m = m.startChallenge() // retry with a fresh draw
+		}
 	case m.finished():
 		if ui.IsConfirmKey(msg) {
 			m = m.refreshChapters()
@@ -247,7 +378,7 @@ func (m Model) handlePick(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.chapterCur++
 		}
 	}
-	if len(m.chapters) > 0 && ui.IsConfirmKey(msg) {
+	if len(m.chapters) > 0 && ui.IsConfirmKey(msg) && !m.chapters[m.chapterCur].locked {
 		m = m.startChapter(m.chapterCur)
 	}
 	return m, nil
@@ -362,6 +493,12 @@ func (m Model) View() tea.View {
 		content = m.emptyView()
 	case m.picking:
 		content = m.pickerView()
+	case m.challenge != nil && m.challengeIntro:
+		content = m.challengeIntroView()
+	case m.challenge != nil && !m.challengeFinished():
+		content = m.challengeView()
+	case m.challenge != nil && !m.challengePassed():
+		content = m.challengeFailView()
 	case m.finished():
 		content = m.doneView()
 	case m.chapter.Beats[m.beatIndex].Kind == model.Practice:
@@ -390,8 +527,10 @@ func (m Model) pickerView() string {
 	b.WriteString("\n\n")
 	for i, entry := range m.chapters {
 		label := entry.chapter.Title + chapterSuffix(m.deps.Msgs, entry)
-		switch i {
-		case m.chapterCur:
+		switch {
+		case entry.locked:
+			b.WriteString(t.Subtle.Render("⊘ " + entry.chapter.Title))
+		case i == m.chapterCur:
 			b.WriteString(t.Selected.Render("▸ " + label))
 		default:
 			b.WriteString(t.Normal.Render("  " + label))
@@ -399,12 +538,23 @@ func (m Model) pickerView() string {
 		b.WriteString("\n")
 	}
 	b.WriteString("\n")
-	b.WriteString(t.Help.Render(m.deps.Msgs.StoryPickHelp))
+	if m.chapters[m.chapterCur].locked {
+		// The first chapter is never locked, so a locked cursor row always
+		// has a predecessor to name.
+		hint := fmt.Sprintf(m.deps.Msgs.StoryLockedHintFmt, m.chapters[m.chapterCur-1].chapter.Title)
+		b.WriteString(t.Subtle.Render(hint))
+	} else {
+		b.WriteString(t.Help.Render(m.deps.Msgs.StoryPickHelp))
+	}
+	b.WriteString("\n")
+	b.WriteString(t.Subtle.Render(m.deps.Msgs.StoryGateNote))
 	return b.String()
 }
 
 func chapterSuffix(msgs i18n.Messages, entry chapterEntry) string {
 	switch {
+	case entry.progress.Mastered:
+		return "  " + msgs.StoryMasteredBadge
 	case entry.progress.Completed:
 		return "  " + msgs.StoryCompleteBadge
 	case entry.progress.BeatIndex > 0:
@@ -440,9 +590,25 @@ func (m Model) beatView() string {
 }
 
 func (m Model) practiceView() string {
+	return m.questionView(m.chapter.Title, "", m.chapter.Beats[m.beatIndex].RefID)
+}
+
+func (m Model) challengeView() string {
+	sub := fmt.Sprintf(m.deps.Msgs.StoryChallengeQFmt, m.challengeIdx+1, len(m.challenge))
+	return m.questionView(m.deps.Msgs.StoryChallengeTitle, sub, m.challenge[m.challengeIdx].RefID)
+}
+
+// questionView renders the shared question body for practice beats and
+// challenge questions: title (with an optional subtitle), the prompt, the
+// options with reveal marks, and the phase help. refID names the pool the
+// question was drawn from, for the vocab romaji labels.
+func (m Model) questionView(title, subtitle, refID string) string {
 	t := m.deps.Theme
 	var b strings.Builder
-	b.WriteString(t.Title.Render(m.chapter.Title))
+	b.WriteString(t.Title.Render(title))
+	if subtitle != "" {
+		b.WriteString("  " + t.Subtle.Render(subtitle))
+	}
 	b.WriteString("\n\n")
 
 	switch m.practiceKind {
@@ -457,7 +623,7 @@ func (m Model) practiceView() string {
 
 	romaji := map[string]string{}
 	if m.practiceKind == model.PracticeVocab {
-		lesson := lessonByID(m.deps.Lessons, m.chapter.Beats[m.beatIndex].RefID)
+		lesson := lessonByID(m.deps.Lessons, refID)
 		if lesson != nil {
 			for _, c := range lesson.Cards {
 				romaji[c.JP] = c.Romaji
@@ -494,11 +660,84 @@ func (m Model) practiceView() string {
 	return b.String()
 }
 
+// challengeIntroView states the mastery bar before the first question, so the
+// gate's rule is visible before it ever bites.
+func (m Model) challengeIntroView() string {
+	t := m.deps.Theme
+	var b strings.Builder
+	b.WriteString(t.Title.Render(m.deps.Msgs.StoryChallengeTitle))
+	b.WriteString("\n\n")
+	body := fmt.Sprintf(m.deps.Msgs.StoryChallengeIntroFmt, study.ChallengeNeeded(len(m.challenge)), len(m.challenge))
+	b.WriteString(t.Normal.Render(ui.WrapText(body, ui.FrameContentWidth(t, m.width))))
+	b.WriteString("\n\n")
+	b.WriteString(t.Help.Render(m.deps.Msgs.ContinueHelp))
+	return b.String()
+}
+
+// challengeFailView shows the score against the stated bar, the missed items
+// to review, and offers an immediate retry — a failed retrieval attempt is
+// still practice (testing effect), so nothing is locked away.
+func (m Model) challengeFailView() string {
+	t := m.deps.Theme
+	var b strings.Builder
+	b.WriteString(t.Title.Render(m.deps.Msgs.StoryChallengeTitle))
+	b.WriteString("\n\n")
+	fmt.Fprintf(&b, m.deps.Msgs.StoryChallengeFailFmt, m.challengeRight, len(m.challenge), study.ChallengeNeeded(len(m.challenge)))
+	b.WriteString("\n")
+	if len(m.challengeMissed) > 0 {
+		b.WriteString("\n")
+		b.WriteString(t.Subtle.Render(m.deps.Msgs.StoryChallengeMissedLbl))
+		b.WriteString("\n")
+		for _, q := range m.challengeMissed {
+			b.WriteString(t.Normal.Render(missedLine(q, m.deps.ShowRomaji)))
+			b.WriteString("\n")
+		}
+	}
+	b.WriteString("\n")
+	b.WriteString(t.Help.Render(m.deps.Msgs.StoryChallengeRetryHelp))
+	return b.String()
+}
+
+// missedLine formats one missed challenge item with its answer: the learner
+// just failed it, so the reading is shown, not hidden.
+func missedLine(q study.ChallengeQuestion, showRomaji bool) string {
+	switch q.Practice {
+	case model.PracticeKana:
+		return fmt.Sprintf("%s (%s)", q.Kana.Char, q.Kana.Romaji)
+	default:
+		if showRomaji && q.Card.Romaji != "" {
+			return fmt.Sprintf("%s (%s) — %s", q.Card.JP, q.Card.Romaji, q.Card.Source)
+		}
+		return fmt.Sprintf("%s — %s", q.Card.JP, q.Card.Source)
+	}
+}
+
 func (m Model) doneView() string {
 	t := m.deps.Theme
 	var b strings.Builder
 	b.WriteString(t.Title.Render(m.deps.Msgs.StoryDoneTitle))
 	b.WriteString("\n\n")
+	if m.challenge != nil {
+		fmt.Fprintf(&b, m.deps.Msgs.StoryChallengePassFmt, m.challengeRight, len(m.challenge))
+		b.WriteString("\n")
+	}
+	if m.newlyMastered {
+		if next := m.nextChapterTitle(); next != "" {
+			b.WriteString(t.Success.Render(fmt.Sprintf(m.deps.Msgs.StoryUnlockedFmt, next)))
+			b.WriteString("\n")
+		}
+	}
+	b.WriteString("\n")
 	b.WriteString(t.Help.Render(m.deps.Msgs.StoryDoneNext))
 	return b.String()
+}
+
+// nextChapterTitle names the chapter after the current one, or "" at the end.
+func (m Model) nextChapterTitle() string {
+	for i, c := range m.deps.Chapters {
+		if c.ID == m.chapter.ID && i+1 < len(m.deps.Chapters) {
+			return m.deps.Chapters[i+1].Title
+		}
+	}
+	return ""
 }

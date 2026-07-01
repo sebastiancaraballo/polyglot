@@ -6,6 +6,7 @@ package model
 // content grows.
 type StoryProgress struct {
 	ChapterID string
-	BeatIndex int // index of the next beat to show; 0 = not yet started
-	Completed bool
+	BeatIndex int  // index of the next beat to show; 0 = not yet started
+	Completed bool // positional: every beat has been seen
+	Mastered  bool // the end-of-chapter challenge was passed; never revoked
 }

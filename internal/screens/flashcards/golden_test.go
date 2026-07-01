@@ -48,3 +48,9 @@ func TestSummaryGolden(t *testing.T) {
 	m.reviewed = 2
 	golden.RequireEqual(t, []byte(m.View().Content))
 }
+
+func TestHeldBackNoticeGolden(t *testing.T) {
+	m := goldenModel()
+	m.heldBackNew = 4
+	golden.RequireEqual(t, []byte(m.View().Content))
+}

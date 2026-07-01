@@ -371,7 +371,7 @@ func (s *SQLiteStore) SavePatternProgress(ctx context.Context, profileID int64, 
 // chapter ID.
 func (s *SQLiteStore) GetStoryProgress(ctx context.Context, profileID int64) (map[string]model.StoryProgress, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT chapter_id, beat_index, completed
+		`SELECT chapter_id, beat_index, completed, mastered
 		   FROM story_progress WHERE profile_id = ?`,
 		profileID,
 	)
@@ -383,7 +383,7 @@ func (s *SQLiteStore) GetStoryProgress(ctx context.Context, profileID int64) (ma
 	progress := make(map[string]model.StoryProgress)
 	for rows.Next() {
 		var p model.StoryProgress
-		if err := rows.Scan(&p.ChapterID, &p.BeatIndex, &p.Completed); err != nil {
+		if err := rows.Scan(&p.ChapterID, &p.BeatIndex, &p.Completed, &p.Mastered); err != nil {
 			return nil, fmt.Errorf("scan story progress: %w", err)
 		}
 		progress[p.ChapterID] = p
@@ -397,12 +397,13 @@ func (s *SQLiteStore) GetStoryProgress(ctx context.Context, profileID int64) (ma
 // SaveStoryProgress inserts or updates progress for one chapter.
 func (s *SQLiteStore) SaveStoryProgress(ctx context.Context, profileID int64, p model.StoryProgress) error {
 	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO story_progress (profile_id, chapter_id, beat_index, completed)
-		 VALUES (?, ?, ?, ?)
+		`INSERT INTO story_progress (profile_id, chapter_id, beat_index, completed, mastered)
+		 VALUES (?, ?, ?, ?, ?)
 		 ON CONFLICT (profile_id, chapter_id) DO UPDATE SET
 		   beat_index = excluded.beat_index,
-		   completed = excluded.completed`,
-		profileID, p.ChapterID, p.BeatIndex, p.Completed,
+		   completed = excluded.completed,
+		   mastered = excluded.mastered`,
+		profileID, p.ChapterID, p.BeatIndex, p.Completed, p.Mastered,
 	)
 	if err != nil {
 		return fmt.Errorf("save story progress: %w", err)
