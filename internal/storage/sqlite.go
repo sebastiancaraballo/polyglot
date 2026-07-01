@@ -367,6 +367,49 @@ func (s *SQLiteStore) SavePatternProgress(ctx context.Context, profileID int64, 
 	return nil
 }
 
+// GetStoryProgress returns the profile's Katsudoo chapter progress, keyed by
+// chapter ID.
+func (s *SQLiteStore) GetStoryProgress(ctx context.Context, profileID int64) (map[string]model.StoryProgress, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT chapter_id, beat_index, completed
+		   FROM story_progress WHERE profile_id = ?`,
+		profileID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query story progress: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	progress := make(map[string]model.StoryProgress)
+	for rows.Next() {
+		var p model.StoryProgress
+		if err := rows.Scan(&p.ChapterID, &p.BeatIndex, &p.Completed); err != nil {
+			return nil, fmt.Errorf("scan story progress: %w", err)
+		}
+		progress[p.ChapterID] = p
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate story progress: %w", err)
+	}
+	return progress, nil
+}
+
+// SaveStoryProgress inserts or updates progress for one chapter.
+func (s *SQLiteStore) SaveStoryProgress(ctx context.Context, profileID int64, p model.StoryProgress) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO story_progress (profile_id, chapter_id, beat_index, completed)
+		 VALUES (?, ?, ?, ?)
+		 ON CONFLICT (profile_id, chapter_id) DO UPDATE SET
+		   beat_index = excluded.beat_index,
+		   completed = excluded.completed`,
+		profileID, p.ChapterID, p.BeatIndex, p.Completed,
+	)
+	if err != nil {
+		return fmt.Errorf("save story progress: %w", err)
+	}
+	return nil
+}
+
 // GetStats returns the aggregate stats for a profile, or ErrNotFound.
 func (s *SQLiteStore) GetStats(ctx context.Context, profileID int64) (model.Stats, error) {
 	row := s.db.QueryRowContext(ctx,

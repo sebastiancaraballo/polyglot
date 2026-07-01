@@ -21,6 +21,7 @@ const (
 	Profiles
 	KanaChart
 	Rikai
+	Story
 )
 
 // GoToMsg requests navigation to a screen.

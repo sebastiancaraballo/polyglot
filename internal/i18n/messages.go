@@ -103,6 +103,16 @@ type Messages struct {
 	RikaiPatternFluent string // badge on a fully-mastered pattern
 	RikaiMasteredFmt   string // "%d/%d" slots mastered
 
+	// Story (Katsudoo)
+	ItemStory          string
+	StoryTitle         string
+	StoryPickHelp      string
+	StoryProgressFmt   string // "%d/%d" beats seen, e.g. "2/6 escenas"
+	StoryCompleteBadge string // badge on a finished chapter
+	StoryEmpty         string // shown when no chapters exist yet
+	StoryDoneTitle     string // chapter-end screen title
+	StoryDoneNext      string // chapter-end help line
+
 	// Flashcards / Review
 	FlashTitle        string
 	ReviewScreenTitle string
@@ -241,6 +251,15 @@ var ES = Messages{
 	RikaiQuestionFmt:   "¿Cómo se dice \"%s\" aquí?",
 	RikaiPatternFluent: "dominado",
 	RikaiMasteredFmt:   "%d/%d",
+
+	ItemStory:          "Katsudoo (historia)",
+	StoryTitle:         "Katsudoo",
+	StoryPickHelp:      "↑/↓ moverse · ENTER empezar · ESC volver",
+	StoryProgressFmt:   "%d/%d escenas",
+	StoryCompleteBadge: "✓ completado",
+	StoryEmpty:         "Aún no hay capítulos disponibles.",
+	StoryDoneTitle:     "Capítulo completado",
+	StoryDoneNext:      "ENTER volver a los capítulos",
 
 	FlashTitle:        "Flashcards",
 	ReviewScreenTitle: "Repaso",

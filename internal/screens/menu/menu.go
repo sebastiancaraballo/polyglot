@@ -105,6 +105,7 @@ func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Mo
 			{"♻", msgs.ItemReview, nav.Review, false, false, ""},
 			{"✓", msgs.ItemQuiz, nav.Quiz, false, summary.ReadingLocked, msgs.ReadingLocked},
 			{"◧", msgs.ItemRikai, nav.Rikai, false, summary.RikaiLocked, msgs.RikaiLocked},
+			{"▧", msgs.ItemStory, nav.Story, false, false, ""},
 			{"▤", msgs.ItemStats, nav.Stats, false, false, ""},
 			{"⚙", msgs.ItemSettings, nav.Settings, false, false, ""},
 			{"⏻", msgs.ItemQuit, nav.Menu, true, false, ""},

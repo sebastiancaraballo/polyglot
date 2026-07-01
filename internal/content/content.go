@@ -18,11 +18,12 @@ type Course struct {
 	Lessons  []model.Lesson
 	Kana     []model.KanaItem
 	Patterns []model.Pattern
+	Chapters []model.Chapter
 }
 
 // Load reads, parses, and validates the course for pair from fsys. Paths are
-// resolved as content/<pair>/{lessons,kana,grammar}/*.yaml so that the same
-// loader works for the embedded FS and for test filesystems. The
+// resolved as content/<pair>/{lessons,kana,grammar,story}/*.yaml so that the
+// same loader works for the embedded FS and for test filesystems. The
 // language-agnostic function catalog under content/functions/*.yaml is loaded
 // once and used to resolve the communicative functions each lesson references.
 func Load(fsys fs.FS, pair string) (*Course, error) {
@@ -59,7 +60,21 @@ func Load(fsys fs.FS, pair string) (*Course, error) {
 			return nil, fmt.Errorf("pattern %q %w", p.ID, err)
 		}
 	}
-	return &Course{Pair: pair, Lessons: lessons, Kana: kana, Patterns: patterns}, nil
+
+	chapters, err := loadChapters(fsys, pair)
+	if err != nil {
+		return nil, err
+	}
+	// Every practice beat must reference vocabulary or kana that actually exists.
+	lessonIDs := lessonIDSet(lessons)
+	kanaTypes := kanaTypesPresent(kana)
+	for _, c := range chapters {
+		if err := checkStoryCoverage(c, lessonIDs, kanaTypes); err != nil {
+			return nil, fmt.Errorf("chapter %q: %w", c.ID, err)
+		}
+	}
+
+	return &Course{Pair: pair, Lessons: lessons, Kana: kana, Patterns: patterns, Chapters: chapters}, nil
 }
 
 // lessonFile mirrors the on-disk YAML shape of a lesson. The source-language key

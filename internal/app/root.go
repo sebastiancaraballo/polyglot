@@ -22,6 +22,7 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/screens/rikai"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/settings"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/stats"
+	"github.com/sebastiancaraballo/polyglot/internal/screens/story"
 	"github.com/sebastiancaraballo/polyglot/internal/storage"
 	"github.com/sebastiancaraballo/polyglot/internal/study"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
@@ -242,6 +243,13 @@ func (m rootModel) build(s nav.Screen) tea.Model {
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
 			ProfileID: m.ctx.profile.ID, Patterns: m.ctx.course.Patterns,
 			Cards: m.ctx.cardIndex(), ShowRomaji: m.ctx.profile.ShowRomaji,
+		})
+	case nav.Story:
+		return story.New(story.Deps{
+			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
+			ProfileID: m.ctx.profile.ID, Chapters: m.ctx.course.Chapters,
+			Lessons: m.ctx.course.Lessons, Kana: m.ctx.course.Kana,
+			ShowRomaji: m.ctx.profile.ShowRomaji,
 		})
 	case nav.Stats:
 		return stats.New(stats.Deps{

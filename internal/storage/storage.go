@@ -56,6 +56,12 @@ type Storage interface {
 	// SavePatternProgress inserts or updates progress for one pattern slot.
 	SavePatternProgress(ctx context.Context, profileID int64, p model.PatternProgress) error
 
+	// GetStoryProgress returns the profile's Katsudoo chapter progress, keyed by
+	// chapter ID. Chapters never started are absent.
+	GetStoryProgress(ctx context.Context, profileID int64) (map[string]model.StoryProgress, error)
+	// SaveStoryProgress inserts or updates progress for one chapter.
+	SaveStoryProgress(ctx context.Context, profileID int64, p model.StoryProgress) error
+
 	// GetStats returns the aggregate stats for a profile.
 	GetStats(ctx context.Context, profileID int64) (model.Stats, error)
 	// SaveStats replaces the aggregate stats for a profile.
