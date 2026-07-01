@@ -124,10 +124,12 @@ func TestMenuSpaceNavigates(t *testing.T) {
 func TestMenuViewShowsProgress(t *testing.T) {
 	m := newTestMenu()
 	content := m.View().Content
-	// The app name is rendered as the block wordmark in the header, not plain text.
-	// Styling wraps each line separately, so match a single (top) wordmark line.
-	if topLine := strings.SplitN(art.Wordmark, "\n", 2)[0]; !strings.Contains(content, topLine) {
-		t.Error("view is missing the app wordmark")
+	// With the current number of menu items, the header block wordmark no
+	// longer fits the frame's fixed content height (see
+	// TestMenuDropsWordmarkWhenItemsOverflow) and falls back to the plain
+	// text title kept in the info column instead.
+	if !strings.Contains(content, i18n.ES.AppName) {
+		t.Error("view is missing the plain-text app name")
 	}
 	for _, want := range []string{"es → ja", "Sebastián", i18n.ES.SwitchProfile, i18n.ES.XPLabel, "1240", i18n.ES.StreakLabel, i18n.ES.ItemKana} {
 		if !strings.Contains(content, want) {
@@ -150,6 +152,45 @@ func TestMenuNarrowWidthFallsBackToTextTitle(t *testing.T) {
 	}
 	if !strings.Contains(content, i18n.ES.AppName) {
 		t.Errorf("narrow view should keep the plain text title %q", i18n.ES.AppName)
+	}
+}
+
+// TestMenuDropsWordmarkWhenItemsOverflow is a regression test: with enough
+// menu items, the header block wordmark plus the globe/info columns no
+// longer fit the frame's fixed content height (an upper bound that does not
+// grow with a taller terminal — see ui.Frame), which used to push the
+// frame's own bottom border out of view instead of just dropping the
+// wordmark. A generously tall window confirms this isn't a small-terminal
+// edge case: the frame's height is capped regardless of terminal size.
+func TestMenuDropsWordmarkWhenItemsOverflow(t *testing.T) {
+	m := newTestMenu()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 100})
+	content := updated.(Model).View().Content
+	if strings.Contains(content, art.Wordmark) {
+		t.Error("view should drop the block wordmark once it no longer fits the fixed content height")
+	}
+	if !strings.Contains(content, i18n.ES.AppName) {
+		t.Error("view should fall back to the plain-text title")
+	}
+	if !strings.Contains(content, "╰") {
+		t.Error("frame's bottom border should still be visible, not clipped off-screen")
+	}
+}
+
+// TestMenuKeepsWordmarkWhenItFits protects the wordmark feature itself: with
+// few enough items, it should still render.
+func TestMenuKeepsWordmarkWhenItFits(t *testing.T) {
+	m := Model{
+		theme:   ui.NewTheme(true),
+		msgs:    i18n.ES,
+		summary: Summary{Name: "Sebastián"},
+		version: "test",
+		items:   []item{{"あ", i18n.ES.ItemKana, nav.Kana, false, false, ""}},
+	}
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 100})
+	content := updated.(Model).View().Content
+	if topLine := strings.SplitN(art.Wordmark, "\n", 2)[0]; !strings.Contains(content, topLine) {
+		t.Error("a short enough item list should keep the block wordmark")
 	}
 }
 

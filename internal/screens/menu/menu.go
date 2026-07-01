@@ -195,16 +195,6 @@ func (m Model) View() tea.View {
 }
 
 func (m Model) content() string {
-	wordmark := m.wordmark()
-	main := m.mainColumns(wordmark == "")
-	if wordmark != "" {
-		// The full-width block wordmark spans the header above the globe/info
-		// columns, standing in for the app name (which the columns then omit to
-		// avoid repeating it), with a blank line separating it from the columns.
-		// To keep the fixed-height frame's footer in view, that blank takes the
-		// place of the columns' internal separator, which mainColumns drops here.
-		main = lipgloss.JoinVertical(lipgloss.Left, wordmark, "", main)
-	}
 	// A transient notice replaces the help line (rather than adding a row) so the
 	// fixed-height frame never pushes the footer out of view. Moving the cursor
 	// clears it and restores the help text.
@@ -213,6 +203,7 @@ func (m Model) content() string {
 		help = m.theme.Subtle.Render(lockGlyph + " " + m.notice)
 	}
 	contentHeight := ui.FrameContentHeight(m.theme, m.height)
+	main := m.assembleMain(contentHeight, lipgloss.Height(help))
 	if contentHeight <= 0 {
 		return main + "\n" + help
 	}
@@ -233,6 +224,29 @@ func (m Model) content() string {
 	b.WriteString(strings.Repeat("\n", bottomPad+1))
 	b.WriteString(help)
 	return b.String()
+}
+
+// assembleMain builds the header: the block wordmark spanning the frame above
+// the globe/info columns, with a blank line separating it from the columns
+// (that blank stands in for the columns' own internal separator, which
+// mainColumns drops when the wordmark is shown, to keep the fixed-height
+// frame's footer in view). The wordmark is dropped — falling back to the
+// plain-text title mainColumns already keeps as an alternative — whenever it
+// doesn't fit: either the frame is too narrow (wordmark's own check) or, now
+// that the menu has grown past a handful of items, too short for the
+// wordmark's rows plus the columns beneath it. Without this, a long enough
+// item list pushes the frame's own bottom border out of view instead of just
+// looking cramped.
+func (m Model) assembleMain(contentHeight, helpHeight int) string {
+	wordmark := m.wordmark()
+	if wordmark == "" {
+		return m.mainColumns(true)
+	}
+	withWordmark := lipgloss.JoinVertical(lipgloss.Left, wordmark, "", m.mainColumns(false))
+	if contentHeight > 0 && lipgloss.Height(withWordmark)+1+helpHeight > contentHeight {
+		return m.mainColumns(true)
+	}
+	return withWordmark
 }
 
 // wordmark renders the compact block-letter app name for the header, or "" when
