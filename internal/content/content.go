@@ -14,16 +14,17 @@ import (
 
 // Course is the fully loaded and validated content for a single language pair.
 type Course struct {
-	Pair    string
-	Lessons []model.Lesson
-	Kana    []model.KanaItem
+	Pair     string
+	Lessons  []model.Lesson
+	Kana     []model.KanaItem
+	Patterns []model.Pattern
 }
 
 // Load reads, parses, and validates the course for pair from fsys. Paths are
-// resolved as content/<pair>/{lessons,kana}/*.yaml so that the same loader works
-// for the embedded FS and for test filesystems. The language-agnostic function
-// catalog under content/functions/*.yaml is loaded once and used to resolve the
-// communicative functions each lesson references.
+// resolved as content/<pair>/{lessons,kana,grammar}/*.yaml so that the same
+// loader works for the embedded FS and for test filesystems. The
+// language-agnostic function catalog under content/functions/*.yaml is loaded
+// once and used to resolve the communicative functions each lesson references.
 func Load(fsys fs.FS, pair string) (*Course, error) {
 	catalog, err := loadFunctions(fsys)
 	if err != nil {
@@ -37,6 +38,10 @@ func Load(fsys fs.FS, pair string) (*Course, error) {
 	if err != nil {
 		return nil, err
 	}
+	patterns, err := loadPatterns(fsys, pair)
+	if err != nil {
+		return nil, err
+	}
 	// Every kana a card depends on must be teachable (present in the kana tables).
 	set := kanaSet(kana)
 	for _, lesson := range lessons {
@@ -46,7 +51,15 @@ func Load(fsys fs.FS, pair string) (*Course, error) {
 			}
 		}
 	}
-	return &Course{Pair: pair, Lessons: lessons, Kana: kana}, nil
+	// Every pattern's slot fillers must be vocab the learner is actually taught
+	// ("words before sentences").
+	cardSet := cardIDSet(lessons)
+	for _, p := range patterns {
+		if err := checkVocabCoverage(p, cardSet); err != nil {
+			return nil, fmt.Errorf("pattern %q %w", p.ID, err)
+		}
+	}
+	return &Course{Pair: pair, Lessons: lessons, Kana: kana, Patterns: patterns}, nil
 }
 
 // lessonFile mirrors the on-disk YAML shape of a lesson. The source-language key

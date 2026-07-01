@@ -241,6 +241,43 @@ func (s *SQLiteStore) SaveCardState(ctx context.Context, profileID int64, state 
 	return nil
 }
 
+// GetCardStates returns every card-scheduling state the profile has, keyed by
+// card ID.
+func (s *SQLiteStore) GetCardStates(ctx context.Context, profileID int64) (map[string]model.CardState, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT card_id, interval, ease, reps, lapses, due_at, last_reviewed_at
+		   FROM card_states WHERE profile_id = ?`,
+		profileID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query card states: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	states := make(map[string]model.CardState)
+	for rows.Next() {
+		var (
+			st             model.CardState
+			dueAt          string
+			lastReviewedAt string
+		)
+		if err := rows.Scan(&st.CardID, &st.Interval, &st.Ease, &st.Reps, &st.Lapses, &dueAt, &lastReviewedAt); err != nil {
+			return nil, fmt.Errorf("scan card state: %w", err)
+		}
+		if st.DueAt, err = parseTime(dueAt); err != nil {
+			return nil, err
+		}
+		if st.LastReviewedAt, err = parseTime(lastReviewedAt); err != nil {
+			return nil, err
+		}
+		states[st.CardID] = st
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate card states: %w", err)
+	}
+	return states, nil
+}
+
 // GetKanaProgress returns the profile's kana automaticity progress, keyed by
 // kana character. Kana the profile has never practiced are absent from the map.
 func (s *SQLiteStore) GetKanaProgress(ctx context.Context, profileID int64) (map[string]model.KanaProgress, error) {
@@ -282,6 +319,50 @@ func (s *SQLiteStore) SaveKanaProgress(ctx context.Context, profileID int64, p m
 	)
 	if err != nil {
 		return fmt.Errorf("save kana progress: %w", err)
+	}
+	return nil
+}
+
+// GetPatternProgress returns the profile's grammar-pattern drill progress,
+// keyed by "<patternID>:<slot>".
+func (s *SQLiteStore) GetPatternProgress(ctx context.Context, profileID int64) (map[string]model.PatternProgress, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT pattern_id, slot, streak, attempts, mastered
+		   FROM pattern_progress WHERE profile_id = ?`,
+		profileID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query pattern progress: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	progress := make(map[string]model.PatternProgress)
+	for rows.Next() {
+		var p model.PatternProgress
+		if err := rows.Scan(&p.PatternID, &p.Slot, &p.Streak, &p.Attempts, &p.Mastered); err != nil {
+			return nil, fmt.Errorf("scan pattern progress: %w", err)
+		}
+		progress[p.PatternID+":"+p.Slot] = p
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate pattern progress: %w", err)
+	}
+	return progress, nil
+}
+
+// SavePatternProgress inserts or updates progress for one pattern slot.
+func (s *SQLiteStore) SavePatternProgress(ctx context.Context, profileID int64, p model.PatternProgress) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO pattern_progress (profile_id, pattern_id, slot, streak, attempts, mastered)
+		 VALUES (?, ?, ?, ?, ?, ?)
+		 ON CONFLICT (profile_id, pattern_id, slot) DO UPDATE SET
+		   streak = excluded.streak,
+		   attempts = excluded.attempts,
+		   mastered = excluded.mastered`,
+		profileID, p.PatternID, p.Slot, p.Streak, p.Attempts, p.Mastered,
+	)
+	if err != nil {
+		return fmt.Errorf("save pattern progress: %w", err)
 	}
 	return nil
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/screens/profiles"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/profilesetup"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/quiz"
+	"github.com/sebastiancaraballo/polyglot/internal/screens/rikai"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/settings"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/stats"
 	"github.com/sebastiancaraballo/polyglot/internal/storage"
@@ -236,6 +237,12 @@ func (m rootModel) build(s nav.Screen) tea.Model {
 			ProfileID: m.ctx.profile.ID, Cards: decodableCards(m.ctx.allCards(), dec),
 			ShowRomaji: m.ctx.profile.ShowRomaji,
 		})
+	case nav.Rikai:
+		return rikai.New(rikai.Deps{
+			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
+			ProfileID: m.ctx.profile.ID, Patterns: m.ctx.course.Patterns,
+			Cards: m.ctx.cardIndex(), ShowRomaji: m.ctx.profile.ShowRomaji,
+		})
 	case nav.Stats:
 		return stats.New(stats.Deps{
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
@@ -316,6 +323,36 @@ func (c appContext) allCards() []model.Card {
 	return cards
 }
 
+// cardIndex flattens every lesson's cards into a lookup by card ID, for
+// screens (like Rikai) that need to resolve a pattern slot's candidate IDs
+// back into full cards.
+func (c appContext) cardIndex() map[string]model.Card {
+	index := make(map[string]model.Card)
+	for _, card := range c.allCards() {
+		index[card.ID] = card
+	}
+	return index
+}
+
+// rikaiReady is best-effort: on a storage error it reports not-ready rather
+// than failing navigation.
+func (c appContext) rikaiReady() bool {
+	states, err := c.store.GetCardStates(context.Background(), c.profile.ID)
+	if err != nil {
+		return false
+	}
+	known := make(map[string]bool, len(states))
+	for id, st := range states {
+		known[id] = study.CardKnown(st)
+	}
+	for _, p := range c.course.Patterns {
+		if study.PatternReady(p, known) {
+			return true
+		}
+	}
+	return false
+}
+
 // reviewItems is the full cross-curriculum set of schedulable items: vocabulary
 // and kana, interleaved by the review queue.
 func (c appContext) reviewItems() []review.Item {
@@ -350,5 +387,6 @@ func (c appContext) summary() menu.Summary {
 		Learned:       learned,
 		Total:         c.reviewableTotal(),
 		ReadingLocked: readable == 0,
+		RikaiLocked:   !c.rikaiReady(),
 	}
 }

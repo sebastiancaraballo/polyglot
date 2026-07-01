@@ -18,3 +18,6 @@ functions:
   - id: count-0-10
     cefr: A1
     description: "Contar y reconocer cantidades del cero al diez."
+  - id: self-introduction
+    cefr: A1
+    description: "Presentarse: decir quién eres y tu ocupación o nacionalidad."

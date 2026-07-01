@@ -39,12 +39,22 @@ type Storage interface {
 	GetCardState(ctx context.Context, profileID int64, cardID string) (model.CardState, error)
 	// SaveCardState inserts or updates the scheduling state for a card.
 	SaveCardState(ctx context.Context, profileID int64, state model.CardState) error
+	// GetCardStates returns every card-scheduling state the profile has, keyed by
+	// card ID, for callers that need to check several cards at once (e.g. Rikai's
+	// words-before-sentences gate) without one query per card.
+	GetCardStates(ctx context.Context, profileID int64) (map[string]model.CardState, error)
 
 	// GetKanaProgress returns the profile's kana automaticity progress, keyed by
 	// kana character. Kana the profile has never practiced are absent.
 	GetKanaProgress(ctx context.Context, profileID int64) (map[string]model.KanaProgress, error)
 	// SaveKanaProgress inserts or updates the automaticity progress for one kana.
 	SaveKanaProgress(ctx context.Context, profileID int64, p model.KanaProgress) error
+
+	// GetPatternProgress returns the profile's grammar-pattern drill progress,
+	// keyed by "<patternID>:<slot>". Slots never drilled are absent.
+	GetPatternProgress(ctx context.Context, profileID int64) (map[string]model.PatternProgress, error)
+	// SavePatternProgress inserts or updates progress for one pattern slot.
+	SavePatternProgress(ctx context.Context, profileID int64, p model.PatternProgress) error
 
 	// GetStats returns the aggregate stats for a profile.
 	GetStats(ctx context.Context, profileID int64) (model.Stats, error)

@@ -49,14 +49,19 @@ type Summary struct {
 	// ReadingLocked gates the reading activities (Flashcards, Quiz) behind kana
 	// fluency: the Foundations decoding gate. See internal/study.Gate.
 	ReadingLocked bool
+	// RikaiLocked gates Rikai behind "words before sentences": at least one
+	// known filler per slot of at least one grammar pattern. See
+	// internal/study.PatternReady.
+	RikaiLocked bool
 }
 
 type item struct {
-	icon   string
-	label  string
-	screen nav.Screen
-	quit   bool
-	locked bool
+	icon      string
+	label     string
+	screen    nav.Screen
+	quit      bool
+	locked    bool
+	lockedMsg string // notice shown when locked; ignored otherwise
 }
 
 // Model is the main menu screen.
@@ -94,14 +99,15 @@ func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Mo
 		animate: !ui.NoColor() && len(art.GlobeFrames) > 1,
 		animID:  animSeq,
 		items: []item{
-			{"あ", msgs.ItemKana, nav.Kana, false, false},
-			{"▦", msgs.ItemKanaChart, nav.KanaChart, false, false},
-			{"▣", msgs.ItemFlashcards, nav.Flashcards, false, summary.ReadingLocked},
-			{"♻", msgs.ItemReview, nav.Review, false, false},
-			{"✓", msgs.ItemQuiz, nav.Quiz, false, summary.ReadingLocked},
-			{"▤", msgs.ItemStats, nav.Stats, false, false},
-			{"⚙", msgs.ItemSettings, nav.Settings, false, false},
-			{"⏻", msgs.ItemQuit, nav.Menu, true, false},
+			{"あ", msgs.ItemKana, nav.Kana, false, false, ""},
+			{"▦", msgs.ItemKanaChart, nav.KanaChart, false, false, ""},
+			{"▣", msgs.ItemFlashcards, nav.Flashcards, false, summary.ReadingLocked, msgs.ReadingLocked},
+			{"♻", msgs.ItemReview, nav.Review, false, false, ""},
+			{"✓", msgs.ItemQuiz, nav.Quiz, false, summary.ReadingLocked, msgs.ReadingLocked},
+			{"◧", msgs.ItemRikai, nav.Rikai, false, summary.RikaiLocked, msgs.RikaiLocked},
+			{"▤", msgs.ItemStats, nav.Stats, false, false, ""},
+			{"⚙", msgs.ItemSettings, nav.Settings, false, false, ""},
+			{"⏻", msgs.ItemQuit, nav.Menu, true, false, ""},
 		},
 	}
 }
@@ -171,7 +177,7 @@ func (m Model) choose() (tea.Model, tea.Cmd) {
 	}
 	it := m.items[m.cursor-1]
 	if it.locked {
-		m.notice = m.msgs.ReadingLocked
+		m.notice = it.lockedMsg
 		return m, nil
 	}
 	if it.quit {

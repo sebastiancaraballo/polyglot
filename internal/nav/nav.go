@@ -20,6 +20,7 @@ const (
 	ProfileSetup
 	Profiles
 	KanaChart
+	Rikai
 )
 
 // GoToMsg requests navigation to a screen.
