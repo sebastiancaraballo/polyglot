@@ -92,6 +92,27 @@ type Messages struct {
 	QuizQuestionFmt string // "¿Cómo se dice \"%s\" en japonés?"
 	ReviewLabel     string
 
+	// Rikai (grammar-pattern practice)
+	ItemRikai          string
+	RikaiTitle         string
+	RikaiLocked        string // menu lock notice / empty-state message
+	RikaiPickHelp      string
+	RikaiMasteryNote   string // explains one-variable-at-a-time, shown under the picker
+	RikaiUnlockHint    string // why the cursor's pattern is locked
+	RikaiQuestionFmt   string // cue for the blank, "¿Cómo se dice \"%s\" aquí?"
+	RikaiPatternFluent string // badge on a fully-mastered pattern
+	RikaiMasteredFmt   string // "%d/%d" slots mastered
+
+	// Story (Katsudoo)
+	ItemStory          string
+	StoryTitle         string
+	StoryPickHelp      string
+	StoryProgressFmt   string // "%d/%d" beats seen, e.g. "2/6 escenas"
+	StoryCompleteBadge string // badge on a finished chapter
+	StoryEmpty         string // shown when no chapters exist yet
+	StoryDoneTitle     string // chapter-end screen title
+	StoryDoneNext      string // chapter-end help line
+
 	// Flashcards / Review
 	FlashTitle        string
 	ReviewScreenTitle string
@@ -220,6 +241,25 @@ var ES = Messages{
 	QuizTitle:       "Quiz",
 	QuizQuestionFmt: "¿Cómo se dice \"%s\" en japonés?",
 	ReviewLabel:     "Repasa",
+
+	ItemRikai:          "Rikai (gramática)",
+	RikaiTitle:         "Rikai",
+	RikaiLocked:        "Aprende más vocabulario para desbloquear Rikai.",
+	RikaiPickHelp:      "↑/↓ moverse · ENTER empezar · ESC volver",
+	RikaiMasteryNote:   "Cada ronda cambia una sola palabra del patrón; el resto queda fija.",
+	RikaiUnlockHint:    "Aprende más palabras de este patrón primero.",
+	RikaiQuestionFmt:   "¿Cómo se dice \"%s\" aquí?",
+	RikaiPatternFluent: "dominado",
+	RikaiMasteredFmt:   "%d/%d",
+
+	ItemStory:          "Katsudoo (historia)",
+	StoryTitle:         "Katsudoo",
+	StoryPickHelp:      "↑/↓ moverse · ENTER empezar · ESC volver",
+	StoryProgressFmt:   "%d/%d escenas",
+	StoryCompleteBadge: "✓ completado",
+	StoryEmpty:         "Aún no hay capítulos disponibles.",
+	StoryDoneTitle:     "Capítulo completado",
+	StoryDoneNext:      "ENTER volver a los capítulos",
 
 	FlashTitle:        "Flashcards",
 	ReviewScreenTitle: "Repaso",

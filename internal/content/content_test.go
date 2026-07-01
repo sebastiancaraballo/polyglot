@@ -228,6 +228,10 @@ func TestLoadMissingDirectories(t *testing.T) {
 
 const validKana = "type: hiragana\nitems:\n  - char: あ\n    romaji: a\n"
 
+// validPatternLesson provides a single vocab card "a:1" for pattern tests to
+// reference as a slot filler.
+const validPatternLesson = "id: a\ntitle: t\njlpt: N5\ncards:\n  - es: Hola\n    jp: あ\n    romaji: a\n"
+
 func TestLoadCurriculumErrors(t *testing.T) {
 	tests := map[string]fstest.MapFS{
 		"unknown function ref": {
@@ -258,6 +262,128 @@ func TestLoadCurriculumErrors(t *testing.T) {
 			"content/xx/lessons/01.yaml": file("id: a\ntitle: t\njlpt: N5\ncards:\n  - es: Hola\n    jp: そ\n    romaji: so\n"),
 			"content/xx/kana/h.yaml":     file(validKana),
 		},
+		"pattern missing id": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/grammar/01.yaml": file("title: t\njlpt: N5\nframe: \"{X}\"\nslots:\n  - name: X\n    cards: [a:1]\n"),
+		},
+		"pattern missing frame": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/grammar/01.yaml": file("id: p\ntitle: t\njlpt: N5\nslots:\n  - name: X\n    cards: [a:1]\n"),
+		},
+		"pattern invalid jlpt": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/grammar/01.yaml": file("id: p\ntitle: t\njlpt: N9\nframe: \"{X}\"\nslots:\n  - name: X\n    cards: [a:1]\n"),
+		},
+		"duplicate pattern id": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/grammar/01.yaml": file("id: p\ntitle: t\njlpt: N5\nframe: \"{X}\"\nslots:\n  - name: X\n    cards: [a:1]\n"),
+			"content/xx/grammar/02.yaml": file("id: p\ntitle: t2\njlpt: N5\nframe: \"{X}\"\nslots:\n  - name: X\n    cards: [a:1]\n"),
+		},
+		"pattern slot missing name": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/grammar/01.yaml": file("id: p\ntitle: t\njlpt: N5\nframe: \"{X}\"\nslots:\n  - cards: [a:1]\n"),
+		},
+		"pattern slot with no candidate cards": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/grammar/01.yaml": file("id: p\ntitle: t\njlpt: N5\nframe: \"{X}\"\nslots:\n  - name: X\n    cards: []\n"),
+		},
+		"frame placeholder not declared as a slot": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/grammar/01.yaml": file("id: p\ntitle: t\njlpt: N5\nframe: \"{Y}\"\nslots:\n  - name: X\n    cards: [a:1]\n"),
+		},
+		"declared slot not used in frame": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/grammar/01.yaml": file("id: p\ntitle: t\njlpt: N5\nframe: \"hola\"\nslots:\n  - name: X\n    cards: [a:1]\n"),
+		},
+		"slot default not among its candidate cards": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/grammar/01.yaml": file("id: p\ntitle: t\njlpt: N5\nframe: \"{X}\"\nslots:\n  - name: X\n    cards: [a:1]\n    default: a:2\n"),
+		},
+		"pattern slot references unknown card id": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/grammar/01.yaml": file("id: p\ntitle: t\njlpt: N5\nframe: \"{X}\"\nslots:\n  - name: X\n    cards: [nope:1]\n"),
+		},
+		"chapter missing id": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("title: t\nbeats:\n  - kind: narration\n    es: Hola\n    jp: あ\n"),
+		},
+		"chapter missing title": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\nbeats:\n  - kind: narration\n    es: Hola\n    jp: あ\n"),
+		},
+		"chapter with no beats": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats: []\n"),
+		},
+		"beat invalid kind": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: bogus\n"),
+		},
+		"dialogue beat missing speaker": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: dialogue\n    es: Hola\n    jp: あ\n"),
+		},
+		"narration beat missing jp": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: narration\n    es: Hola\n"),
+		},
+		"narration beat missing es": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: narration\n    jp: あ\n"),
+		},
+		"practice beat missing ref_id": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: practice\n    practice: vocab\n"),
+		},
+		"practice beat invalid practice kind": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: practice\n    practice: bogus\n    ref_id: a\n"),
+		},
+		"practice beat carries stray dialogue fields": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: practice\n    practice: vocab\n    ref_id: a\n    jp: あ\n"),
+		},
+		"duplicate chapter id": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: narration\n    es: Hola\n    jp: あ\n"),
+			"content/xx/story/02.yaml":   file("id: c\ntitle: t2\nbeats:\n  - kind: narration\n    es: Hola\n    jp: あ\n"),
+		},
+		"practice beat references unknown lesson id": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: practice\n    practice: vocab\n    ref_id: nope\n"),
+		},
+		"practice beat references unknown kana type": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: practice\n    practice: kana\n    ref_id: bogus\n"),
+		},
+		"practice beat references empty kana type": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: practice\n    practice: kana\n    ref_id: katakana\n"),
+		},
 	}
 
 	for name, fsys := range tests {
@@ -266,6 +392,142 @@ func TestLoadCurriculumErrors(t *testing.T) {
 				t.Fatal("expected a validation error, got nil")
 			}
 		})
+	}
+}
+
+func TestLoadPatternValid(t *testing.T) {
+	fsys := fstest.MapFS{
+		"content/xx/lessons/01.yaml": file(validPatternLesson),
+		"content/xx/kana/h.yaml":     file(validKana),
+		"content/xx/grammar/01.yaml": file(
+			"id: p\ntitle: t\njlpt: N5\nframe: \"{X}\"\nslots:\n  - name: X\n    cards: [a:1]\n    default: a:1\n",
+		),
+	}
+	course, err := Load(fsys, "xx")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(course.Patterns) != 1 {
+		t.Fatalf("got %d patterns, want 1", len(course.Patterns))
+	}
+	p := course.Patterns[0]
+	if len(p.Slots) != 1 || p.Slots[0].Default != "a:1" {
+		t.Errorf("unexpected slots: %+v", p.Slots)
+	}
+}
+
+func TestPatternSlotDefaultDefaultsToFirstCard(t *testing.T) {
+	fsys := fstest.MapFS{
+		"content/xx/lessons/01.yaml": file(validPatternLesson),
+		"content/xx/kana/h.yaml":     file(validKana),
+		"content/xx/grammar/01.yaml": file(
+			"id: p\ntitle: t\njlpt: N5\nframe: \"{X}\"\nslots:\n  - name: X\n    cards: [a:1]\n",
+		),
+	}
+	course, err := Load(fsys, "xx")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := course.Patterns[0].Slots[0].Default; got != "a:1" {
+		t.Errorf("omitted default = %q, want %q", got, "a:1")
+	}
+}
+
+func TestLoadNoGrammarIsNotAnError(t *testing.T) {
+	course, err := Load(validFS(), "xx")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(course.Patterns) != 0 {
+		t.Errorf("got %d patterns, want 0", len(course.Patterns))
+	}
+}
+
+func TestEmbeddedGrammarPatterns(t *testing.T) {
+	course, err := LoadEmbedded(DefaultPair)
+	if err != nil {
+		t.Fatalf("LoadEmbedded: %v", err)
+	}
+	if len(course.Patterns) == 0 {
+		t.Fatal("expected at least one embedded grammar pattern")
+	}
+	cardSet := cardIDSet(course.Lessons)
+	for _, p := range course.Patterns {
+		if !p.JLPT.Valid() {
+			t.Errorf("pattern %q has invalid JLPT %q", p.ID, p.JLPT)
+		}
+		if err := checkVocabCoverage(p, cardSet); err != nil {
+			t.Errorf("pattern %q: %v", p.ID, err)
+		}
+		slotNames := make(map[string]bool, len(p.Slots))
+		for _, s := range p.Slots {
+			slotNames[s.Name] = true
+		}
+		if err := checkFramePlaceholders(p.Frame, slotNames); err != nil {
+			t.Errorf("pattern %q: %v", p.ID, err)
+		}
+	}
+}
+
+func TestLoadStoryValid(t *testing.T) {
+	fsys := fstest.MapFS{
+		"content/xx/lessons/01.yaml": file(validPatternLesson),
+		"content/xx/kana/h.yaml":     file(validKana),
+		"content/xx/story/01.yaml": file(
+			"id: c\ntitle: t\nbeats:\n" +
+				"  - kind: narration\n    es: Hola\n    jp: あ\n" +
+				"  - kind: dialogue\n    speaker: Yui\n    es: Hola\n    jp: あ\n" +
+				"  - kind: practice\n    practice: vocab\n    ref_id: a\n",
+		),
+	}
+	course, err := Load(fsys, "xx")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(course.Chapters) != 1 {
+		t.Fatalf("got %d chapters, want 1", len(course.Chapters))
+	}
+	c := course.Chapters[0]
+	if len(c.Beats) != 3 {
+		t.Fatalf("got %d beats, want 3", len(c.Beats))
+	}
+	if c.Beats[1].Speaker != "Yui" {
+		t.Errorf("dialogue speaker = %q, want %q", c.Beats[1].Speaker, "Yui")
+	}
+	if c.Beats[2].Practice != model.PracticeVocab || c.Beats[2].RefID != "a" {
+		t.Errorf("practice beat = %+v, want Practice=vocab RefID=a", c.Beats[2])
+	}
+}
+
+func TestLoadNoStoryIsNotAnError(t *testing.T) {
+	course, err := Load(validFS(), "xx")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(course.Chapters) != 0 {
+		t.Errorf("got %d chapters, want 0", len(course.Chapters))
+	}
+}
+
+func TestEmbeddedStoryChapters(t *testing.T) {
+	course, err := LoadEmbedded(DefaultPair)
+	if err != nil {
+		t.Fatalf("LoadEmbedded: %v", err)
+	}
+	if len(course.Chapters) == 0 {
+		t.Fatal("expected at least one embedded story chapter")
+	}
+	lessonIDs := lessonIDSet(course.Lessons)
+	kanaTypes := kanaTypesPresent(course.Kana)
+	for _, c := range course.Chapters {
+		for _, b := range c.Beats {
+			if !b.Kind.Valid() {
+				t.Errorf("chapter %q has a beat with invalid kind %q", c.ID, b.Kind)
+			}
+		}
+		if err := checkStoryCoverage(c, lessonIDs, kanaTypes); err != nil {
+			t.Errorf("chapter %q: %v", c.ID, err)
+		}
 	}
 }
 

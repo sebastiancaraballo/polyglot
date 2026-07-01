@@ -1,0 +1,20 @@
+id: self-intro
+title: "Presentarse"
+jlpt: N5
+functions: [self-introduction]
+cards:
+  - es: "Yo"
+    jp: "わたし"
+    romaji: "watashi"
+  - es: "Tú / Usted"
+    jp: "あなた"
+    romaji: "anata"
+  - es: "Estudiante"
+    jp: "がくせい"
+    romaji: "gakusei"
+  - es: "Profesor/a"
+    jp: "せんせい"
+    romaji: "sensei"
+  - es: "Japonés/a (nacionalidad)"
+    jp: "にほんじん"
+    romaji: "nihonjin"

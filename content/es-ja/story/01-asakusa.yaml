@@ -1,0 +1,29 @@
+id: capitulo-1-asakusa
+title: "Bienvenida a Asakusa"
+beats:
+  - kind: narration
+    place: "Asakusa, Tokio"
+    es: "Es una mañana tranquila en Asakusa. Frente a la Puerta del Trueno, alguien te saluda con una sonrisa."
+    jp: "浅草の静かな朝。雷門の前で、誰かが笑顔であなたに挨拶する。"
+  - kind: dialogue
+    speaker: "Yui"
+    es: "¡Hola! Bienvenido/a a Asakusa. Vivo aquí cerca y conozco bien el barrio."
+    jp: "こんにちは！浅草へようこそ。この近くに住んでいて、この街をよく知っています。"
+    romaji: "Konnichiwa! Asakusa e yōkoso. Kono chikaku ni sundeite, kono machi o yoku shitteimasu."
+  - kind: dialogue
+    speaker: "Yui"
+    es: "Antes de caminar juntos, practiquemos un saludo."
+    jp: "一緒に歩く前に、挨拶を練習しましょう。"
+    romaji: "Issho ni aruku mae ni, aisatsu o renshū shimashō."
+  - kind: practice
+    practice: vocab
+    ref_id: greetings
+  - kind: dialogue
+    speaker: "Yui"
+    es: "Muy bien. Ahora sí, vamos a caminar juntos por Asakusa."
+    jp: "上手ですね。それでは、一緒に浅草を歩きましょう。"
+    romaji: "Jōzu desu ne. Soredewa, issho ni Asakusa o arukimashō."
+  - kind: narration
+    place: "Asakusa, Tokio"
+    es: "Caminan juntos hacia el templo, entre el bullicio suave de la calle Nakamise."
+    jp: "二人は仲見世通りの穏やかな賑わいの中、お寺に向かって歩いていく。"

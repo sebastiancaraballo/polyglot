@@ -1,0 +1,12 @@
+id: x-wa-n-desu
+title: "X wa N desu"
+jlpt: N5
+notes: "Patrón cópula: X es N. Cada ronda cambia una sola palabra (X o N), nunca las dos a la vez."
+frame: "{X}は{N}です"
+slots:
+  - name: X
+    cards: [self-intro:1, self-intro:2]
+    default: self-intro:1
+  - name: N
+    cards: [self-intro:3, self-intro:4, self-intro:5]
+    default: self-intro:3
