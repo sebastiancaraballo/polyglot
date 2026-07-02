@@ -54,8 +54,9 @@ type Model struct {
 	chapters   []chapterEntry
 	chapterCur int
 
-	chapter   model.Chapter
-	beatIndex int
+	chapter     model.Chapter
+	beatIndex   int
+	presentPage int // current page of a present beat's material list
 
 	options  []string
 	correct  int
@@ -147,6 +148,7 @@ func (m Model) enterBeat() Model {
 	if m.finished() {
 		return m
 	}
+	m.presentPage = 0
 	if m.chapter.Beats[m.beatIndex].Kind == model.Practice {
 		m = m.setPracticeQuestion()
 	}
@@ -361,10 +363,40 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	case m.chapter.Beats[m.beatIndex].Kind == model.Practice && !m.answered:
 		m = m.answerKey(msg)
+	case m.chapter.Beats[m.beatIndex].Kind == model.Present:
+		m = m.handlePresentKey(msg)
 	case ui.IsConfirmKey(msg):
 		m = m.advance()
 	}
 	return m, nil
+}
+
+// handlePresentKey pages through a present beat's material when it spans more
+// than one screen, then advances the story from the last page. Confirming on a
+// non-final page turns to the next, so the learner reads all of it before the
+// practice that follows.
+func (m Model) handlePresentKey(msg tea.KeyPressMsg) Model {
+	pages := len(m.presentPages(m.chapter.Beats[m.beatIndex]))
+	switch msg.String() {
+	case "up", "k", "left", "h", "pgup":
+		if m.presentPage > 0 {
+			m.presentPage--
+		}
+		return m
+	case "down", "j", "right", "l", "pgdown":
+		if m.presentPage < pages-1 {
+			m.presentPage++
+		}
+		return m
+	}
+	if ui.IsConfirmKey(msg) {
+		if m.presentPage < pages-1 {
+			m.presentPage++
+		} else {
+			m = m.advance()
+		}
+	}
+	return m
 }
 
 func (m Model) handlePick(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -595,10 +627,39 @@ func (m Model) beatView() string {
 // introduces before it practices it, so retrieval always follows exposure.
 // The optional framing line sets the scene diegetically; the list below it is
 // the material itself, with readings and glosses visible (decoding before
-// recall).
+// recall). When the pool is taller than the fixed frame it paginates, so a
+// large lesson never clips the frame — the learner turns pages before the
+// practice that follows.
 func (m Model) presentView() string {
 	t := m.deps.Theme
 	beat := m.chapter.Beats[m.beatIndex]
+	pages := m.presentPages(beat)
+	page := m.presentPage
+	if page >= len(pages) {
+		page = len(pages) - 1
+	}
+	if page < 0 {
+		page = 0
+	}
+
+	parts := []string{m.presentHeader(beat), strings.Join(pages[page], "\n")}
+	if len(pages) > 1 {
+		parts = append(parts, t.Subtle.Render(fmt.Sprintf(m.deps.Msgs.StoryPresentPageFmt, page+1, len(pages))))
+	}
+	help := m.deps.Msgs.ContinueHelp
+	if len(pages) > 1 && page < len(pages)-1 {
+		help = m.deps.Msgs.StoryPresentMoreHelp
+	}
+	parts = append(parts, "", t.Help.Render(help))
+	return strings.Join(parts, "\n")
+}
+
+// presentHeader renders the fixed top of a present beat: the chapter title,
+// the optional diegetic framing line, and the "learn this first" label. Its
+// wrapped height is what the item list is budgeted against.
+func (m Model) presentHeader(beat model.Beat) string {
+	t := m.deps.Theme
+	width := ui.FrameContentWidth(t, m.width)
 	var b strings.Builder
 	b.WriteString(t.Title.Render(m.chapter.Title))
 	b.WriteString("\n\n")
@@ -611,23 +672,41 @@ func (m Model) presentView() string {
 			b.WriteString(t.Accent.Bold(true).Render(beat.Speaker))
 			b.WriteString("\n")
 		}
-		b.WriteString(t.Normal.Render(beat.JP))
+		jp := beat.JP
 		if m.deps.ShowRomaji && beat.Romaji != "" {
-			fmt.Fprintf(&b, " (%s)", beat.Romaji)
+			jp += fmt.Sprintf(" (%s)", beat.Romaji)
 		}
+		b.WriteString(t.Normal.Render(ui.WrapText(jp, width)))
 		b.WriteString("\n")
-		b.WriteString(t.Subtle.Render(beat.Source))
+		b.WriteString(t.Subtle.Render(ui.WrapText(beat.Source, width)))
 		b.WriteString("\n\n")
 	}
 	b.WriteString(t.Subtle.Render(m.deps.Msgs.StoryPresentLabel))
-	b.WriteString("\n")
-	for _, line := range m.presentItems(beat) {
-		b.WriteString(t.Normal.Render("  " + line))
-		b.WriteString("\n")
-	}
-	b.WriteString("\n")
-	b.WriteString(t.Help.Render(m.deps.Msgs.ContinueHelp))
 	return b.String()
+}
+
+// presentPages splits a present beat's material into pages that each fit the
+// current frame below the header, reserving a row for the page indicator only
+// when more than one page is needed.
+func (m Model) presentPages(beat model.Beat) [][]string {
+	t := m.deps.Theme
+	width := ui.FrameContentWidth(t, m.width)
+	items := m.presentItems(beat)
+	lines := make([]string, 0, len(items))
+	for _, it := range items {
+		lines = append(lines, ui.WrapText("  "+it, width))
+	}
+
+	// Rows left for items = frame interior − header − a blank line − the help
+	// line. capFull assumes no page indicator; if the list overflows even that,
+	// re-paginate reserving one more row for the "page x/y" indicator.
+	avail := ui.FrameContentHeight(t, m.height)
+	capFull := avail - lineHeight(m.presentHeader(beat)) - 2
+	pages := paginateByHeight(lines, capFull)
+	if len(pages) <= 1 {
+		return pages
+	}
+	return paginateByHeight(lines, capFull-1)
 }
 
 // presentItems formats each item of a present beat's pool: vocab as
@@ -658,6 +737,40 @@ func (m Model) presentItems(beat model.Beat) []string {
 		return lines
 	}
 	return nil
+}
+
+// lineHeight counts the display rows a rendered string occupies. The story
+// screen builds its strings from WrapText output, so hard newlines are the
+// only line breaks to count.
+func lineHeight(s string) int { return strings.Count(s, "\n") + 1 }
+
+// paginateByHeight greedily groups pre-wrapped lines into pages whose combined
+// display height fits capacity. A single line taller than capacity gets its own
+// page rather than being dropped. Always returns at least one (possibly empty)
+// page so callers can index page zero.
+func paginateByHeight(lines []string, capacity int) [][]string {
+	if capacity < 1 {
+		capacity = 1
+	}
+	var pages [][]string
+	var cur []string
+	curH := 0
+	for _, ln := range lines {
+		h := lineHeight(ln)
+		if len(cur) > 0 && curH+h > capacity {
+			pages = append(pages, cur)
+			cur, curH = nil, 0
+		}
+		cur = append(cur, ln)
+		curH += h
+	}
+	if len(cur) > 0 {
+		pages = append(pages, cur)
+	}
+	if len(pages) == 0 {
+		pages = append(pages, nil)
+	}
+	return pages
 }
 
 func (m Model) practiceView() string {

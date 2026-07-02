@@ -2,6 +2,7 @@ package story
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -422,6 +423,60 @@ func TestPresentBeatRendersPoolAndAdvances(t *testing.T) {
 	}
 	if len(got.options) == 0 {
 		t.Fatal("advancing into the practice beat should build its options")
+	}
+}
+
+func TestPresentBeatPaginatesLongPoolAndFitsFrame(t *testing.T) {
+	store, profileID := newStore(t)
+	cards := make([]model.Card, 40)
+	for i := range cards {
+		cards[i] = model.Card{
+			ID: fmt.Sprintf("big:%d", i), Source: fmt.Sprintf("palabra %d", i),
+			JP: "ことば", Romaji: "kotoba",
+		}
+	}
+	bigLesson := model.Lesson{ID: "big", Title: "Grande", JLPT: model.N5, Cards: cards}
+	chapter := model.Chapter{
+		ID: "big-chapter", Title: "Capítulo grande",
+		Beats: []model.Beat{
+			{Kind: model.Present, Practice: model.PracticeVocab, RefID: "big"},
+			{Kind: model.Practice, Practice: model.PracticeVocab, RefID: "big"},
+		},
+	}
+	deps := Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID,
+		Chapters: []model.Chapter{chapter}, Lessons: []model.Lesson{bigLesson}, ShowRomaji: true}
+	m := New(deps)
+	m.width, m.height = 80, 30 // a realistic frame
+	m = m.startChapter(0)
+
+	pages := m.presentPages(chapter.Beats[0])
+	if len(pages) < 2 {
+		t.Fatalf("a 40-item pool should span multiple pages, got %d", len(pages))
+	}
+	// Every page must render within the frame's content height, border intact.
+	avail := ui.FrameContentHeight(m.deps.Theme, m.height)
+	for i := range pages {
+		m.presentPage = i
+		if h := lineHeight(m.presentView()); h > avail {
+			t.Errorf("page %d renders %d rows, exceeds frame content height %d", i, h, avail)
+		}
+	}
+
+	// Confirm turns pages, only advancing the story from the last page.
+	m.presentPage = 0
+	last := len(pages) - 1
+	for i := 0; i < last; i++ {
+		var tm tea.Model = m
+		tm, _ = tm.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		m = tm.(Model)
+		if m.beatIndex != 0 {
+			t.Fatalf("confirming on page %d should turn the page, not advance the beat", i)
+		}
+	}
+	var tm tea.Model = m
+	tm, _ = tm.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if got := tm.(Model); got.beatIndex != 1 {
+		t.Fatalf("confirming on the last page should advance to the practice beat; beatIndex = %d", got.beatIndex)
 	}
 }
 
