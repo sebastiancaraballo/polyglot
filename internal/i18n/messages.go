@@ -140,6 +140,7 @@ type Messages struct {
 	Today             string
 	DayShort          string
 	FlashNewHeldFmt   string // pacing transparency: %d new cards deferred and why
+	FreqRankFmt       string // frequency rank shown on the vocab reveal, "nº %d"
 
 	// Stats
 	StatsTitle    string
@@ -300,6 +301,7 @@ var ES = Messages{
 	Today:             "hoy",
 	DayShort:          "d",
 	FlashNewHeldFmt:   "%d tarjetas nuevas en espera: entran poco a poco para consolidar lo aprendido.",
+	FreqRankFmt:       "Frecuencia: nº %d",
 
 	StatsTitle:    "Mis estadísticas",
 	BestLabel:     "récord",

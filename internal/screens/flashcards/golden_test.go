@@ -54,3 +54,10 @@ func TestHeldBackNoticeGolden(t *testing.T) {
 	m.heldBackNew = 4
 	golden.RequireEqual(t, []byte(m.View().Content))
 }
+
+func TestRevealedVocabWithFreqGolden(t *testing.T) {
+	m := goldenModel()
+	m.queue[0].Item.Freq = 339
+	m.revealed = true
+	golden.RequireEqual(t, []byte(m.View().Content))
+}

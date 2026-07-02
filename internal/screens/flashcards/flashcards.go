@@ -190,6 +190,10 @@ func (m Model) cardView() string {
 		b.WriteString(t.Subtle.Render(ui.WrapText(item.Notes, m.noteWidth())))
 		b.WriteString("\n")
 	}
+	if item.Freq > 0 {
+		b.WriteString(t.Subtle.Render(fmt.Sprintf(m.deps.Msgs.FreqRankFmt, item.Freq)))
+		b.WriteString("\n")
+	}
 	b.WriteString("\n")
 	b.WriteString(m.deps.Msgs.GradePrompt)
 	b.WriteString("\n")

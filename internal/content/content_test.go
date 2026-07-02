@@ -541,6 +541,89 @@ func TestFreqOptional(t *testing.T) {
 	}
 }
 
+// freqFS is a pair with a target-language frequency list, for backfill tests:
+// three cards matched by word, by reading, and not at all, plus one with a
+// manual freq override.
+func freqFS() fstest.MapFS {
+	return fstest.MapFS{
+		"content/es-xx/lessons/01.yaml": file(
+			"id: a\ntitle: t\njlpt: N5\ncards:\n" +
+				"  - es: Palabra\n    jp: ことば\n    romaji: kotoba\n" + // word match
+				"  - es: Yo\n    jp: わたし\n    romaji: watashi\n" + // reading match (私)
+				"  - es: Por favor\n    jp: おねがいします\n    romaji: onegaishimasu\n" + // no match
+				"  - es: Manual\n    jp: はい\n    romaji: hai\n    freq: 7\n", // explicit override
+		),
+		"content/es-xx/kana/h.yaml": file(
+			"type: hiragana\nitems:\n  - char: こ\n    romaji: ko\n  - char: と\n    romaji: to\n" +
+				"  - char: ば\n    romaji: ba\n  - char: わ\n    romaji: wa\n  - char: た\n    romaji: ta\n" +
+				"  - char: し\n    romaji: shi\n  - char: お\n    romaji: o\n  - char: ね\n    romaji: ne\n" +
+				"  - char: が\n    romaji: ga\n  - char: い\n    romaji: i\n  - char: ま\n    romaji: ma\n" +
+				"  - char: す\n    romaji: su\n  - char: は\n    romaji: wa\n",
+		),
+		"content/xx/frequency.tsv": file(
+			"# comment\n" +
+				"1\tことば\tことば\t100\n" +
+				"2\t私\tわたし\t90\n" +
+				"3\tはい\tはい\t80\n",
+		),
+	}
+}
+
+func TestFreqBackfill(t *testing.T) {
+	course, err := Load(freqFS(), "es-xx")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	cards := course.Lessons[0].Cards
+	tests := []struct {
+		name string
+		card model.Card
+		want int
+	}{
+		{"matched by surface word", cards[0], 1},
+		{"matched by reading (kanji surface form)", cards[1], 2},
+		{"unmatched stays unranked", cards[2], 0},
+		{"explicit freq wins over backfill", cards[3], 7},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.card.Freq != tt.want {
+				t.Errorf("%s (%s): Freq = %d, want %d", tt.card.ID, tt.card.JP, tt.card.Freq, tt.want)
+			}
+		})
+	}
+}
+
+func TestFreqBackfillMissingListIsNotAnError(t *testing.T) {
+	fsys := freqFS()
+	delete(fsys, "content/xx/frequency.tsv")
+	course, err := Load(fsys, "es-xx")
+	if err != nil {
+		t.Fatalf("Load without a frequency list: %v", err)
+	}
+	if got := course.Lessons[0].Cards[0].Freq; got != 0 {
+		t.Errorf("Freq without a list = %d, want 0", got)
+	}
+}
+
+func TestEmbeddedCourseBackfillsFreq(t *testing.T) {
+	course, err := LoadEmbedded(DefaultPair)
+	if err != nil {
+		t.Fatalf("LoadEmbedded: %v", err)
+	}
+	ranked := 0
+	for _, lesson := range course.Lessons {
+		for _, card := range lesson.Cards {
+			if card.Freq > 0 {
+				ranked++
+			}
+		}
+	}
+	if ranked == 0 {
+		t.Fatal("expected at least some embedded cards to gain a frequency rank")
+	}
+}
+
 func TestEmbeddedLessonsReferenceKnownFunctions(t *testing.T) {
 	course, err := LoadEmbedded(DefaultPair)
 	if err != nil {

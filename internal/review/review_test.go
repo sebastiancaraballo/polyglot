@@ -219,6 +219,38 @@ func TestBuildQueueLapseHeavySetHalvesIntake(t *testing.T) {
 	}
 }
 
+// The new-card budget cut prefers the most frequent words: ranked cards enter
+// most-frequent-first; unranked cards only after them, in input order.
+func TestBuildQueueAdmitsMostFrequentNewCardsFirst(t *testing.T) {
+	store, pid := newStore(t)
+	freqItem := func(id string, freq int) review.Item {
+		it := item(id, review.Vocab)
+		it.Freq = freq
+		return it
+	}
+	items := []review.Item{
+		freqItem("unranked-a", 0),
+		freqItem("rare", 900),
+		freqItem("common", 14),
+		freqItem("mid", 300),
+		freqItem("unranked-b", 0),
+	}
+
+	q, err := review.BuildQueue(context.Background(), store, pid, items, time.Now(), 3)
+	if err != nil {
+		t.Fatalf("BuildQueue: %v", err)
+	}
+	// limit 3, no due reviews → budget 3: the ranked cards, most frequent
+	// first; both unranked cards held back behind them.
+	want := []string{"common", "mid", "rare"}
+	if got := ids(q.Items); !equal(got, want) {
+		t.Fatalf("want %v, got %v", want, got)
+	}
+	if q.HeldBackNew != 2 {
+		t.Fatalf("HeldBackNew = %d, want 2", q.HeldBackNew)
+	}
+}
+
 // Strand interleaving still operates on the admitted set.
 func TestBuildQueueInterleavesAdmittedNewCards(t *testing.T) {
 	store, pid := newStore(t)
