@@ -23,6 +23,22 @@ func isKana(r rune) bool {
 	return unicode.In(r, unicode.Hiragana, unicode.Katakana)
 }
 
+// isKanaMark reports whether r is a kana modifier with no standalone reading:
+// the sokuon (small tsu っ/ッ), which geminates the following consonant, or the
+// chōonpu (ー), which lengthens the preceding vowel. They modify an adjacent,
+// separately-teachable kana rather than being syllables themselves, so they are
+// always decodable once a learner knows kana and are not taught as their own
+// items. (The chōonpu is already script "Common" and thus skipped as non-kana,
+// but is listed here so the intent is explicit and robust.)
+func isKanaMark(r rune) bool {
+	switch r {
+	case 'っ', 'ッ', 'ー':
+		return true
+	default:
+		return false
+	}
+}
+
 // checkKanaCoverage verifies that every kana used in jp is present in set, so no
 // card depends on a character the learner cannot yet be taught. It tokenizes with
 // longest match — trying a two-rune combination (yōon) before a single rune — so
@@ -33,7 +49,7 @@ func checkKanaCoverage(jp string, set map[string]bool) error {
 	runes := []rune(jp)
 	for i := 0; i < len(runes); {
 		r := runes[i]
-		if !isKana(r) {
+		if isKanaMark(r) || !isKana(r) {
 			i++
 			continue
 		}

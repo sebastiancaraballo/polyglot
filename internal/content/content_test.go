@@ -760,6 +760,21 @@ func TestEmbeddedKanaCoverage(t *testing.T) {
 	}
 }
 
+func TestKanaCoverageAllowsKanaMarks(t *testing.T) {
+	course, err := LoadEmbedded(DefaultPair)
+	if err != nil {
+		t.Fatalf("LoadEmbedded: %v", err)
+	}
+	set := kanaSet(course.Kana)
+	// Sokuon (っ/ッ) and chōonpu (ー) modify a neighbor and have no item of
+	// their own, so words using them must still pass coverage.
+	for _, jp := range []string{"がっこう", "きって", "ざっし", "ちょっと", "コーヒー", "ノート", "スーパー"} {
+		if err := checkKanaCoverage(jp, set); err != nil {
+			t.Errorf("checkKanaCoverage(%q) = %v, want nil", jp, err)
+		}
+	}
+}
+
 func TestEmbeddedContentIsKanjiFree(t *testing.T) {
 	// Kanji dependencies are deferred; the kana-coverage check skips non-kana
 	// runes, so this pins the assumption that current content carries no kanji.

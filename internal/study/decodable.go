@@ -44,6 +44,8 @@ func (d Decoder) Decodable(jp string) bool {
 	for i := 0; i < len(runes); {
 		r := runes[i]
 		switch {
+		case isKanaMark(r):
+			i++ // sokuon (っ/ッ) and chōonpu (ー) modify a neighbor; always readable once you know kana
 		case isKana(r):
 			if i+1 < len(runes) {
 				if pair := string(runes[i : i+2]); d.combos[pair] {
@@ -72,4 +74,17 @@ func (d Decoder) Decodable(jp string) bool {
 // isKana reports whether r belongs to either Japanese syllabary.
 func isKana(r rune) bool {
 	return unicode.In(r, unicode.Hiragana, unicode.Katakana)
+}
+
+// isKanaMark reports whether r is a kana modifier with no standalone reading:
+// the sokuon (small tsu っ/ッ) or the chōonpu (ー). They modify an adjacent
+// kana, so a learner who knows kana can already read them — they never gate
+// decodability of a word.
+func isKanaMark(r rune) bool {
+	switch r {
+	case 'っ', 'ッ', 'ー':
+		return true
+	default:
+		return false
+	}
 }
