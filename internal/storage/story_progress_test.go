@@ -39,7 +39,7 @@ func TestStoryProgressRoundTrip(t *testing.T) {
 	}
 
 	// Saving again upserts rather than duplicating.
-	want.BeatIndex, want.Completed = 5, true
+	want.BeatIndex, want.Completed, want.Mastered = 5, true, true
 	if err := store.SaveStoryProgress(ctx, profile.ID, want); err != nil {
 		t.Fatalf("SaveStoryProgress (update): %v", err)
 	}
@@ -52,6 +52,9 @@ func TestStoryProgressRoundTrip(t *testing.T) {
 	}
 	if !got["capitulo-1-asakusa"].Completed {
 		t.Error("chapter should be marked completed after update")
+	}
+	if !got["capitulo-1-asakusa"].Mastered {
+		t.Error("chapter should be marked mastered after update")
 	}
 }
 

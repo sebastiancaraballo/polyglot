@@ -86,31 +86,61 @@ func KanaItems(kana []model.KanaItem) []Item {
 	return items
 }
 
+// Queue is a built study session plus the pacing facts the UI needs to
+// explain it: how many due reviews it holds and how many new cards were
+// deferred, so a held-back card is never hidden logic.
+type Queue struct {
+	Items       []Scheduled
+	DueReviews  int // due cards that have been reviewed before
+	HeldBackNew int // due new cards deferred by pacing, so the UI can say why
+}
+
 // BuildQueue returns the items currently due for the profile, ordered most-overdue
 // first within each strand and interleaved across strands, capped to at most limit
 // items (limit <= 0 means no cap). It loads each item's scheduling state from the
-// store, treating a never-seen item as a new card that is immediately due. The
-// result is deterministic for a given input.
-func BuildQueue(ctx context.Context, store storage.Storage, profileID int64, items []Item, now time.Time, limit int) ([]Scheduled, error) {
-	var due []Scheduled
+// store, treating a never-seen item as a new card that is immediately due. Due
+// reviews take priority: new (never-reviewed) cards are admitted only up to
+// NewCardBudget, and the number held back is reported. The result is
+// deterministic for a given input.
+func BuildQueue(ctx context.Context, store storage.Storage, profileID int64, items []Item, now time.Time, limit int) (Queue, error) {
+	var reviews, fresh []Scheduled
+	lapsed := 0
 	for _, it := range items {
 		state, err := store.GetCardState(ctx, profileID, it.CardID)
 		switch {
 		case errors.Is(err, storage.ErrNotFound):
 			state = srs.NewCard(it.CardID)
 		case err != nil:
-			return nil, fmt.Errorf("review: load state for %q: %w", it.CardID, err)
+			return Queue{}, fmt.Errorf("review: load state for %q: %w", it.CardID, err)
 		}
-		if srs.IsDue(state, now) {
-			due = append(due, Scheduled{Item: it, State: state})
+		if !srs.IsDue(state, now) {
+			continue
+		}
+		if state.LastReviewedAt.IsZero() {
+			fresh = append(fresh, Scheduled{Item: it, State: state})
+		} else {
+			reviews = append(reviews, Scheduled{Item: it, State: state})
+			if state.Lapses > 0 {
+				lapsed++
+			}
 		}
 	}
 
-	ordered := interleave(due)
+	budget := NewCardBudget(len(reviews), lapsed, limit)
+	admitted := fresh
+	if len(admitted) > budget {
+		admitted = admitted[:budget]
+	}
+
+	ordered := interleave(append(reviews, admitted...))
 	if limit > 0 && len(ordered) > limit {
 		ordered = ordered[:limit]
 	}
-	return ordered, nil
+	return Queue{
+		Items:       ordered,
+		DueReviews:  len(reviews),
+		HeldBackNew: len(fresh) - len(admitted),
+	}, nil
 }
 
 // interleave orders due items most-overdue first within each strand, then pulls

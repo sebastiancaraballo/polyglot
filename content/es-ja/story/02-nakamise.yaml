@@ -1,0 +1,29 @@
+id: capitulo-2-nakamise
+title: "Compras en Nakamise"
+beats:
+  - kind: narration
+    place: "Calle Nakamise, Asakusa"
+    es: "Entran en la calle Nakamise. A ambos lados, puestos de dulces y recuerdos acompañan el camino hacia el templo."
+    jp: "二人は仲見世通りに入る。両側に、お菓子やお土産の店が参道に並んでいる。"
+  - kind: dialogue
+    speaker: "Yui"
+    es: "Esta es la calle Nakamise. ¿Ves esos pastelitos? Se llaman ningyō-yaki, una especialidad de Asakusa."
+    jp: "ここが仲見世通りです。あのお菓子、見えますか？人形焼といって、浅草の名物です。"
+    romaji: "Koko ga Nakamise-dōri desu. Ano okashi, miemasu ka? Ningyōyaki to itte, Asakusa no meibutsu desu."
+  - kind: dialogue
+    speaker: "Yui"
+    es: "¿Cuántos compramos? Para pedir en japonés, hay que saber contar. Practiquemos los números."
+    jp: "いくつ買いましょうか？日本語で注文するには、数を知らないと。数字を練習しましょう。"
+    romaji: "Ikutsu kaimashō ka? Nihongo de chūmon suru ni wa, kazu o shiranai to. Sūji o renshū shimashō."
+  - kind: practice
+    practice: vocab
+    ref_id: numbers
+  - kind: dialogue
+    speaker: "Yui"
+    es: "¡Perfecto! Entonces compramos cinco. «Itsutsu, onegaishimasu»."
+    jp: "完璧です！じゃあ、五つ買いましょう。いつつ、お願いします。"
+    romaji: "Kanpeki desu! Jā, itsutsu kaimashō. Itsutsu, onegaishimasu."
+  - kind: narration
+    place: "Sensō-ji, Asakusa"
+    es: "Con los dulces todavía calientes en la mano, siguen caminando hacia la gran puerta Hōzōmon y el salón principal del templo."
+    jp: "まだ温かいお菓子を手に、二人は宝蔵門と本堂へ歩いていく。"

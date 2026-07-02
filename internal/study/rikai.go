@@ -9,7 +9,7 @@ import (
 // CardKnown is the "words before sentences" gating signal: a vocab card counts
 // as known once it has survived at least one spaced-repetition review. This is
 // deliberately the simplest viable signal; a heavier per-word mastery concept
-// is the later Mastery-gates ticket's job, not Rikai's.
+// is a possible future enhancement, not Rikai's job.
 func CardKnown(state model.CardState) bool { return state.Reps > 0 }
 
 // PatternReady reports whether every slot of the pattern has at least one
@@ -36,8 +36,8 @@ func slotReady(slot model.Slot, known map[string]bool) bool {
 // VariableSlotIndex returns which slot index varies on drill round n
 // (0-based), cycling through the pattern's slots one at a time. Cognitive Load
 // Theory: change only one variable per round. This is deliberately a plain
-// round-robin, not adaptive selection — adaptive slot selection belongs to the
-// later Mastery-gates / adaptive-pacing ticket.
+// round-robin, not adaptive selection — prioritizing the least-mastered slot
+// is left as a possible future adaptive enhancement.
 func VariableSlotIndex(slotCount, round int) int {
 	if slotCount <= 0 {
 		return 0

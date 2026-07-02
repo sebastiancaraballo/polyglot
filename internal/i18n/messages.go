@@ -108,10 +108,23 @@ type Messages struct {
 	StoryTitle         string
 	StoryPickHelp      string
 	StoryProgressFmt   string // "%d/%d" beats seen, e.g. "2/6 escenas"
-	StoryCompleteBadge string // badge on a finished chapter
+	StoryCompleteBadge string // badge on a chapter seen but not yet mastered
+	StoryMasteredBadge string // badge on a mastered chapter
 	StoryEmpty         string // shown when no chapters exist yet
-	StoryDoneTitle     string // chapter-end screen title
+	StoryDoneTitle     string // chapter-end screen title (reached only mastered)
 	StoryDoneNext      string // chapter-end help line
+	StoryGateNote      string // the gating rule, standing under the picker
+	StoryLockedHintFmt string // why the cursor's chapter is locked, names the previous chapter
+
+	// Story end-of-chapter challenge
+	StoryChallengeTitle     string
+	StoryChallengeIntroFmt  string // pass bar, stated before the first question
+	StoryChallengeQFmt      string // "Pregunta %d de %d"
+	StoryChallengePassFmt   string // score on the done screen
+	StoryChallengeFailFmt   string // score + needed on the fail screen
+	StoryChallengeMissedLbl string // heading over the missed items
+	StoryChallengeRetryHelp string
+	StoryUnlockedFmt        string // announced on mastery when a next chapter exists
 
 	// Flashcards / Review
 	FlashTitle        string
@@ -126,6 +139,7 @@ type Messages struct {
 	NothingDue        string
 	Today             string
 	DayShort          string
+	FlashNewHeldFmt   string // pacing transparency: %d new cards deferred and why
 
 	// Stats
 	StatsTitle    string
@@ -256,10 +270,22 @@ var ES = Messages{
 	StoryTitle:         "Katsudoo",
 	StoryPickHelp:      "↑/↓ moverse · ENTER empezar · ESC volver",
 	StoryProgressFmt:   "%d/%d escenas",
-	StoryCompleteBadge: "✓ completado",
+	StoryCompleteBadge: "visto · reto pendiente",
+	StoryMasteredBadge: "✓ dominado",
 	StoryEmpty:         "Aún no hay capítulos disponibles.",
-	StoryDoneTitle:     "Capítulo completado",
+	StoryDoneTitle:     "¡Capítulo dominado!",
 	StoryDoneNext:      "ENTER volver a los capítulos",
+	StoryGateNote:      "Cada capítulo se desbloquea dominando el anterior.",
+	StoryLockedHintFmt: "Supera el reto de «%s» para desbloquear este capítulo.",
+
+	StoryChallengeTitle:     "Reto del capítulo",
+	StoryChallengeIntroFmt:  "Demuestra lo aprendido: acierta %d de %d para dominar el capítulo.",
+	StoryChallengeQFmt:      "Pregunta %d de %d",
+	StoryChallengePassFmt:   "Reto superado: %d/%d.",
+	StoryChallengeFailFmt:   "Reto no superado: %d/%d (necesitas %d).",
+	StoryChallengeMissedLbl: "Para repasar:",
+	StoryChallengeRetryHelp: "ENTER reintentar · ESC salir",
+	StoryUnlockedFmt:        "Desbloqueado: %s",
 
 	FlashTitle:        "Flashcards",
 	ReviewScreenTitle: "Repaso",
@@ -273,6 +299,7 @@ var ES = Messages{
 	NothingDue:        "No hay tarjetas para repasar ahora. Vuelve más tarde.",
 	Today:             "hoy",
 	DayShort:          "d",
+	FlashNewHeldFmt:   "%d tarjetas nuevas en espera: entran poco a poco para consolidar lo aprendido.",
 
 	StatsTitle:    "Mis estadísticas",
 	BestLabel:     "récord",

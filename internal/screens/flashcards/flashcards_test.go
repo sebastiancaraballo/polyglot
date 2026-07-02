@@ -1,6 +1,9 @@
 package flashcards
 
 import (
+	"context"
+	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -10,6 +13,7 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/model"
 	"github.com/sebastiancaraballo/polyglot/internal/review"
 	"github.com/sebastiancaraballo/polyglot/internal/srs"
+	"github.com/sebastiancaraballo/polyglot/internal/storage"
 	"github.com/sebastiancaraballo/polyglot/internal/ui"
 )
 
@@ -51,6 +55,36 @@ func TestSpaceRevealsFlashcard(t *testing.T) {
 	got := next.(Model)
 	if !got.revealed {
 		t.Fatal("space should reveal the current flashcard")
+	}
+}
+
+// TestNewSurfacesHeldBackCount seeds more new cards than the pacing budget
+// admits and checks the screen both caps the session and says why.
+func TestNewSurfacesHeldBackCount(t *testing.T) {
+	store, err := storage.Open(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	profile, err := store.CreateProfile(context.Background(), "tester")
+	if err != nil {
+		t.Fatalf("CreateProfile: %v", err)
+	}
+
+	var items []review.Item
+	for i := 0; i < 15; i++ {
+		id := fmt.Sprintf("v:%d", i)
+		items = append(items, review.Item{CardID: id, Strand: review.Vocab, Prompt: id, Answer: id})
+	}
+	m := New(Deps{Theme: ui.PlainTheme(), Msgs: i18n.ES, Store: store, ProfileID: profile.ID, Items: items})
+	if len(m.queue) != 10 {
+		t.Fatalf("queue = %d, want 10 (paced new-card intake)", len(m.queue))
+	}
+	if m.heldBackNew != 5 {
+		t.Fatalf("heldBackNew = %d, want 5", m.heldBackNew)
+	}
+	if !strings.Contains(m.cardView(), "5 tarjetas nuevas en espera") {
+		t.Fatal("card view should state how many new cards were held back and why")
 	}
 }
 
