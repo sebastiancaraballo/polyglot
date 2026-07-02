@@ -680,6 +680,33 @@ func TestFreqBackfillMissingListIsNotAnError(t *testing.T) {
 	}
 }
 
+func TestEmbeddedN5VocabularyLessons(t *testing.T) {
+	course, err := LoadEmbedded(DefaultPair)
+	if err != nil {
+		t.Fatalf("LoadEmbedded: %v", err)
+	}
+	byID := make(map[string]model.Lesson, len(course.Lessons))
+	for _, l := range course.Lessons {
+		byID[l.ID] = l
+	}
+	// The core N5 vocabulary bank: each thematic lesson must ship, be tagged
+	// N5, and be non-empty. (Kana decodability and function resolution are
+	// covered by TestEmbeddedKanaCoverage and TestEmbeddedLessonsReferenceKnownFunctions.)
+	for _, id := range []string{"colors", "food-drink", "everyday-objects", "adjectives"} {
+		lesson, ok := byID[id]
+		if !ok {
+			t.Errorf("missing N5 vocabulary lesson %q", id)
+			continue
+		}
+		if lesson.JLPT != model.N5 {
+			t.Errorf("lesson %q jlpt = %q, want N5", id, lesson.JLPT)
+		}
+		if len(lesson.Cards) == 0 {
+			t.Errorf("lesson %q has no cards", id)
+		}
+	}
+}
+
 func TestEmbeddedCourseBackfillsFreq(t *testing.T) {
 	course, err := LoadEmbedded(DefaultPair)
 	if err != nil {
