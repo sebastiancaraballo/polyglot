@@ -33,3 +33,90 @@ functions:
   - id: describe-qualities
     cefr: A1
     description: "Describir cualidades básicas: tamaño, precio y estado."
+  - id: everyday-actions
+    cefr: A1
+    description: "Hablar de acciones cotidianas con verbos básicos."
+  - id: movement-verbs
+    cefr: A1
+    description: "Describir movimiento: ir, venir, entrar, salir, subir, bajar."
+  - id: interaction-verbs
+    cefr: A2
+    description: "Interactuar con otros y con objetos: dar, recibir, usar, ayudar, enseñar."
+  - id: describe-states
+    cefr: A1
+    description: "Describir estados y cualidades con adjetivos na."
+  - id: express-degree-frequency
+    cefr: A2
+    description: "Matizar con adverbios de grado y frecuencia."
+  - id: ask-questions
+    cefr: A1
+    description: "Formular preguntas básicas con palabras interrogativas."
+  - id: point-things
+    cefr: A1
+    description: "Señalar personas y cosas con demostrativos."
+  - id: describe-location
+    cefr: A1
+    description: "Indicar la posición de las cosas: arriba, abajo, dentro, al lado."
+  - id: talk-time
+    cefr: A1
+    description: "Situar acciones en el tiempo: hoy, ayer, mañana, ahora."
+  - id: tell-day
+    cefr: A1
+    description: "Nombrar los días de la semana."
+  - id: tell-date
+    cefr: A1
+    description: "Nombrar los meses y las fechas."
+  - id: tell-time
+    cefr: A1
+    description: "Decir la hora: horas y minutos."
+  - id: count-large
+    cefr: A2
+    description: "Contar más allá del diez: decenas, cientos y miles."
+  - id: use-counters
+    cefr: A2
+    description: "Contar objetos, personas y animales con clasificadores."
+  - id: talk-family
+    cefr: A1
+    description: "Hablar de la familia."
+  - id: talk-people
+    cefr: A1
+    description: "Describir a las personas y sus ocupaciones."
+  - id: name-body-parts
+    cefr: A1
+    description: "Nombrar las partes del cuerpo."
+  - id: talk-places
+    cefr: A1
+    description: "Nombrar lugares de la ciudad."
+  - id: describe-home
+    cefr: A1
+    description: "Hablar de la casa y sus habitaciones."
+  - id: talk-weather
+    cefr: A1
+    description: "Hablar del tiempo y la naturaleza."
+  - id: name-animals
+    cefr: A1
+    description: "Nombrar animales comunes."
+  - id: talk-clothing
+    cefr: A1
+    description: "Nombrar prendas de vestir."
+  - id: talk-transport
+    cefr: A1
+    description: "Nombrar medios de transporte."
+  - id: talk-school
+    cefr: A1
+    description: "Hablar de la escuela y el estudio."
+  - id: everyday-life
+    cefr: A1
+    description: "Nombrar objetos y actividades de la vida diaria."
+  - id: talk-countries
+    cefr: A1
+    description: "Hablar de países, nacionalidades e idiomas."
+  - id: express-feelings
+    cefr: A2
+    description: "Expresar sentimientos y estados de ánimo."
+  - id: talk-hobbies
+    cefr: A1
+    description: "Hablar de aficiones y tiempo libre."
+  - id: link-ideas
+    cefr: A2
+    description: "Conectar ideas con conjunciones básicas."
