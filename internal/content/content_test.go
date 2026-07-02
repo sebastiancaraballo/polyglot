@@ -384,6 +384,26 @@ func TestLoadCurriculumErrors(t *testing.T) {
 			"content/xx/kana/h.yaml":     file(validKana),
 			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: practice\n    practice: kana\n    ref_id: katakana\n"),
 		},
+		"present beat missing ref_id": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: present\n    practice: vocab\n"),
+		},
+		"present beat references unknown lesson id": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: present\n    practice: vocab\n    ref_id: nope\n"),
+		},
+		"present beat with partial framing (jp without es)": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: present\n    practice: vocab\n    ref_id: a\n    jp: あ\n"),
+		},
+		"practice before its pool is presented": {
+			"content/xx/lessons/01.yaml": file(validPatternLesson),
+			"content/xx/kana/h.yaml":     file(validKana),
+			"content/xx/story/01.yaml":   file("id: c\ntitle: t\nbeats:\n  - kind: practice\n    practice: vocab\n    ref_id: a\n  - kind: present\n    practice: vocab\n    ref_id: a\n"),
+		},
 	}
 
 	for name, fsys := range tests {
@@ -477,6 +497,7 @@ func TestLoadStoryValid(t *testing.T) {
 			"id: c\ntitle: t\nbeats:\n" +
 				"  - kind: narration\n    es: Hola\n    jp: あ\n" +
 				"  - kind: dialogue\n    speaker: Yui\n    es: Hola\n    jp: あ\n" +
+				"  - kind: present\n    practice: vocab\n    ref_id: a\n" +
 				"  - kind: practice\n    practice: vocab\n    ref_id: a\n",
 		),
 	}
@@ -488,14 +509,17 @@ func TestLoadStoryValid(t *testing.T) {
 		t.Fatalf("got %d chapters, want 1", len(course.Chapters))
 	}
 	c := course.Chapters[0]
-	if len(c.Beats) != 3 {
-		t.Fatalf("got %d beats, want 3", len(c.Beats))
+	if len(c.Beats) != 4 {
+		t.Fatalf("got %d beats, want 4", len(c.Beats))
 	}
 	if c.Beats[1].Speaker != "Yui" {
 		t.Errorf("dialogue speaker = %q, want %q", c.Beats[1].Speaker, "Yui")
 	}
-	if c.Beats[2].Practice != model.PracticeVocab || c.Beats[2].RefID != "a" {
-		t.Errorf("practice beat = %+v, want Practice=vocab RefID=a", c.Beats[2])
+	if c.Beats[2].Kind != model.Present || c.Beats[2].Practice != model.PracticeVocab || c.Beats[2].RefID != "a" {
+		t.Errorf("present beat = %+v, want Kind=present Practice=vocab RefID=a", c.Beats[2])
+	}
+	if c.Beats[3].Practice != model.PracticeVocab || c.Beats[3].RefID != "a" {
+		t.Errorf("practice beat = %+v, want Practice=vocab RefID=a", c.Beats[3])
 	}
 }
 
@@ -528,6 +552,56 @@ func TestEmbeddedStoryChapters(t *testing.T) {
 		if err := checkStoryCoverage(c, lessonIDs, kanaTypes); err != nil {
 			t.Errorf("chapter %q: %v", c.ID, err)
 		}
+	}
+	if err := checkStoryPresentation(course.Chapters); err != nil {
+		t.Errorf("embedded chapters must present before they practice: %v", err)
+	}
+}
+
+func TestCheckStoryPresentation(t *testing.T) {
+	present := model.Beat{Kind: model.Present, Practice: model.PracticeVocab, RefID: "greetings"}
+	practice := model.Beat{Kind: model.Practice, Practice: model.PracticeVocab, RefID: "greetings"}
+	narration := model.Beat{Kind: model.Narration, Source: "x", JP: "あ"}
+
+	tests := map[string]struct {
+		chapters []model.Chapter
+		wantErr  bool
+	}{
+		"present then practice in same chapter": {
+			chapters: []model.Chapter{{ID: "c1", Beats: []model.Beat{present, practice}}},
+		},
+		"practice with no presentation": {
+			chapters: []model.Chapter{{ID: "c1", Beats: []model.Beat{practice}}},
+			wantErr:  true,
+		},
+		"present after practice does not count": {
+			chapters: []model.Chapter{{ID: "c1", Beats: []model.Beat{practice, present}}},
+			wantErr:  true,
+		},
+		"presented in a prior chapter": {
+			chapters: []model.Chapter{
+				{ID: "c1", Beats: []model.Beat{present, narration}},
+				{ID: "c2", Beats: []model.Beat{practice}},
+			},
+		},
+		"presented only in a later chapter": {
+			chapters: []model.Chapter{
+				{ID: "c1", Beats: []model.Beat{practice}},
+				{ID: "c2", Beats: []model.Beat{present}},
+			},
+			wantErr: true,
+		},
+		"no practice beats at all": {
+			chapters: []model.Chapter{{ID: "c1", Beats: []model.Beat{narration}}},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := checkStoryPresentation(tc.chapters)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("checkStoryPresentation err = %v, wantErr = %v", err, tc.wantErr)
+			}
+		})
 	}
 }
 

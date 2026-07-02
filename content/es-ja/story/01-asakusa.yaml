@@ -12,9 +12,21 @@ beats:
     romaji: "Konnichiwa! Asakusa e yōkoso. Kono chikaku ni sundeite, kono machi o yoku shitteimasu."
   - kind: dialogue
     speaker: "Yui"
-    es: "Antes de caminar juntos, practiquemos un saludo."
-    jp: "一緒に歩く前に、挨拶を練習しましょう。"
-    romaji: "Issho ni aruku mae ni, aisatsu o renshū shimashō."
+    es: "Antes de caminar juntos, aprendamos algunos saludos."
+    jp: "一緒に歩く前に、いくつか挨拶を覚えましょう。"
+    romaji: "Issho ni aruku mae ni, ikutsuka aisatsu o oboemashō."
+  - kind: present
+    practice: vocab
+    ref_id: greetings
+    speaker: "Yui"
+    es: "Estos son los saludos que más vas a usar. Escúchalos y quédate con ellos."
+    jp: "これがよく使う挨拶です。聞いて、覚えてくださいね。"
+    romaji: "Kore ga yoku tsukau aisatsu desu. Kiite, oboete kudasai ne."
+  - kind: dialogue
+    speaker: "Yui"
+    es: "Ahora practiquemos: ¿recuerdas cómo se dicen?"
+    jp: "では練習しましょう。言い方を覚えていますか？"
+    romaji: "Dewa renshū shimashō. Iikata o oboete imasu ka?"
   - kind: practice
     practice: vocab
     ref_id: greetings

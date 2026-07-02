@@ -503,6 +503,8 @@ func (m Model) View() tea.View {
 		content = m.doneView()
 	case m.chapter.Beats[m.beatIndex].Kind == model.Practice:
 		content = m.practiceView()
+	case m.chapter.Beats[m.beatIndex].Kind == model.Present:
+		content = m.presentView()
 	default:
 		content = m.beatView()
 	}
@@ -587,6 +589,75 @@ func (m Model) beatView() string {
 	b.WriteString("\n\n")
 	b.WriteString(t.Help.Render(m.deps.Msgs.ContinueHelp))
 	return b.String()
+}
+
+// presentView renders a present beat: the pool of material the chapter
+// introduces before it practices it, so retrieval always follows exposure.
+// The optional framing line sets the scene diegetically; the list below it is
+// the material itself, with readings and glosses visible (decoding before
+// recall).
+func (m Model) presentView() string {
+	t := m.deps.Theme
+	beat := m.chapter.Beats[m.beatIndex]
+	var b strings.Builder
+	b.WriteString(t.Title.Render(m.chapter.Title))
+	b.WriteString("\n\n")
+	if beat.Place != "" {
+		b.WriteString(t.Subtle.Render(beat.Place))
+		b.WriteString("\n\n")
+	}
+	if beat.JP != "" {
+		if beat.Speaker != "" {
+			b.WriteString(t.Accent.Bold(true).Render(beat.Speaker))
+			b.WriteString("\n")
+		}
+		b.WriteString(t.Normal.Render(beat.JP))
+		if m.deps.ShowRomaji && beat.Romaji != "" {
+			fmt.Fprintf(&b, " (%s)", beat.Romaji)
+		}
+		b.WriteString("\n")
+		b.WriteString(t.Subtle.Render(beat.Source))
+		b.WriteString("\n\n")
+	}
+	b.WriteString(t.Subtle.Render(m.deps.Msgs.StoryPresentLabel))
+	b.WriteString("\n")
+	for _, line := range m.presentItems(beat) {
+		b.WriteString(t.Normal.Render("  " + line))
+		b.WriteString("\n")
+	}
+	b.WriteString("\n")
+	b.WriteString(t.Help.Render(m.deps.Msgs.ContinueHelp))
+	return b.String()
+}
+
+// presentItems formats each item of a present beat's pool: vocab as
+// "JP (romaji) — gloss" (romaji honoring the ShowRomaji preference, gloss
+// always shown), kana as "char (romaji)" (its reading is the whole point).
+func (m Model) presentItems(beat model.Beat) []string {
+	switch beat.Practice {
+	case model.PracticeVocab:
+		lesson := lessonByID(m.deps.Lessons, beat.RefID)
+		if lesson == nil {
+			return nil
+		}
+		lines := make([]string, 0, len(lesson.Cards))
+		for _, c := range lesson.Cards {
+			if m.deps.ShowRomaji && c.Romaji != "" {
+				lines = append(lines, fmt.Sprintf("%s (%s) — %s", c.JP, c.Romaji, c.Source))
+			} else {
+				lines = append(lines, fmt.Sprintf("%s — %s", c.JP, c.Source))
+			}
+		}
+		return lines
+	case model.PracticeKana:
+		filtered := filterKana(m.deps.Kana, model.KanaType(beat.RefID))
+		lines := make([]string, 0, len(filtered))
+		for _, k := range filtered {
+			lines = append(lines, fmt.Sprintf("%s (%s)", k.Char, k.Romaji))
+		}
+		return lines
+	}
+	return nil
 }
 
 func (m Model) practiceView() string {

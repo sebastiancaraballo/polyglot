@@ -2,20 +2,23 @@ package model
 
 // BeatKind distinguishes what kind of moment a Beat is. Narration sets a scene
 // or advances the plot with no specific speaker; dialogue is a line spoken by
-// a character; practice pauses the story for one diegetic check that reuses
-// an existing trainer's grading logic.
+// a character; present diegetically introduces a pool of material (a vocabulary
+// lesson or a kana set) so the learner meets it before being asked to retrieve
+// it; practice pauses the story for one diegetic check that reuses an existing
+// trainer's grading logic.
 type BeatKind string
 
 const (
 	Narration BeatKind = "narration"
 	Dialogue  BeatKind = "dialogue"
+	Present   BeatKind = "present"
 	Practice  BeatKind = "practice"
 )
 
 // Valid reports whether k is a recognized beat kind.
 func (k BeatKind) Valid() bool {
 	switch k {
-	case Narration, Dialogue, Practice:
+	case Narration, Dialogue, Present, Practice:
 		return true
 	default:
 		return false
@@ -45,14 +48,14 @@ type Beat struct {
 	Speaker string // dialogue only: the character's name
 	Place   string // optional: a real-world place this beat evokes
 
-	Source string // narration/dialogue: the line in the learner's source language (Spanish)
-	JP     string // narration/dialogue: the line in Japanese
-	Romaji string // narration/dialogue: optional romanized reading
+	Source string // narration/dialogue/present: the line in the learner's source language (Spanish)
+	JP     string // narration/dialogue/present: the line in Japanese
+	Romaji string // narration/dialogue/present: optional romanized reading
 
-	Practice PracticeKind // practice only
-	// RefID resolves the practice question pool: a Lesson.ID when Practice is
-	// PracticeVocab, or "hiragana"/"katakana" (== string(KanaType)) when
-	// Practice is PracticeKana.
+	Practice PracticeKind // present/practice only
+	// RefID resolves the pool a present or practice beat draws on: a Lesson.ID
+	// when Practice is PracticeVocab, or "hiragana"/"katakana"
+	// (== string(KanaType)) when Practice is PracticeKana.
 	RefID string
 }
 

@@ -115,6 +115,7 @@ type Messages struct {
 	StoryDoneNext      string // chapter-end help line
 	StoryGateNote      string // the gating rule, standing under the picker
 	StoryLockedHintFmt string // why the cursor's chapter is locked, names the previous chapter
+	StoryPresentLabel  string // heading over a present beat's introduced material
 
 	// Story end-of-chapter challenge
 	StoryChallengeTitle     string
@@ -278,6 +279,7 @@ var ES = Messages{
 	StoryDoneNext:      "ENTER volver a los capítulos",
 	StoryGateNote:      "Cada capítulo se desbloquea dominando el anterior.",
 	StoryLockedHintFmt: "Supera el reto de «%s» para desbloquear este capítulo.",
+	StoryPresentLabel:  "Aprende antes de practicar:",
 
 	StoryChallengeTitle:     "Reto del capítulo",
 	StoryChallengeIntroFmt:  "Demuestra lo aprendido: acierta %d de %d para dominar el capítulo.",
