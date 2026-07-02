@@ -38,6 +38,7 @@ type Item struct {
 	Answer    string // the answer, revealed on demand
 	Secondary string // optional secondary line shown with the answer (e.g. romaji)
 	Notes     string // optional usage notes
+	Freq      int    // target-language frequency rank; 0 = unranked
 }
 
 // Scheduled pairs an item with its current spaced-repetition state.
@@ -65,6 +66,7 @@ func VocabItems(lessons []model.Lesson) []Item {
 				Answer:    c.JP,
 				Secondary: c.Romaji,
 				Notes:     c.Notes,
+				Freq:      c.Freq,
 			})
 		}
 	}
@@ -100,8 +102,9 @@ type Queue struct {
 // items (limit <= 0 means no cap). It loads each item's scheduling state from the
 // store, treating a never-seen item as a new card that is immediately due. Due
 // reviews take priority: new (never-reviewed) cards are admitted only up to
-// NewCardBudget, and the number held back is reported. The result is
-// deterministic for a given input.
+// NewCardBudget — most frequent words first (Nation: frequency-driven
+// acquisition), unranked cards after ranked ones in input order — and the
+// number held back is reported. The result is deterministic for a given input.
 func BuildQueue(ctx context.Context, store storage.Storage, profileID int64, items []Item, now time.Time, limit int) (Queue, error) {
 	var reviews, fresh []Scheduled
 	lapsed := 0
@@ -126,6 +129,16 @@ func BuildQueue(ctx context.Context, store storage.Storage, profileID int64, ite
 		}
 	}
 
+	// The budget cut decides which new material the learner meets first, so
+	// cut by frequency rank: ranked before unranked, most frequent first,
+	// stable (curricular input order) otherwise.
+	sort.SliceStable(fresh, func(i, j int) bool {
+		fi, fj := fresh[i].Item.Freq, fresh[j].Item.Freq
+		if (fi > 0) != (fj > 0) {
+			return fi > 0
+		}
+		return fi > 0 && fi < fj
+	})
 	budget := NewCardBudget(len(reviews), lapsed, limit)
 	admitted := fresh
 	if len(admitted) > budget {

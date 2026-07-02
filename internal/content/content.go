@@ -1,11 +1,13 @@
 package content
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"path"
 	"sort"
 	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -74,7 +76,31 @@ func Load(fsys fs.FS, pair string) (*Course, error) {
 		}
 	}
 
+	// Backfill each card's frequency rank from the target language's list, when
+	// one ships (content/<lang>/frequency.tsv). Like grammar and story content,
+	// the list is optional: a pair without one simply has unranked cards.
+	if lang := targetLang(pair); lang != "" {
+		entries, err := loadFrequency(fsys, lang)
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			// No list for this language: leave cards unranked.
+		case err != nil:
+			return nil, err
+		default:
+			backfillFreq(lessons, freqIndex(entries))
+		}
+	}
+
 	return &Course{Pair: pair, Lessons: lessons, Kana: kana, Patterns: patterns, Chapters: chapters}, nil
+}
+
+// targetLang extracts the target language from a pair like "es-ja" ("" when
+// the pair has no source-target form).
+func targetLang(pair string) string {
+	if i := strings.LastIndexByte(pair, '-'); i >= 0 {
+		return pair[i+1:]
+	}
+	return ""
 }
 
 // lessonFile mirrors the on-disk YAML shape of a lesson. The source-language key
