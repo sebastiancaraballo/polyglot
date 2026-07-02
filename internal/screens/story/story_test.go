@@ -385,6 +385,46 @@ func TestLockedChapterRendersHintAndGateNote(t *testing.T) {
 	}
 }
 
+func TestPresentBeatRendersPoolAndAdvances(t *testing.T) {
+	store, profileID := newStore(t)
+	presentChapter := model.Chapter{
+		ID: "present-chapter", Title: "Con presentación",
+		Beats: []model.Beat{
+			{Kind: model.Present, Practice: model.PracticeVocab, RefID: "test-lesson",
+				Speaker: "Yui", Source: "Mira estas palabras.", JP: "これを見て。"},
+			{Kind: model.Practice, Practice: model.PracticeVocab, RefID: "test-lesson"},
+		},
+	}
+	deps := Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID,
+		Chapters: []model.Chapter{presentChapter}, Lessons: testLessons, Kana: testKana, ShowRomaji: true}
+	m := New(deps)
+	m = m.startChapter(0)
+
+	view := m.presentView()
+	if !strings.Contains(view, i18n.ES.StoryPresentLabel) {
+		t.Error("present beat should render the present label")
+	}
+	for _, c := range testLessons[0].Cards {
+		if !strings.Contains(view, c.JP) || !strings.Contains(view, c.Source) {
+			t.Errorf("present beat should list card %q (%s); view:\n%s", c.JP, c.Source, view)
+		}
+	}
+	if !strings.Contains(view, "Mira estas palabras.") {
+		t.Error("present beat should render its optional framing line")
+	}
+
+	// A present beat advances on confirm like narration, reaching the practice.
+	var tm tea.Model = m
+	tm, _ = tm.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	got := tm.(Model)
+	if got.beatIndex != 1 {
+		t.Fatalf("beatIndex = %d, want 1 (advanced past the present beat)", got.beatIndex)
+	}
+	if len(got.options) == 0 {
+		t.Fatal("advancing into the practice beat should build its options")
+	}
+}
+
 func TestResumeSkipsAlreadySeenBeats(t *testing.T) {
 	store, profileID := newStore(t)
 	if err := store.SaveStoryProgress(context.Background(), profileID,
