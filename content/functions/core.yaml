@@ -21,3 +21,15 @@ functions:
   - id: self-introduction
     cefr: A1
     description: "Presentarse: decir quién eres y tu ocupación o nacionalidad."
+  - id: describe-colors
+    cefr: A1
+    description: "Nombrar y reconocer los colores básicos."
+  - id: talk-food-drink
+    cefr: A1
+    description: "Nombrar comidas y bebidas de uso diario."
+  - id: name-everyday-objects
+    cefr: A1
+    description: "Nombrar objetos de uso cotidiano en casa y en la calle."
+  - id: describe-qualities
+    cefr: A1
+    description: "Describir cualidades básicas: tamaño, precio y estado."
