@@ -75,6 +75,10 @@ func Load(fsys fs.FS, pair string) (*Course, error) {
 			return nil, fmt.Errorf("chapter %q: %w", c.ID, err)
 		}
 	}
+	// A chapter may only practice material it (or an earlier chapter) presented.
+	if err := checkStoryPresentation(chapters); err != nil {
+		return nil, err
+	}
 
 	// Backfill each card's frequency rank from the target language's list, when
 	// one ships (content/<lang>/frequency.tsv). Like grammar and story content,

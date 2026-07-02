@@ -104,17 +104,20 @@ type Messages struct {
 	RikaiMasteredFmt   string // "%d/%d" slots mastered
 
 	// Story (Katsudoo)
-	ItemStory          string
-	StoryTitle         string
-	StoryPickHelp      string
-	StoryProgressFmt   string // "%d/%d" beats seen, e.g. "2/6 escenas"
-	StoryCompleteBadge string // badge on a chapter seen but not yet mastered
-	StoryMasteredBadge string // badge on a mastered chapter
-	StoryEmpty         string // shown when no chapters exist yet
-	StoryDoneTitle     string // chapter-end screen title (reached only mastered)
-	StoryDoneNext      string // chapter-end help line
-	StoryGateNote      string // the gating rule, standing under the picker
-	StoryLockedHintFmt string // why the cursor's chapter is locked, names the previous chapter
+	ItemStory            string
+	StoryTitle           string
+	StoryPickHelp        string
+	StoryProgressFmt     string // "%d/%d" beats seen, e.g. "2/6 escenas"
+	StoryCompleteBadge   string // badge on a chapter seen but not yet mastered
+	StoryMasteredBadge   string // badge on a mastered chapter
+	StoryEmpty           string // shown when no chapters exist yet
+	StoryDoneTitle       string // chapter-end screen title (reached only mastered)
+	StoryDoneNext        string // chapter-end help line
+	StoryGateNote        string // the gating rule, standing under the picker
+	StoryLockedHintFmt   string // why the cursor's chapter is locked, names the previous chapter
+	StoryPresentLabel    string // heading over a present beat's introduced material
+	StoryPresentPageFmt  string // "Página %d de %d" when a present beat paginates
+	StoryPresentMoreHelp string // help line on a present page that has more after it
 
 	// Story end-of-chapter challenge
 	StoryChallengeTitle     string
@@ -267,17 +270,20 @@ var ES = Messages{
 	RikaiPatternFluent: "dominado",
 	RikaiMasteredFmt:   "%d/%d",
 
-	ItemStory:          "Katsudoo (historia)",
-	StoryTitle:         "Katsudoo",
-	StoryPickHelp:      "↑/↓ moverse · ENTER empezar · ESC volver",
-	StoryProgressFmt:   "%d/%d escenas",
-	StoryCompleteBadge: "visto · reto pendiente",
-	StoryMasteredBadge: "✓ dominado",
-	StoryEmpty:         "Aún no hay capítulos disponibles.",
-	StoryDoneTitle:     "¡Capítulo dominado!",
-	StoryDoneNext:      "ENTER volver a los capítulos",
-	StoryGateNote:      "Cada capítulo se desbloquea dominando el anterior.",
-	StoryLockedHintFmt: "Supera el reto de «%s» para desbloquear este capítulo.",
+	ItemStory:            "Katsudoo (historia)",
+	StoryTitle:           "Katsudoo",
+	StoryPickHelp:        "↑/↓ moverse · ENTER empezar · ESC volver",
+	StoryProgressFmt:     "%d/%d escenas",
+	StoryCompleteBadge:   "visto · reto pendiente",
+	StoryMasteredBadge:   "✓ dominado",
+	StoryEmpty:           "Aún no hay capítulos disponibles.",
+	StoryDoneTitle:       "¡Capítulo dominado!",
+	StoryDoneNext:        "ENTER volver a los capítulos",
+	StoryGateNote:        "Cada capítulo se desbloquea dominando el anterior.",
+	StoryLockedHintFmt:   "Supera el reto de «%s» para desbloquear este capítulo.",
+	StoryPresentLabel:    "Aprende antes de practicar:",
+	StoryPresentPageFmt:  "Página %d de %d",
+	StoryPresentMoreHelp: "↑/↓ páginas · ENTER siguiente · ESC menú",
 
 	StoryChallengeTitle:     "Reto del capítulo",
 	StoryChallengeIntroFmt:  "Demuestra lo aprendido: acierta %d de %d para dominar el capítulo.",

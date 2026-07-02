@@ -106,6 +106,22 @@ func parseBeat(b beatFile) (model.Beat, error) {
 			return model.Beat{}, fmt.Errorf("dialogue beat is missing speaker")
 		}
 		beat.Source, beat.JP, beat.Romaji = b.Source, b.JP, b.Romaji
+	case model.Present:
+		practice := model.PracticeKind(b.Practice)
+		if !practice.Valid() {
+			return model.Beat{}, fmt.Errorf("invalid practice kind %q", b.Practice)
+		}
+		if b.RefID == "" {
+			return model.Beat{}, fmt.Errorf("present beat is missing ref_id")
+		}
+		// The framing line (speaker/es/jp/romaji) is optional: a present beat
+		// may set the scene diegetically, but its core content is the pool it
+		// renders. es/jp travel together when given.
+		if (b.Source == "") != (b.JP == "") {
+			return model.Beat{}, fmt.Errorf("present beat framing needs both es and jp, or neither")
+		}
+		beat.Practice, beat.RefID = practice, b.RefID
+		beat.Source, beat.JP, beat.Romaji = b.Source, b.JP, b.Romaji
 	case model.Practice:
 		practice := model.PracticeKind(b.Practice)
 		if !practice.Valid() {

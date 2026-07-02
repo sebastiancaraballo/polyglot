@@ -12,9 +12,21 @@ beats:
     romaji: "Koko ga Nakamise-dōri desu. Ano okashi, miemasu ka? Ningyōyaki to itte, Asakusa no meibutsu desu."
   - kind: dialogue
     speaker: "Yui"
-    es: "¿Cuántos compramos? Para pedir en japonés, hay que saber contar. Practiquemos los números."
-    jp: "いくつ買いましょうか？日本語で注文するには、数を知らないと。数字を練習しましょう。"
-    romaji: "Ikutsu kaimashō ka? Nihongo de chūmon suru ni wa, kazu o shiranai to. Sūji o renshū shimashō."
+    es: "¿Cuántos compramos? Para pedir en japonés, hay que saber contar. Primero, los números."
+    jp: "いくつ買いましょうか？日本語で注文するには、数を知らないと。まずは数字です。"
+    romaji: "Ikutsu kaimashō ka? Nihongo de chūmon suru ni wa, kazu o shiranai to. Mazu wa sūji desu."
+  - kind: present
+    practice: vocab
+    ref_id: numbers
+    speaker: "Yui"
+    es: "Del uno al diez. Repítelos conmigo mientras miramos los puestos."
+    jp: "一から十まで。店を見ながら、一緒に言ってみましょう。"
+    romaji: "Ichi kara jū made. Mise o minagara, issho ni itte mimashō."
+  - kind: dialogue
+    speaker: "Yui"
+    es: "¿Los tienes? Vamos a practicarlos."
+    jp: "覚えましたか？練習しましょう。"
+    romaji: "Oboemashita ka? Renshū shimashō."
   - kind: practice
     practice: vocab
     ref_id: numbers
