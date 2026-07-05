@@ -129,6 +129,23 @@ type Messages struct {
 	StoryChallengeRetryHelp string
 	StoryUnlockedFmt        string // announced on mastery when a next chapter exists
 
+	// N5 mock assessment (capstone level exam)
+	ItemAssessment             string // menu entry
+	AssessmentLocked           string // menu lock notice
+	AssessmentPassedBadge      string // "✓ aprobado", on the menu label and intro
+	AssessmentTitle            string
+	AssessmentIntroFmt         string // pass bar, stated before the first question
+	AssessmentBestFmt          string // prior best score on the intro
+	AssessmentPatternPromptFmt string // cue for a blanked grammar slot
+	AssessmentPassTitle        string // result title when passed
+	AssessmentFailTitle        string // result title when failed
+	AssessmentPassFmt          string // score on the pass screen
+	AssessmentFailFmt          string // score + needed on the fail screen
+	AssessmentMissedLbl        string // heading over the missed items
+	AssessmentMoreFmt          string // "+%d más" when the review list is truncated
+	AssessmentRetryHelp        string
+	AssessmentDoneHelp         string // help line when passed
+
 	// Flashcards / Review
 	FlashTitle        string
 	ReviewScreenTitle string
@@ -293,6 +310,22 @@ var ES = Messages{
 	StoryChallengeMissedLbl: "Para repasar:",
 	StoryChallengeRetryHelp: "ENTER reintentar · ESC salir",
 	StoryUnlockedFmt:        "Desbloqueado: %s",
+
+	ItemAssessment:             "Examen N5",
+	AssessmentLocked:           "Domina todos los capítulos de la historia para desbloquear el examen.",
+	AssessmentPassedBadge:      "✓ aprobado",
+	AssessmentTitle:            "Examen N5",
+	AssessmentIntroFmt:         "Examen de nivel: acierta %d de %d para aprobar N5. Preguntas de vocabulario, kana y gramática.",
+	AssessmentBestFmt:          "Mejor resultado: %d/%d.",
+	AssessmentPatternPromptFmt: "¿Qué palabra completa la frase? Pista: \"%s\".",
+	AssessmentPassTitle:        "¡N5 aprobado!",
+	AssessmentFailTitle:        "Examen N5",
+	AssessmentPassFmt:          "Aprobado: %d/%d.",
+	AssessmentFailFmt:          "No aprobado: %d/%d (necesitas %d).",
+	AssessmentMissedLbl:        "Para repasar:",
+	AssessmentMoreFmt:          "+%d más",
+	AssessmentRetryHelp:        "ENTER reintentar · ESC salir",
+	AssessmentDoneHelp:         "ENTER volver al menú",
 
 	FlashTitle:        "Flashcards",
 	ReviewScreenTitle: "Repaso",
