@@ -707,6 +707,42 @@ func TestEmbeddedN5VocabularyLessons(t *testing.T) {
 	}
 }
 
+func TestEmbeddedN5GrammarPatterns(t *testing.T) {
+	course, err := LoadEmbedded(DefaultPair)
+	if err != nil {
+		t.Fatalf("LoadEmbedded: %v", err)
+	}
+	byID := make(map[string]model.Pattern, len(course.Patterns))
+	for _, p := range course.Patterns {
+		byID[p.ID] = p
+	}
+	// The N5 grammar slice: particles wa/ga/wo/ni/de, the copula with nouns,
+	// i- and na-adjective predicates, masu/masen/mashita, and the te-form
+	// request. (Vocab coverage and frame-placeholder consistency are covered
+	// by TestEmbeddedGrammarPatterns.)
+	for _, id := range []string{
+		"x-wa-n-desu",
+		"kore-sore-are-wa-n-desu",
+		"kore-wa-i-adj-desu",
+		"x-wa-na-adj-desu",
+		"x-ga-suki-desu",
+		"x-wo-tabemasu",
+		"x-wo-nomimasu",
+		"place-ni-ikimasu",
+		"place-de-tabemasu",
+		"verb-te-kudasai",
+	} {
+		pattern, ok := byID[id]
+		if !ok {
+			t.Errorf("missing N5 grammar pattern %q", id)
+			continue
+		}
+		if pattern.JLPT != model.N5 {
+			t.Errorf("pattern %q jlpt = %q, want N5", id, pattern.JLPT)
+		}
+	}
+}
+
 func TestEmbeddedCourseBackfillsFreq(t *testing.T) {
 	course, err := LoadEmbedded(DefaultPair)
 	if err != nil {

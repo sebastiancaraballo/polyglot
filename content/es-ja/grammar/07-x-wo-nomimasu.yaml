@@ -1,0 +1,12 @@
+id: x-wo-nomimasu
+title: "X wo nomimasu/masen/mashita"
+jlpt: N5
+notes: "El mismo patrón que たべます, pero con のむ (beber)."
+frame: "{X}を{Verb}"
+slots:
+  - name: X
+    cards: [food-drink:1, food-drink:2, food-drink:10]
+    default: food-drink:1
+  - name: Verb
+    cards: [verbs-polite-forms:4, verbs-polite-forms:5, verbs-polite-forms:6]
+    default: verbs-polite-forms:4

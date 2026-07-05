@@ -1,0 +1,9 @@
+id: verb-te-kudasai
+title: "Verb-te kudasai"
+jlpt: N5
+notes: "La forma te más ください forma una petición cortés: haz X, por favor."
+frame: "{Verb}ください"
+slots:
+  - name: Verb
+    cards: [verbs-te-form:1, verbs-te-form:2, verbs-te-form:3, verbs-te-form:4, verbs-te-form:5, verbs-te-form:6]
+    default: verbs-te-form:1

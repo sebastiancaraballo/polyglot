@@ -1,0 +1,12 @@
+id: x-wa-na-adj-desu
+title: "X wa Adj desu (adjetivos na)"
+jlpt: N5
+notes: "Los adjetivos na también van seguidos de です; a diferencia de los adjetivos i, no terminan en -i."
+frame: "{X}は{Adj}です"
+slots:
+  - name: X
+    cards: [self-intro:1, self-intro:2, demonstratives:10]
+    default: self-intro:1
+  - name: Adj
+    cards: [na-adjectives:2, na-adjectives:5, na-adjectives:6, na-adjectives:11]
+    default: na-adjectives:2

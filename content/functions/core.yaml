@@ -120,3 +120,9 @@ functions:
   - id: link-ideas
     cefr: A2
     description: "Conectar ideas con conjunciones básicas."
+  - id: polite-verb-forms
+    cefr: A2
+    description: "Conjugar verbos en presente y pasado corteses: ~masu, ~masen, ~mashita."
+  - id: polite-requests
+    cefr: A2
+    description: "Pedir algo cortésmente con la forma te: ...te kudasai."
