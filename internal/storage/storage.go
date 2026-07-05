@@ -62,6 +62,13 @@ type Storage interface {
 	// SaveStoryProgress inserts or updates progress for one chapter.
 	SaveStoryProgress(ctx context.Context, profileID int64, p model.StoryProgress) error
 
+	// GetAssessmentResult returns the profile's result for a level's mock
+	// assessment. A level never assessed yields a zero-value result (not
+	// passed), not an error.
+	GetAssessmentResult(ctx context.Context, profileID int64, level model.JLPT) (model.AssessmentResult, error)
+	// SaveAssessmentResult inserts or updates the result for one level.
+	SaveAssessmentResult(ctx context.Context, profileID int64, r model.AssessmentResult) error
+
 	// GetStats returns the aggregate stats for a profile.
 	GetStats(ctx context.Context, profileID int64) (model.Stats, error)
 	// SaveStats replaces the aggregate stats for a profile.
