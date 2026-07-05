@@ -799,7 +799,8 @@ func (m Model) questionView(title, subtitle, refID string) string {
 
 	switch m.practiceKind {
 	case model.PracticeVocab:
-		fmt.Fprintf(&b, m.deps.Msgs.QuizQuestionFmt, m.practiceCard.Source)
+		prompt := fmt.Sprintf(m.deps.Msgs.QuizQuestionFmt, m.practiceCard.Source)
+		b.WriteString(ui.WrapText(prompt, ui.FrameContentWidth(t, m.width)))
 	case model.PracticeKana:
 		b.WriteString(m.deps.Msgs.KanaPrompt)
 		b.WriteString("\n\n")

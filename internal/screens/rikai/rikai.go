@@ -372,9 +372,10 @@ func (m Model) questionView() string {
 		}
 		fill[slot.Name] = m.deps.Cards[slot.Default].JP
 	}
-	b.WriteString(t.Accent.Bold(true).Render(study.RenderFrame(m.pattern.Frame, fill)))
+	width := ui.FrameContentWidth(t, m.width)
+	b.WriteString(t.Accent.Bold(true).Render(ui.WrapText(study.RenderFrame(m.pattern.Frame, fill), width)))
 	b.WriteString("\n\n")
-	fmt.Fprintf(&b, m.deps.Msgs.RikaiQuestionFmt, r.correct.Source)
+	b.WriteString(ui.WrapText(fmt.Sprintf(m.deps.Msgs.RikaiQuestionFmt, r.correct.Source), width))
 	b.WriteString("\n\n")
 
 	for i, opt := range m.options {

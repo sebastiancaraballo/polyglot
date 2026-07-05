@@ -218,7 +218,8 @@ func (m Model) questionView() string {
 	t := m.deps.Theme
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s  %d/%d\n\n", t.Title.Render(m.deps.Msgs.QuizTitle), m.index+1, len(m.deck))
-	fmt.Fprintf(&b, m.deps.Msgs.QuizQuestionFmt, m.deck[m.index].Source)
+	prompt := fmt.Sprintf(m.deps.Msgs.QuizQuestionFmt, m.deck[m.index].Source)
+	b.WriteString(ui.WrapText(prompt, ui.FrameContentWidth(t, m.width)))
 	b.WriteString("\n\n")
 
 	for i, opt := range m.options {
