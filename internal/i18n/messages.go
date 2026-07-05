@@ -16,7 +16,12 @@ type Messages struct {
 	ItemSettings   string
 	ItemQuit       string
 	SwitchProfile  string
-	MenuHelp       string
+	MenuHelp       string // help footer at the top level of the menu
+	MenuHelpSub    string // help footer inside a category submenu (back hint)
+	CatLearn       string // category grouping the new-material activities
+	CatRead        string // category grouping the reading activities
+	CatEvaluate    string // category grouping the retrieval/testing activities
+	CatTools       string // category grouping the reference/tool screens
 	ReadingLocked  string // hint when a learner opens a locked reading activity
 
 	// Settings
@@ -207,7 +212,12 @@ var ES = Messages{
 	ItemSettings:   "Ajustes",
 	ItemQuit:       "Salir",
 	SwitchProfile:  "Cambiar de perfil",
-	MenuHelp:       "↑/↓ moverse · ENTER elegir/cambiar perfil · Q salir",
+	MenuHelp:       "↑/↓ moverse · ENTER entrar/cambiar perfil · Q salir",
+	MenuHelpSub:    "↑/↓ moverse · ENTER elegir · ESC volver",
+	CatLearn:       "Aprender",
+	CatRead:        "Leer",
+	CatEvaluate:    "Evaluar",
+	CatTools:       "Herramientas",
 	ReadingLocked:  "Aprende a leer los kana con fluidez primero.",
 
 	SettingsTitle:        "Ajustes",

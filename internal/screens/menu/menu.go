@@ -29,6 +29,21 @@ var restHold = int(restDuration / frameInterval)
 // symbol (it must not rely on color alone) and single display width.
 const lockGlyph = "⊘"
 
+// Category icons and the disclosure marker for the grouped (drill-down) menu.
+// Each is a monochrome, single-width symbol distinct from the leaf item icons
+// (never relying on color alone). submenuGlyph trails a category label to signal
+// that choosing it opens a submenu.
+const (
+	catLearnGlyph = "◆"
+	catReadGlyph  = "◫"
+	catEvalGlyph  = "◉"
+	catToolsGlyph = "▩"
+	submenuGlyph  = "›"
+)
+
+// topLevel is the section value for the root of the menu (no category open).
+const topLevel = -1
+
 // animSeq hands every menu instance a distinct animation id so that a tick left
 // in flight by a previous menu can't drive a newer one (which would speed the
 // animation up after navigating away and back).
@@ -68,6 +83,9 @@ type item struct {
 	quit      bool
 	locked    bool
 	lockedMsg string // notice shown when locked; ignored otherwise
+	// children, when non-empty, makes this a category: choosing it descends into
+	// a submenu of its children instead of navigating. Leaf items leave it nil.
+	children []item
 }
 
 // Model is the main menu screen.
@@ -77,9 +95,10 @@ type Model struct {
 	summary Summary
 	version string
 
-	items  []item
-	cursor int
-	notice string // transient message, e.g. why a locked item can't be opened
+	items   []item
+	section int // topLevel, or the index into items of the open category
+	cursor  int
+	notice  string // transient message, e.g. why a locked item can't be opened
 
 	// Header globe animation.
 	animate bool
@@ -99,25 +118,56 @@ func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Mo
 		msgs:    msgs,
 		summary: summary,
 		version: version,
+		section: topLevel,
 		cursor:  1,
 		// Honor reduced-motion preferences: keep the globe static (resting on
 		// Japan) when color is disabled, which also keeps it readable.
 		animate: !ui.NoColor() && len(art.GlobeFrames) > 1,
 		animID:  animSeq,
+		// The top level is a handful of categories (plus the Settings and Quit
+		// leaves) so it never outgrows the fixed-height frame; the activities live
+		// one level down. Leaf items keep their gating exactly as before.
 		items: []item{
-			{"あ", msgs.ItemKana, nav.Kana, false, false, ""},
-			{"▦", msgs.ItemKanaChart, nav.KanaChart, false, false, ""},
-			{"▣", msgs.ItemFlashcards, nav.Flashcards, false, summary.ReadingLocked, msgs.ReadingLocked},
-			{"♻", msgs.ItemReview, nav.Review, false, false, ""},
-			{"✓", msgs.ItemQuiz, nav.Quiz, false, summary.ReadingLocked, msgs.ReadingLocked},
-			{"◧", msgs.ItemRikai, nav.Rikai, false, summary.RikaiLocked, msgs.RikaiLocked},
-			{"▧", msgs.ItemStory, nav.Story, false, false, ""},
-			{"▨", assessmentLabel(msgs, summary), nav.Assessment, false, summary.AssessmentLocked, msgs.AssessmentLocked},
-			{"▤", msgs.ItemStats, nav.Stats, false, false, ""},
-			{"⚙", msgs.ItemSettings, nav.Settings, false, false, ""},
-			{"⏻", msgs.ItemQuit, nav.Menu, true, false, ""},
+			{icon: catLearnGlyph, label: msgs.CatLearn, children: []item{
+				{icon: "あ", label: msgs.ItemKana, screen: nav.Kana},
+				{icon: "▣", label: msgs.ItemFlashcards, screen: nav.Flashcards, locked: summary.ReadingLocked, lockedMsg: msgs.ReadingLocked},
+				{icon: "◧", label: msgs.ItemRikai, screen: nav.Rikai, locked: summary.RikaiLocked, lockedMsg: msgs.RikaiLocked},
+			}},
+			{icon: catReadGlyph, label: msgs.CatRead, children: []item{
+				{icon: "▧", label: msgs.ItemStory, screen: nav.Story},
+				{icon: "▦", label: msgs.ItemKanaChart, screen: nav.KanaChart},
+			}},
+			{icon: catEvalGlyph, label: msgs.CatEvaluate, children: []item{
+				{icon: "♻", label: msgs.ItemReview, screen: nav.Review},
+				{icon: "✓", label: msgs.ItemQuiz, screen: nav.Quiz, locked: summary.ReadingLocked, lockedMsg: msgs.ReadingLocked},
+				{icon: "▨", label: assessmentLabel(msgs, summary), screen: nav.Assessment, locked: summary.AssessmentLocked, lockedMsg: msgs.AssessmentLocked},
+			}},
+			{icon: catToolsGlyph, label: msgs.CatTools, children: []item{
+				{icon: "▤", label: msgs.ItemStats, screen: nav.Stats},
+			}},
+			{icon: "⚙", label: msgs.ItemSettings, screen: nav.Settings},
+			{icon: "⏻", label: msgs.ItemQuit, screen: nav.Menu, quit: true},
 		},
 	}
+}
+
+// currentItems returns the item list for the level the cursor is on: the
+// top-level categories/leaves, or the open category's children.
+func (m Model) currentItems() []item {
+	if m.section == topLevel {
+		return m.items
+	}
+	return m.items[m.section].children
+}
+
+// cursorOffset is how far item index 0 sits from cursor 0. At the top level the
+// profile switcher occupies cursor 0, so items start at cursor 1; a submenu has
+// no profile row, so its items start at cursor 0.
+func (m Model) cursorOffset() int {
+	if m.section == topLevel {
+		return 1
+	}
+	return 0
 }
 
 // assessmentLabel appends the "passed" badge to the N5 assessment entry once
@@ -157,6 +207,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+		case "esc", "left", "h", "backspace":
+			// Leave an open category back to the top level, restoring the cursor to
+			// the category we came from. At the top level there is nowhere to go
+			// back to (the menu is the root), so this is a no-op.
+			if m.section != topLevel {
+				m.cursor = m.section + 1
+				m.section = topLevel
+				m.notice = ""
+			}
 		case "up", "k":
 			m.notice = ""
 			if m.cursor > 0 {
@@ -164,7 +223,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "down", "j":
 			m.notice = ""
-			if m.cursor < len(m.items) {
+			if m.cursor < m.maxCursor() {
 				m.cursor++
 			}
 		}
@@ -188,11 +247,35 @@ func (m *Model) step() {
 	}
 }
 
-func (m Model) choose() (tea.Model, tea.Cmd) {
-	if m.cursor == 0 {
-		return m, nav.GoTo(nav.Profiles)
+// maxCursor is the highest cursor index for the current level. The top level
+// counts the profile row at cursor 0, so it reaches len(items); a submenu stops
+// at its last child.
+func (m Model) maxCursor() int {
+	if m.section == topLevel {
+		return len(m.items)
 	}
-	it := m.items[m.cursor-1]
+	return len(m.currentItems()) - 1
+}
+
+func (m Model) choose() (tea.Model, tea.Cmd) {
+	if m.section == topLevel {
+		if m.cursor == 0 {
+			return m, nav.GoTo(nav.Profiles)
+		}
+		it := m.items[m.cursor-1]
+		if len(it.children) > 0 {
+			m.section = m.cursor - 1
+			m.cursor = 0
+			m.notice = ""
+			return m, nil
+		}
+		return m.activate(it)
+	}
+	return m.activate(m.currentItems()[m.cursor])
+}
+
+// activate runs a leaf item: show its notice if locked, quit, or navigate.
+func (m Model) activate(it item) (tea.Model, tea.Cmd) {
 	if it.locked {
 		m.notice = it.lockedMsg
 		return m, nil
@@ -214,7 +297,11 @@ func (m Model) content() string {
 	// A transient notice replaces the help line (rather than adding a row) so the
 	// fixed-height frame never pushes the footer out of view. Moving the cursor
 	// clears it and restores the help text.
-	help := m.theme.Help.Render(m.msgs.MenuHelp)
+	helpText := m.msgs.MenuHelp
+	if m.section != topLevel {
+		helpText = m.msgs.MenuHelpSub // inside a category: show the back hint
+	}
+	help := m.theme.Help.Render(helpText)
 	if m.notice != "" {
 		help = m.theme.Subtle.Render(lockGlyph + " " + m.notice)
 	}
@@ -286,7 +373,11 @@ func (m Model) mainColumns(showName bool) string {
 		m.titleLine(showName),
 		m.xpLine(),
 		m.streakLine(),
-		m.profileLine(),
+	}
+	// The profile switcher is a top-level affordance only; a category submenu has
+	// no profile row.
+	if m.section == topLevel {
+		rows = append(rows, m.profileLine())
 	}
 	// Separate the progress block from the menu options. When the wordmark header
 	// is shown it already provides that blank (above the columns), so it is
@@ -305,8 +396,10 @@ func (m Model) mainColumns(showName bool) string {
 }
 
 func (m Model) menuItems() string {
+	items := m.currentItems()
+	offset := m.cursorOffset()
 	var b strings.Builder
-	for i, it := range m.items {
+	for i, it := range items {
 		// A locked item shows the lock glyph in place of its icon — a fixed-width
 		// marker that never wraps the row (which would break the column layout).
 		// The reason is explained in the footer when the learner opens it.
@@ -314,16 +407,22 @@ func (m Model) menuItems() string {
 		if it.locked {
 			icon = lockGlyph
 		}
-		line := fmt.Sprintf("%s  %s", icon, it.label)
+		label := it.label
+		if len(it.children) > 0 {
+			// A trailing disclosure marker signals this row opens a submenu,
+			// without relying on color.
+			label += " " + submenuGlyph
+		}
+		line := fmt.Sprintf("%s  %s", icon, label)
 		switch {
-		case i+1 == m.cursor:
+		case i+offset == m.cursor:
 			b.WriteString(m.theme.Selected.Render("▸ " + line))
 		case it.locked:
 			b.WriteString(m.theme.Subtle.Render("  " + line))
 		default:
 			b.WriteString(m.theme.Normal.Render("  " + line))
 		}
-		if i < len(m.items)-1 {
+		if i < len(items)-1 {
 			b.WriteString("\n")
 		}
 	}
