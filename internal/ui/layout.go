@@ -135,15 +135,55 @@ func wrapLine(line string, width int) []string {
 	}
 
 	var lines []string
-	current := words[0]
-	for _, word := range words[1:] {
-		next := current + " " + word
-		if lipgloss.Width(next) <= width {
-			current = next
-			continue
+	current := ""
+	for _, word := range words {
+		// A single token wider than the frame (e.g. space-less Japanese text,
+		// which strings.Fields keeps whole) is hard-broken by display width so
+		// it wraps instead of overflowing the frame.
+		for _, piece := range breakWord(word, width) {
+			switch {
+			case current == "":
+				current = piece
+			case lipgloss.Width(current+" "+piece) <= width:
+				current += " " + piece
+			default:
+				lines = append(lines, current)
+				current = piece
+			}
 		}
-		lines = append(lines, current)
-		current = word
 	}
-	return append(lines, current)
+	if current != "" {
+		lines = append(lines, current)
+	}
+	return lines
+}
+
+// breakWord splits a single whitespace-free token into chunks that each fit
+// width display cells, breaking between runes and honoring wide (CJK) runes.
+// A token that already fits is returned unchanged. This is what lets scripts
+// without spaces (Japanese) wrap at all.
+func breakWord(word string, width int) []string {
+	if width < 1 {
+		width = 1
+	}
+	if lipgloss.Width(word) <= width {
+		return []string{word}
+	}
+	var chunks []string
+	var cur []rune
+	curW := 0
+	for _, r := range word {
+		rw := lipgloss.Width(string(r))
+		if curW+rw > width && len(cur) > 0 {
+			chunks = append(chunks, string(cur))
+			cur = cur[:0]
+			curW = 0
+		}
+		cur = append(cur, r)
+		curW += rw
+	}
+	if len(cur) > 0 {
+		chunks = append(chunks, string(cur))
+	}
+	return chunks
 }

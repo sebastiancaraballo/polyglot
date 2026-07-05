@@ -601,23 +601,25 @@ func chapterSuffix(msgs i18n.Messages, entry chapterEntry) string {
 func (m Model) beatView() string {
 	t := m.deps.Theme
 	beat := m.chapter.Beats[m.beatIndex]
+	width := ui.FrameContentWidth(t, m.width)
 	var b strings.Builder
 	b.WriteString(t.Title.Render(m.chapter.Title))
 	b.WriteString("\n\n")
 	if beat.Place != "" {
-		b.WriteString(t.Subtle.Render(beat.Place))
+		b.WriteString(t.Subtle.Render(ui.WrapText(beat.Place, width)))
 		b.WriteString("\n\n")
 	}
 	if beat.Kind == model.Dialogue {
 		b.WriteString(t.Accent.Bold(true).Render(beat.Speaker))
 		b.WriteString("\n")
 	}
-	b.WriteString(t.Normal.Render(beat.JP))
+	jp := beat.JP
 	if m.deps.ShowRomaji && beat.Romaji != "" {
-		fmt.Fprintf(&b, " (%s)", beat.Romaji)
+		jp += fmt.Sprintf(" (%s)", beat.Romaji)
 	}
+	b.WriteString(t.Normal.Render(ui.WrapText(jp, width)))
 	b.WriteString("\n")
-	b.WriteString(t.Subtle.Render(beat.Source))
+	b.WriteString(t.Subtle.Render(ui.WrapText(beat.Source, width)))
 	b.WriteString("\n\n")
 	b.WriteString(t.Help.Render(m.deps.Msgs.ContinueHelp))
 	return b.String()
