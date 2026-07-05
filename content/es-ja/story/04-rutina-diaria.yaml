@@ -1,0 +1,61 @@
+id: capitulo-4-rutina
+title: "La vida diaria"
+beats:
+  - kind: narration
+    place: "Cafetería cerca de Sensō-ji, Asakusa"
+    es: "Se sientan con una taza de té caliente. Fuera, el bullicio de Asakusa continúa, pero aquí todo es tranquilo."
+    jp: "二人は熱いお茶を飲みながら座る。外では浅草の賑わいが続いているが、ここは静かだ。"
+  - kind: dialogue
+    speaker: "Yui"
+    es: "Cuéntame de tu día. ¿A qué hora te levantas normalmente?"
+    jp: "あなたの一日について教えてください。普段何時に起きますか？"
+    romaji: "Anata no ichinichi ni tsuite oshiete kudasai. Fudan nanji ni okimasu ka?"
+  - kind: dialogue
+    speaker: "Yui"
+    es: "Para hablar de la hora, primero aprendamos a decir las horas y los minutos."
+    jp: "時間について話すには、まず時と分の言い方を覚えましょう。"
+    romaji: "Jikan ni tsuite hanasu ni wa, mazu ji to fun no iikata o oboemashō."
+  - kind: present
+    practice: vocab
+    ref_id: time-clock
+    speaker: "Yui"
+    es: "Aquí tienes las horas: la una, las dos... y cómo decir «de la mañana» o «de la tarde»."
+    jp: "これが時間の言い方です。いちじ、にじ…そして「午前」「午後」の使い方です。"
+    romaji: "Kore ga jikan no iikata desu. Ichiji, niji... soshite 'gozen' 'gogo' no tsukaikata desu."
+  - kind: dialogue
+    speaker: "Yui"
+    es: "¿Ya las tienes? Practiquemos un poco."
+    jp: "もう覚えましたか？少し練習しましょう。"
+    romaji: "Mō oboemashita ka? Sukoshi renshū shimashō."
+  - kind: practice
+    practice: vocab
+    ref_id: time-clock
+  - kind: dialogue
+    speaker: "Yui"
+    es: "Muy bien. Ahora, ¿qué haces normalmente durante el día? Comer, trabajar, descansar..."
+    jp: "とても上手です。では、普段一日に何をしますか？食べる、働く、休む…"
+    romaji: "Totemo jōzu desu. Dewa, fudan ichinichi ni nani o shimasu ka? Taberu, hataraku, yasumu..."
+  - kind: present
+    practice: vocab
+    ref_id: verbs-daily
+    speaker: "Yui"
+    es: "Estos son los verbos de la vida diaria: comer, dormir, trabajar, descansar y más."
+    jp: "これが日常生活の動詞です。食べる、寝る、働く、休む、そして他にも。"
+    romaji: "Kore ga nichijō seikatsu no dōshi desu. Taberu, neru, hataraku, yasumu, soshite hoka ni mo."
+  - kind: dialogue
+    speaker: "Yui"
+    es: "¿Los recuerdas todos? Comprobemos."
+    jp: "全部覚えていますか？確認しましょう。"
+    romaji: "Zenbu oboete imasu ka? Kakunin shimashō."
+  - kind: practice
+    practice: vocab
+    ref_id: verbs-daily
+  - kind: dialogue
+    speaker: "Yui"
+    es: "¡Excelente! Ya puedes contar tu rutina diaria en japonés."
+    jp: "素晴らしい！もう日本語で自分の一日を話せますね。"
+    romaji: "Subarashii! Mō nihongo de jibun no ichinichi o hanasemasu ne."
+  - kind: narration
+    place: "Asakusa"
+    es: "El sol empieza a bajar sobre Asakusa. El viaje de hoy termina aquí, pero el camino del japonés recién comienza."
+    jp: "浅草に夕日が差し込み始める。今日の旅はここで終わるが、日本語の道はまだ始まったばかりだ。"
