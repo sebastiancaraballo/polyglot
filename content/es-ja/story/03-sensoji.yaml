@@ -1,0 +1,61 @@
+id: capitulo-3-sensoji
+title: "Direcciones en Sensō-ji"
+beats:
+  - kind: narration
+    place: "Sensō-ji, Asakusa"
+    es: "Llegan a la gran puerta Hōzōmon. Frente al salón principal, el humo del incensario se eleva entre la multitud."
+    jp: "二人は宝蔵門に着く。本堂の前で、香炉の煙が人混みの中に立ちのぼる。"
+  - kind: dialogue
+    speaker: "Yui"
+    es: "Aquí venden omikuji, la fortuna escrita. El puesto está un poco escondido; preguntemos a alguien."
+    jp: "ここではおみくじを売っています。あの店は少し隠れているので、誰かに聞いてみましょう。"
+    romaji: "Koko de wa omikuji o utteimasu. Ano mise wa sukoshi kakureteiru node, dareka ni kiite mimashō."
+  - kind: dialogue
+    speaker: "Yui"
+    es: "Para preguntar dónde está algo, necesitamos palabras interrogativas. Aprendamos las más útiles."
+    jp: "何かがどこにあるか聞くには、疑問詞が必要です。よく使うものを覚えましょう。"
+    romaji: "Nanika ga doko ni aru ka kiku ni wa, gimonshi ga hitsuyō desu. Yoku tsukau mono o oboemashō."
+  - kind: present
+    practice: vocab
+    ref_id: question-words
+    speaker: "Yui"
+    es: "Estas son las preguntas básicas: dónde, cómo, cuál. Escúchalas con atención."
+    jp: "これが基本の疑問詞です。どこ、どう、どちら。よく聞いてくださいね。"
+    romaji: "Kore ga kihon no gimonshi desu. Doko, dō, dochira. Yoku kiite kudasai ne."
+  - kind: dialogue
+    speaker: "Yui"
+    es: "¿Los recuerdas? Practiquemos."
+    jp: "覚えていますか？練習しましょう。"
+    romaji: "Oboete imasu ka? Renshū shimashō."
+  - kind: practice
+    practice: vocab
+    ref_id: question-words
+  - kind: dialogue
+    speaker: "Yui"
+    es: "Bien. Ahora, si alguien responde «a la derecha» o «está cerca», necesitas entender la posición."
+    jp: "いいですね。誰かが「右です」や「近くです」と答えたら、位置がわからないといけません。"
+    romaji: "Ii desu ne. Dareka ga 'migi desu' ya 'chikaku desu' to kotaetara, ichi ga wakaranai to ikemasen."
+  - kind: present
+    practice: vocab
+    ref_id: positions
+    speaker: "Yui"
+    es: "Arriba, abajo, derecha, izquierda, cerca, lejos... estas palabras te ayudan a entender las direcciones."
+    jp: "上、下、右、左、近い、遠い…この言葉が方向を理解するのに役立ちます。"
+    romaji: "Ue, shita, migi, hidari, chikai, tōi... kono kotoba ga hōkō o rikai suru no ni yakudachimasu."
+  - kind: dialogue
+    speaker: "Yui"
+    es: "¿Todo claro? Vamos a comprobarlo."
+    jp: "わかりましたか？確認しましょう。"
+    romaji: "Wakarimashita ka? Kakunin shimashō."
+  - kind: practice
+    practice: vocab
+    ref_id: positions
+  - kind: dialogue
+    speaker: "Yui"
+    es: "¡Perfecto! Un monje nos dice: «migi ni arimasu» — está a la derecha."
+    jp: "完璧です！お坊さんが「右にあります」と教えてくれました。"
+    romaji: "Kanpeki desu! Obōsan ga 'migi ni arimasu' to oshiete kuremashita."
+  - kind: narration
+    place: "Cerca de Sensō-ji, Asakusa"
+    es: "Con la fortuna en la mano, deciden sentarse en una cafetería cercana para descansar un momento."
+    jp: "おみくじを手に、二人は近くの喫茶店に座って少し休むことにする。"

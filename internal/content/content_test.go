@@ -558,6 +558,29 @@ func TestEmbeddedStoryChapters(t *testing.T) {
 	}
 }
 
+func TestEmbeddedN5StoryChapters(t *testing.T) {
+	course, err := LoadEmbedded(DefaultPair)
+	if err != nil {
+		t.Fatalf("LoadEmbedded: %v", err)
+	}
+	byID := make(map[string]model.Chapter, len(course.Chapters))
+	for _, c := range course.Chapters {
+		byID[c.ID] = c
+	}
+	// The N5 story arc, in mastery-gate order: arrival/greetings, shopping,
+	// directions, and daily routine. (Beat validity, coverage, and
+	// present-before-practice are covered by TestEmbeddedStoryChapters.)
+	want := []string{"capitulo-1-asakusa", "capitulo-2-nakamise", "capitulo-3-sensoji", "capitulo-4-rutina"}
+	for _, id := range want {
+		if _, ok := byID[id]; !ok {
+			t.Errorf("missing N5 story chapter %q", id)
+		}
+	}
+	if len(course.Chapters) != len(want) {
+		t.Errorf("got %d embedded chapters, want %d (%v)", len(course.Chapters), len(want), want)
+	}
+}
+
 func TestCheckStoryPresentation(t *testing.T) {
 	present := model.Beat{Kind: model.Present, Practice: model.PracticeVocab, RefID: "greetings"}
 	practice := model.Beat{Kind: model.Practice, Practice: model.PracticeVocab, RefID: "greetings"}
