@@ -53,6 +53,12 @@ type Summary struct {
 	// known filler per slot of at least one grammar pattern. See
 	// internal/study.PatternReady.
 	RikaiLocked bool
+	// AssessmentLocked gates the N5 mock assessment behind mastering every story
+	// chapter — the capstone gate.
+	AssessmentLocked bool
+	// AssessmentPassed marks the N5 assessment as already passed, shown as a
+	// badge on the menu label.
+	AssessmentPassed bool
 }
 
 type item struct {
@@ -106,11 +112,21 @@ func New(theme ui.Theme, msgs i18n.Messages, summary Summary, version string) Mo
 			{"✓", msgs.ItemQuiz, nav.Quiz, false, summary.ReadingLocked, msgs.ReadingLocked},
 			{"◧", msgs.ItemRikai, nav.Rikai, false, summary.RikaiLocked, msgs.RikaiLocked},
 			{"▧", msgs.ItemStory, nav.Story, false, false, ""},
+			{"▨", assessmentLabel(msgs, summary), nav.Assessment, false, summary.AssessmentLocked, msgs.AssessmentLocked},
 			{"▤", msgs.ItemStats, nav.Stats, false, false, ""},
 			{"⚙", msgs.ItemSettings, nav.Settings, false, false, ""},
 			{"⏻", msgs.ItemQuit, nav.Menu, true, false, ""},
 		},
 	}
+}
+
+// assessmentLabel appends the "passed" badge to the N5 assessment entry once
+// the learner has cleared it, so the milestone shows in the menu.
+func assessmentLabel(msgs i18n.Messages, summary Summary) string {
+	if summary.AssessmentPassed {
+		return msgs.ItemAssessment + "  " + msgs.AssessmentPassedBadge
+	}
+	return msgs.ItemAssessment
 }
 
 // Init implements tea.Model.

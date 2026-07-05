@@ -22,6 +22,7 @@ const (
 	KanaChart
 	Rikai
 	Story
+	Assessment
 )
 
 // GoToMsg requests navigation to a screen.
