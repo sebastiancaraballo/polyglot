@@ -1,0 +1,12 @@
+id: kore-wa-i-adj-desu
+title: "Kore wa Adj desu (adjetivos i)"
+jlpt: N5
+notes: "Los adjetivos i van directamente seguidos de です en presente cortés (no llevan な)."
+frame: "{Demo}は{Adj}です"
+slots:
+  - name: Demo
+    cards: [demonstratives:1, demonstratives:2, demonstratives:3]
+    default: demonstratives:1
+  - name: Adj
+    cards: [adjectives:1, adjectives:2, adjectives:5, adjectives:6]
+    default: adjectives:1

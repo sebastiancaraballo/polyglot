@@ -1,0 +1,9 @@
+id: place-ni-ikimasu
+title: "Place ni ikimasu"
+jlpt: N5
+notes: "に marca el destino del movimiento con verbos como いく (ir)."
+frame: "{Place}にいきます"
+slots:
+  - name: Place
+    cards: [places-town:3, places-town:7, places-town:9, places-town:10, places-town:17]
+    default: places-town:3

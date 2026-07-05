@@ -1,0 +1,12 @@
+id: kore-sore-are-wa-n-desu
+title: "Kore/sore/are wa N desu"
+jlpt: N5
+notes: "Extiende la cópula a los demostrativos: esto/eso/aquello es N. Cada ronda cambia una sola palabra (Demo o N)."
+frame: "{Demo}は{N}です"
+slots:
+  - name: Demo
+    cards: [demonstratives:1, demonstratives:2, demonstratives:3]
+    default: demonstratives:1
+  - name: N
+    cards: [everyday-objects:1, everyday-objects:2, everyday-objects:5, everyday-objects:7]
+    default: everyday-objects:1

@@ -1,0 +1,9 @@
+id: place-de-tabemasu
+title: "Place de tabemasu"
+jlpt: N5
+notes: "で marca el lugar donde ocurre la acción, a diferencia de に (destino del movimiento)."
+frame: "{Place}でたべます"
+slots:
+  - name: Place
+    cards: [places-town:3, places-town:9, places-town:13, places-town:14]
+    default: places-town:14

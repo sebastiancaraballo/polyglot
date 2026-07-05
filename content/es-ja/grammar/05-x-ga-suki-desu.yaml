@@ -1,0 +1,12 @@
+id: x-ga-suki-desu
+title: "X ga suki/kirai desu"
+jlpt: N5
+notes: "が marca lo que gusta o disgusta: X ga suki/kirai/daisuki desu."
+frame: "{X}が{Adj}です"
+slots:
+  - name: X
+    cards: [food-drink:1, food-drink:2, food-drink:4, food-drink:5]
+    default: food-drink:1
+  - name: Adj
+    cards: [na-adjectives:14, na-adjectives:15, na-adjectives:16]
+    default: na-adjectives:14

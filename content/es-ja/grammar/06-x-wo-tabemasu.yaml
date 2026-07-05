@@ -1,0 +1,12 @@
+id: x-wo-tabemasu
+title: "X wo tabemasu/masen/mashita"
+jlpt: N5
+notes: "を marca el objeto directo; el verbo cambia entre presente afirmativo, negativo y pasado."
+frame: "{X}を{Verb}"
+slots:
+  - name: X
+    cards: [food-drink:3, food-drink:4, food-drink:5, food-drink:6, food-drink:7, food-drink:8, food-drink:9]
+    default: food-drink:3
+  - name: Verb
+    cards: [verbs-polite-forms:1, verbs-polite-forms:2, verbs-polite-forms:3]
+    default: verbs-polite-forms:1
