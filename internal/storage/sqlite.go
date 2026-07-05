@@ -411,6 +411,54 @@ func (s *SQLiteStore) SaveStoryProgress(ctx context.Context, profileID int64, p 
 	return nil
 }
 
+// GetAssessmentResult returns the profile's result for a level's mock
+// assessment. A level never assessed yields a zero-value result (not passed),
+// not an error, so callers can gate on Passed without special-casing absence.
+func (s *SQLiteStore) GetAssessmentResult(ctx context.Context, profileID int64, level model.JLPT) (model.AssessmentResult, error) {
+	row := s.db.QueryRowContext(ctx,
+		`SELECT passed, best_correct, total, taken_at
+		   FROM assessment_result WHERE profile_id = ? AND level = ?`,
+		profileID, string(level),
+	)
+	result := model.AssessmentResult{Level: level}
+	var takenAt sql.NullString
+	err := row.Scan(&result.Passed, &result.BestCorrect, &result.Total, &takenAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.AssessmentResult{Level: level}, nil
+	}
+	if err != nil {
+		return model.AssessmentResult{}, fmt.Errorf("scan assessment result: %w", err)
+	}
+	if takenAt.Valid {
+		if result.TakenAt, err = parseTime(takenAt.String); err != nil {
+			return model.AssessmentResult{}, err
+		}
+	}
+	return result, nil
+}
+
+// SaveAssessmentResult inserts or updates a profile's result for one level.
+func (s *SQLiteStore) SaveAssessmentResult(ctx context.Context, profileID int64, r model.AssessmentResult) error {
+	var takenAt any
+	if !r.TakenAt.IsZero() {
+		takenAt = r.TakenAt.UTC().Format(timeLayout)
+	}
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO assessment_result (profile_id, level, passed, best_correct, total, taken_at)
+		 VALUES (?, ?, ?, ?, ?, ?)
+		 ON CONFLICT (profile_id, level) DO UPDATE SET
+		   passed = excluded.passed,
+		   best_correct = excluded.best_correct,
+		   total = excluded.total,
+		   taken_at = excluded.taken_at`,
+		profileID, string(r.Level), r.Passed, r.BestCorrect, r.Total, takenAt,
+	)
+	if err != nil {
+		return fmt.Errorf("save assessment result: %w", err)
+	}
+	return nil
+}
+
 // GetStats returns the aggregate stats for a profile, or ErrNotFound.
 func (s *SQLiteStore) GetStats(ctx context.Context, profileID int64) (model.Stats, error) {
 	row := s.db.QueryRowContext(ctx,

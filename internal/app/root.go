@@ -11,6 +11,7 @@ import (
 	"github.com/sebastiancaraballo/polyglot/internal/model"
 	"github.com/sebastiancaraballo/polyglot/internal/nav"
 	"github.com/sebastiancaraballo/polyglot/internal/review"
+	"github.com/sebastiancaraballo/polyglot/internal/screens/assessment"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/flashcards"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/kana"
 	"github.com/sebastiancaraballo/polyglot/internal/screens/kanachart"
@@ -251,6 +252,14 @@ func (m rootModel) build(s nav.Screen) tea.Model {
 			Lessons: m.ctx.course.Lessons, Kana: m.ctx.course.Kana,
 			ShowRomaji: m.ctx.profile.ShowRomaji,
 		})
+	case nav.Assessment:
+		return assessment.New(assessment.Deps{
+			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
+			ProfileID: m.ctx.profile.ID, Level: model.N5,
+			Lessons: m.ctx.course.Lessons, Kana: m.ctx.course.Kana,
+			Patterns: m.ctx.course.Patterns, Cards: m.ctx.cardIndex(),
+			ShowRomaji: m.ctx.profile.ShowRomaji,
+		})
 	case nav.Stats:
 		return stats.New(stats.Deps{
 			Theme: m.ctx.theme, Msgs: m.ctx.msgs, Store: m.ctx.store,
@@ -361,6 +370,30 @@ func (c appContext) rikaiReady() bool {
 	return false
 }
 
+// n5Assessment reports whether the N5 mock assessment is unlocked (every story
+// chapter mastered — the capstone gate) and whether the learner has passed it.
+// Best-effort: on a storage error it reports locked/not-passed rather than
+// failing navigation.
+func (c appContext) n5Assessment() (unlocked, passed bool) {
+	ctx := context.Background()
+	if len(c.course.Chapters) > 0 {
+		progress, err := c.store.GetStoryProgress(ctx, c.profile.ID)
+		if err == nil {
+			unlocked = true
+			for _, ch := range c.course.Chapters {
+				if !progress[ch.ID].Mastered {
+					unlocked = false
+					break
+				}
+			}
+		}
+	}
+	if result, err := c.store.GetAssessmentResult(ctx, c.profile.ID, model.N5); err == nil {
+		passed = result.Passed
+	}
+	return unlocked, passed
+}
+
 // reviewItems is the full cross-curriculum set of schedulable items: vocabulary
 // and kana, interleaved by the review queue.
 func (c appContext) reviewItems() []review.Item {
@@ -388,13 +421,17 @@ func (c appContext) summary() menu.Summary {
 	// and show that growing decodable subset.
 	readable := len(decodableCards(c.allCards(), c.decoder()))
 
+	assessmentUnlocked, assessmentPassed := c.n5Assessment()
+
 	return menu.Summary{
-		Name:          c.profile.Name,
-		XP:            stats.XP,
-		Streak:        stats.Streak,
-		Learned:       learned,
-		Total:         c.reviewableTotal(),
-		ReadingLocked: readable == 0,
-		RikaiLocked:   !c.rikaiReady(),
+		Name:             c.profile.Name,
+		XP:               stats.XP,
+		Streak:           stats.Streak,
+		Learned:          learned,
+		Total:            c.reviewableTotal(),
+		ReadingLocked:    readable == 0,
+		RikaiLocked:      !c.rikaiReady(),
+		AssessmentLocked: !assessmentUnlocked,
+		AssessmentPassed: assessmentPassed,
 	}
 }
