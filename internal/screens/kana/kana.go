@@ -52,9 +52,13 @@ type Model struct {
 	groups      []group // selectable practice sets
 	picking     bool    // true while showing the group picker
 	groupCursor int
+	// reverse flips the drill direction: false = recognition (glyph shown, pick
+	// romaji, the default); true = recall/production (romaji shown, pick the
+	// glyph). Chosen in the picker and fixed for the session.
+	reverse bool
 
 	deck []model.KanaItem // shuffled session order
-	pool []string         // romaji of the selected group, for distractors
+	pool []string         // the answer strings of the selected group, for distractors
 
 	index        int
 	options      []string
@@ -147,7 +151,7 @@ func (m Model) startSession() Model {
 	}
 	m.pool = make([]string, 0, len(items))
 	for _, it := range items {
-		m.pool = append(m.pool, it.Romaji)
+		m.pool = append(m.pool, m.answer(it))
 	}
 	m.deck = items
 	m.rng.Shuffle(len(m.deck), func(i, j int) { m.deck[i], m.deck[j] = m.deck[j], m.deck[i] })
@@ -161,11 +165,21 @@ func (m Model) setQuestion() Model {
 	if m.index >= len(m.deck) {
 		return m
 	}
-	m.options, m.correct = study.Options(m.rng, m.deck[m.index].Romaji, m.pool, optionCount)
+	m.options, m.correct = study.Options(m.rng, m.answer(m.deck[m.index]), m.pool, optionCount)
 	m.selected = 0
 	m.answered = false
 	m.shownAt = time.Now()
 	return m
+}
+
+// answer is the correct choice for an item in the current direction: its romaji
+// in recognition mode, its glyph in recall (reverse) mode. The prompt shows the
+// other side.
+func (m Model) answer(it model.KanaItem) string {
+	if m.reverse {
+		return it.Char
+	}
+	return it.Romaji
 }
 
 func (m Model) finished() bool { return m.index >= len(m.deck) }
@@ -246,6 +260,9 @@ func (m Model) handlePick(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.groupCursor < len(m.groups)-1 {
 			m.groupCursor++
 		}
+	case "left", "h", "right", "l":
+		// The direction is binary, so either arrow just flips it.
+		m.reverse = !m.reverse
 	}
 	if ui.IsConfirmKey(msg) && !m.groups[m.groupCursor].locked {
 		m = m.startSession()
@@ -355,6 +372,8 @@ func (m Model) pickerView() string {
 	var b strings.Builder
 	b.WriteString(t.Title.Render(m.deps.Msgs.KanaTitle))
 	b.WriteString("\n\n")
+	b.WriteString(t.Subtle.Render(fmt.Sprintf(m.deps.Msgs.KanaDirectionFmt, m.directionLabel())))
+	b.WriteString("\n\n")
 	for i, g := range m.groups {
 		label := g.label + m.groupSuffix(g)
 		switch {
@@ -377,6 +396,14 @@ func (m Model) pickerView() string {
 	b.WriteString("\n")
 	b.WriteString(t.Subtle.Render(m.deps.Msgs.KanaMasteryNote))
 	return b.String()
+}
+
+// directionLabel names the current drill direction for the picker.
+func (m Model) directionLabel() string {
+	if m.reverse {
+		return m.deps.Msgs.KanaDirReverse
+	}
+	return m.deps.Msgs.KanaDirForward
 }
 
 // groupSuffix annotates a picker row with its mastery: a fluent badge when every
@@ -405,21 +432,16 @@ func (m Model) questionView() string {
 	t := m.deps.Theme
 	header := fmt.Sprintf("%s  %d/%d", t.Title.Render(m.deps.Msgs.KanaTitle), m.index+1, len(m.deck))
 
+	prompt := m.deps.Msgs.KanaPrompt
+	if m.reverse {
+		prompt = m.deps.Msgs.KanaPromptReverse
+	}
+
 	var lower strings.Builder
-	lower.WriteString(m.deps.Msgs.KanaPrompt)
+	lower.WriteString(prompt)
 	lower.WriteString("\n\n")
 	for i, opt := range m.options {
-		line := fmt.Sprintf(" %d) %s", i+1, opt)
-		switch {
-		case m.answered && i == m.correct:
-			lower.WriteString(t.Success.Render("✓" + line))
-		case m.answered && i == m.selected:
-			lower.WriteString(t.Error.Render("✗" + line))
-		case i == m.selected:
-			lower.WriteString(t.Selected.Render("▸" + line))
-		default:
-			lower.WriteString(t.Normal.Render(" " + line))
-		}
+		lower.WriteString(m.optionLine(i, opt))
 		lower.WriteString("\n")
 	}
 	lower.WriteString("\n")
@@ -430,9 +452,13 @@ func (m Model) questionView() string {
 	}
 	lowerStr := lower.String()
 
-	// Render the kana as a large, prominent tile centered within the frame, not
-	// within the dynamic help/options text below it.
-	tile := m.bigKana(m.deck[m.index].Char)
+	// The stimulus is shown as a large, prominent tile centered within the frame:
+	// the glyph in recognition mode, the romaji in recall (reverse) mode.
+	stimulus := m.deck[m.index].Char
+	if m.reverse {
+		stimulus = m.deck[m.index].Romaji
+	}
+	tile := m.bigKana(stimulus)
 	width := ui.FrameContentWidth(t, m.width)
 	if tileWidth := lipgloss.Width(tile); tileWidth > width {
 		width = tileWidth
@@ -440,6 +466,37 @@ func (m Model) questionView() string {
 	tile = lipgloss.PlaceHorizontal(width, lipgloss.Center, tile)
 
 	return lipgloss.JoinVertical(lipgloss.Left, header, "", tile, "", lowerStr)
+}
+
+// optionLine renders one answer option with its selection/reveal marker. In
+// recall (reverse) mode the option is a kana glyph, drawn with the accent kana
+// styling so it stays legible; the marker and number carry the state color.
+func (m Model) optionLine(i int, opt string) string {
+	t := m.deps.Theme
+	if m.reverse {
+		mark, style := " ", t.Normal
+		switch {
+		case m.answered && i == m.correct:
+			mark, style = "✓", t.Success
+		case m.answered && i == m.selected:
+			mark, style = "✗", t.Error
+		case i == m.selected:
+			mark, style = "▸", t.Selected
+		}
+		return style.Render(fmt.Sprintf("%s %d) ", mark, i+1)) + t.Accent.Bold(true).Render(opt)
+	}
+
+	line := fmt.Sprintf(" %d) %s", i+1, opt)
+	switch {
+	case m.answered && i == m.correct:
+		return t.Success.Render("✓" + line)
+	case m.answered && i == m.selected:
+		return t.Error.Render("✗" + line)
+	case i == m.selected:
+		return t.Selected.Render("▸" + line)
+	default:
+		return t.Normal.Render(" " + line)
+	}
 }
 
 // bigKana renders a kana character as a large, bordered focal tile. A terminal

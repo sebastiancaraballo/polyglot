@@ -2,6 +2,7 @@ package kana
 
 import (
 	"context"
+	"math/rand"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -340,4 +341,146 @@ func kanaTileColumn(t *testing.T, view string) int {
 	}
 	t.Fatal("view does not contain kana tile")
 	return 0
+}
+
+func reverseFixtureItems() []model.KanaItem {
+	return []model.KanaItem{
+		{Char: "あ", Romaji: "a", Type: model.Hiragana, Category: model.Base},
+		{Char: "い", Romaji: "i", Type: model.Hiragana, Category: model.Base},
+		{Char: "う", Romaji: "u", Type: model.Hiragana, Category: model.Base},
+		{Char: "え", Romaji: "e", Type: model.Hiragana, Category: model.Base},
+		{Char: "お", Romaji: "o", Type: model.Hiragana, Category: model.Base},
+	}
+}
+
+func TestArrowTogglesDirectionInPicker(t *testing.T) {
+	store, profileID := newStore(t)
+	if err := store.SetKanaOnboarded(context.Background(), profileID); err != nil {
+		t.Fatalf("SetKanaOnboarded: %v", err)
+	}
+	m := New(Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: reverseFixtureItems()})
+	if m.reverse {
+		t.Fatal("trainer should default to recognition (forward) direction")
+	}
+	next, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
+	if !next.(Model).reverse {
+		t.Fatal("→ should flip to reverse direction")
+	}
+	next, _ = next.(Model).Update(tea.KeyPressMsg{Code: tea.KeyLeft})
+	if next.(Model).reverse {
+		t.Fatal("← should flip direction back to forward")
+	}
+}
+
+func TestReverseSessionAsksForTheGlyph(t *testing.T) {
+	m := Model{
+		deps:    Deps{Theme: ui.PlainTheme(), Msgs: i18n.ES},
+		reverse: true,
+	}
+	m.rng = rand.New(rand.NewSource(1))
+	// Build a reverse session over the fixture: the answer pool is the glyphs.
+	items := reverseFixtureItems()
+	m.deps.Items = items
+	m.groups = buildGroups(i18n.ES, m.gate)
+	m.groupCursor = allGroupIndex(t, m)
+	// All group is unlocked only once hiragana is fluent; force it open for the
+	// test by matching directly instead of going through the gate.
+	m.deck = items
+	m.pool = make([]string, 0, len(items))
+	for _, it := range items {
+		m.pool = append(m.pool, m.answer(it))
+	}
+	m = m.setQuestion()
+
+	// The correct option and every distractor must be a glyph from the pool.
+	glyphs := map[string]bool{}
+	for _, it := range items {
+		glyphs[it.Char] = true
+	}
+	for _, opt := range m.options {
+		if !glyphs[opt] {
+			t.Errorf("reverse option %q is not a kana glyph", opt)
+		}
+	}
+	if m.options[m.correct] != m.deck[0].Char {
+		t.Errorf("reverse correct option = %q, want the deck glyph %q", m.options[m.correct], m.deck[0].Char)
+	}
+	// The prompt shows the romaji, not the glyph.
+	view := m.questionView()
+	if !strings.Contains(view, m.deps.Msgs.KanaPromptReverse) {
+		t.Errorf("reverse question should use the recall prompt; view:\n%s", view)
+	}
+}
+
+func TestReverseAnswerRecordsMasteryByCharacter(t *testing.T) {
+	store, profileID := newStore(t)
+	items := reverseFixtureItems()
+	m := Model{
+		deps:    Deps{Theme: ui.NewTheme(true), Msgs: i18n.ES, Store: store, ProfileID: profileID, Items: items},
+		reverse: true,
+		rng:     rand.New(rand.NewSource(1)),
+		deck:    []model.KanaItem{items[0]}, // あ
+		pool:    []string{"あ", "い", "う", "え"},
+	}
+	m = m.setQuestion()
+	m.selected = m.correct // answer correctly
+	m = m.reveal()
+
+	// Mastery is keyed by the character, direction-agnostic: the reverse answer
+	// advances the same per-character streak the forward drill uses.
+	got, err := store.GetKanaProgress(context.Background(), profileID)
+	if err != nil {
+		t.Fatalf("GetKanaProgress: %v", err)
+	}
+	p, ok := got["あ"]
+	if !ok {
+		t.Fatal("reverse answer should record progress under the glyph あ")
+	}
+	if p.Streak == 0 && p.Attempts == 0 {
+		t.Fatal("reverse answer should advance the character's mastery streak")
+	}
+}
+
+func TestQuestionViewFitsFrameBothDirections(t *testing.T) {
+	th := ui.PlainTheme()
+	const termW, termH = 80, 30
+	maxW := ui.FrameContentWidth(th, termW)
+	maxH := ui.FrameContentHeight(th, termH)
+	items := reverseFixtureItems()
+
+	for _, reverse := range []bool{false, true} {
+		m := Model{
+			deps:    Deps{Theme: th, Msgs: i18n.ES, Items: items},
+			reverse: reverse,
+			rng:     rand.New(rand.NewSource(1)),
+			deck:    []model.KanaItem{items[0]},
+			width:   termW, height: termH,
+		}
+		m.pool = make([]string, 0, len(items))
+		for _, it := range items {
+			m.pool = append(m.pool, m.answer(it))
+		}
+		m = m.setQuestion()
+		for _, answered := range []bool{false, true} {
+			m.answered = answered
+			m.selected = 1
+			content := m.questionView()
+			if w := lipgloss.Width(content); w > maxW {
+				t.Errorf("[WIDTH] reverse=%v answered=%v: %d > %d", reverse, answered, w, maxW)
+			}
+			if h := lipgloss.Height(content); h > maxH {
+				t.Errorf("[HEIGHT] reverse=%v answered=%v: %d > %d", reverse, answered, h, maxH)
+			}
+		}
+		// The picker (with the direction line) must also fit.
+		m.picking = true
+		m.groups = buildGroups(i18n.ES, m.gate)
+		p := m.pickerView()
+		if w := lipgloss.Width(p); w > maxW {
+			t.Errorf("[WIDTH] picker reverse=%v: %d > %d", reverse, w, maxW)
+		}
+		if h := lipgloss.Height(p); h > maxH {
+			t.Errorf("[HEIGHT] picker reverse=%v: %d > %d", reverse, h, maxH)
+		}
+	}
 }

@@ -66,9 +66,13 @@ type Messages struct {
 
 	// Kana trainer
 	KanaTitle         string
-	KanaPrompt        string
+	KanaPrompt        string // recognition prompt (glyph shown, pick romaji)
+	KanaPromptReverse string // recall prompt (romaji shown, pick glyph)
 	KanaGroupAll      string
 	KanaPickHelp      string
+	KanaDirectionFmt  string // "Dirección: %s", shown in the picker
+	KanaDirForward    string // "kana → romaji"
+	KanaDirReverse    string // "romaji → kana"
 	KanaFluent        string // badge on a fully-mastered group
 	KanaMasteredFmt   string // "%d/%d" mastered count
 	KanaUnlockHintFmt string // why a katakana group is locked, with live "%d/%d" hiragana progress
@@ -249,8 +253,12 @@ var ES = Messages{
 
 	KanaTitle:         "Entrenador de Kana",
 	KanaPrompt:        "¿Cómo se lee?",
+	KanaPromptReverse: "¿Qué kana es?",
 	KanaGroupAll:      "Todo",
-	KanaPickHelp:      "↑/↓ moverse · ENTER empezar · ESC volver",
+	KanaPickHelp:      "↑/↓ grupo · ←/→ dirección · ENTER empezar · ESC volver",
+	KanaDirectionFmt:  "Dirección: %s",
+	KanaDirForward:    "kana → romaji",
+	KanaDirReverse:    "romaji → kana",
 	KanaFluent:        "fluido",
 	KanaMasteredFmt:   "%d/%d",
 	KanaUnlockHintFmt: "Domina el hiragana para desbloquear el katakana — %d/%d.",
