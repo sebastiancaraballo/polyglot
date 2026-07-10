@@ -10,4 +10,5 @@ pub mod i18n;
 pub mod license;
 pub mod model;
 pub mod srs;
+pub mod storage;
 pub mod study;

@@ -8,8 +8,10 @@ rust-version.workspace = true
 
 [dependencies]
 chrono.workspace = true
+dirs = "5"
 include_dir = "0.7"
 rand = "0.8"
+rusqlite = { version = "0.32", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_yaml_ng = "0.10"
 unicode-general-category = "1"
