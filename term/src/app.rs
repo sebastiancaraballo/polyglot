@@ -2,16 +2,21 @@
 //!
 //! Port of the Go `internal/nav` + `internal/app/root` wiring. Screens are a
 //! stack: the menu is the root, activities are pushed on top, and going back
-//! pops. (During the TUI port, not-yet-ported destinations render a placeholder
-//! screen so navigation is exercisable end-to-end.)
+//! pops (refreshing the menu's progress summary). Not-yet-ported destinations
+//! render a placeholder so navigation is exercisable end-to-end.
 
+use polyglot_core::content::Course;
 use polyglot_core::i18n::Messages;
+use polyglot_core::model::Profile;
+use polyglot_core::storage::{SqliteStore, StorageError};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::Frame;
 
 use crate::frame::draw_frame;
+use crate::screens::kanachart::KanaChart;
 use crate::screens::menu::{Menu, Summary};
 use crate::screens::placeholder::Placeholder;
+use crate::screens::stats::Stats;
 use crate::theme::Theme;
 
 /// A top-level navigation destination (mirrors the Go `nav.Screen`).
@@ -52,17 +57,12 @@ impl Dest {
 
 /// The outcome of a key press within a screen.
 pub enum Transition {
-    /// Stay on the current screen.
     Stay,
-    /// Quit the application.
     Quit,
-    /// Push a new screen for `Dest`.
     Push(Dest),
-    /// Pop back to the previous screen.
     Pop,
 }
 
-/// Whether the event loop should continue or exit.
 #[derive(PartialEq, Eq)]
 enum Flow {
     Continue,
@@ -71,52 +71,120 @@ enum Flow {
 
 enum Screen {
     Menu(Menu),
+    Stats(Stats),
+    KanaChart(KanaChart),
     Placeholder(Placeholder),
 }
 
-/// The running application.
+/// The running application: shared context (storage, content, active profile)
+/// plus the screen stack.
 pub struct App {
     theme: Theme,
     msgs: &'static Messages,
+    version: String,
+    store: SqliteStore,
+    course: Course,
+    profile_id: Option<i64>,
     stack: Vec<Screen>,
 }
 
 impl App {
-    /// Builds the app rooted at the main menu.
-    pub fn new(theme: Theme, msgs: &'static Messages, summary: Summary, version: String) -> App {
-        App {
+    /// Builds the app rooted at the main menu, resolving the active profile and
+    /// computing the menu's progress summary from storage.
+    pub fn new(
+        theme: Theme,
+        msgs: &'static Messages,
+        version: String,
+        store: SqliteStore,
+        course: Course,
+    ) -> Result<App, StorageError> {
+        let profile_id = resolve_profile(&store)?.map(|p| p.id);
+        let summary = Summary::build(&store, &course, profile_id)?;
+        let menu = Menu::new(msgs, summary, version.clone());
+        Ok(App {
             theme,
             msgs,
-            stack: vec![Screen::Menu(Menu::new(msgs, summary, version))],
-        }
+            version,
+            store,
+            course,
+            profile_id,
+            stack: vec![Screen::Menu(menu)],
+        })
     }
 
     fn render(&self, f: &mut Frame) {
         let inner = draw_frame(f, &self.theme);
         match self.stack.last().expect("stack is never empty") {
-            Screen::Menu(m) => m.render(f, inner, &self.theme, self.msgs),
-            Screen::Placeholder(p) => p.render(f, inner, &self.theme),
+            Screen::Menu(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::Stats(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::KanaChart(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::Placeholder(s) => s.render(f, inner, &self.theme),
         }
     }
 
     fn handle(&mut self, code: KeyCode, mods: KeyModifiers) -> Flow {
         let transition = match self.stack.last_mut().expect("stack is never empty") {
-            Screen::Menu(m) => m.handle(code, mods),
-            Screen::Placeholder(p) => p.handle(code, mods),
+            Screen::Menu(s) => s.handle(code, mods),
+            Screen::Stats(s) => s.handle(code, mods),
+            Screen::KanaChart(s) => s.handle(code, mods),
+            Screen::Placeholder(s) => s.handle(code, mods),
         };
         match transition {
             Transition::Stay => Flow::Continue,
             Transition::Quit => Flow::Quit,
             Transition::Push(dest) => {
-                self.stack.push(Screen::Placeholder(Placeholder::new(dest)));
+                let screen = self.build_screen(dest);
+                self.stack.push(screen);
                 Flow::Continue
             }
             Transition::Pop => {
                 if self.stack.len() > 1 {
                     self.stack.pop();
                 }
+                self.refresh_menu();
                 Flow::Continue
             }
+        }
+    }
+
+    /// Builds the screen for a destination, reading its data from the shared
+    /// context. Unported destinations fall back to a placeholder.
+    fn build_screen(&self, dest: Dest) -> Screen {
+        match dest {
+            Dest::Stats => Screen::Stats(Stats::new(&self.store, &self.course, self.profile_id)),
+            Dest::KanaChart => Screen::KanaChart(KanaChart::new(&self.course)),
+            other => Screen::Placeholder(Placeholder::new(other)),
+        }
+    }
+
+    /// Rebuilds the menu's progress summary after returning to it, so gating and
+    /// counters reflect any progress made in the popped screen.
+    fn refresh_menu(&mut self) {
+        if self.stack.len() != 1 {
+            return;
+        }
+        if let Ok(summary) = Summary::build(&self.store, &self.course, self.profile_id) {
+            self.stack[0] = Screen::Menu(Menu::new(self.msgs, summary, self.version.clone()));
+        }
+    }
+}
+
+/// Returns the persisted active profile, the first existing profile, or `None`
+/// on a first run with no profiles yet.
+fn resolve_profile(store: &SqliteStore) -> Result<Option<Profile>, StorageError> {
+    if let Some(id) = store.active_profile_id()? {
+        match store.get_profile(id) {
+            Ok(p) => return Ok(Some(p)),
+            Err(StorageError::NotFound) => {}
+            Err(e) => return Err(e),
+        }
+    }
+    let profiles = store.list_profiles()?;
+    match profiles.into_iter().next() {
+        None => Ok(None),
+        Some(p) => {
+            store.set_active_profile_id(p.id)?;
+            Ok(Some(p))
         }
     }
 }

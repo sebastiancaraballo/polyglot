@@ -5,7 +5,13 @@
 //! plain-text title fallback the Go menu itself falls back to when the art does
 //! not fit.
 
+use std::collections::HashSet;
+
+use polyglot_core::content::Course;
 use polyglot_core::i18n::Messages;
+use polyglot_core::model::Jlpt;
+use polyglot_core::storage::{SqliteStore, StorageError};
+use polyglot_core::study;
 use ratatui::crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::layout::Rect;
 use ratatui::text::Line;
@@ -35,6 +41,69 @@ pub struct Summary {
     pub rikai_locked: bool,
     pub assessment_locked: bool,
     pub assessment_passed: bool,
+}
+
+impl Summary {
+    /// Builds the menu summary from the course and the active profile's
+    /// progress, computing each activity's gate through the core engine. With no
+    /// active profile (first run), everything is locked and counters are zero.
+    pub fn build(
+        store: &SqliteStore,
+        course: &Course,
+        profile_id: Option<i64>,
+    ) -> Result<Summary, StorageError> {
+        let total = (course.kana.len()
+            + course.lessons.iter().map(|l| l.cards.len()).sum::<usize>())
+            as i64;
+
+        let Some(pid) = profile_id else {
+            return Ok(Summary {
+                total,
+                reading_locked: true,
+                rikai_locked: true,
+                assessment_locked: true,
+                ..Summary::default()
+            });
+        };
+
+        let profile = store.get_profile(pid)?;
+        let stats = store.get_stats(pid)?;
+        let learned = store.count_learned_cards(pid)?;
+
+        let kana_progress = store.get_kana_progress(pid)?;
+        let gate = study::new_gate(&course.kana, &kana_progress);
+
+        let card_states = store.get_card_states(pid)?;
+        let known: HashSet<String> = card_states
+            .iter()
+            .filter(|(_, s)| s.reps > 0)
+            .map(|(id, _)| id.clone())
+            .collect();
+        let rikai_locked = !course
+            .patterns
+            .iter()
+            .any(|p| study::pattern_ready(p, &known));
+
+        let story_progress = store.get_story_progress(pid)?;
+        let all_mastered = !course.chapters.is_empty()
+            && course
+                .chapters
+                .iter()
+                .all(|c| story_progress.get(&c.id).is_some_and(|sp| sp.mastered));
+        let assessment_passed = store.get_assessment_result(pid, Jlpt::N5)?.passed;
+
+        Ok(Summary {
+            name: profile.name,
+            xp: stats.xp,
+            streak: stats.streak,
+            learned,
+            total,
+            reading_locked: !gate.reading_unlocked(),
+            rikai_locked,
+            assessment_locked: !all_mastered,
+            assessment_passed,
+        })
+    }
 }
 
 struct Item {
