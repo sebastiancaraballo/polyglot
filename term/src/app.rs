@@ -13,11 +13,19 @@ use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers
 use ratatui::Frame;
 
 use crate::frame::draw_frame;
+use crate::screens::kana::KanaTrainer;
 use crate::screens::kanachart::KanaChart;
 use crate::screens::menu::{Menu, Summary};
 use crate::screens::placeholder::Placeholder;
 use crate::screens::stats::Stats;
 use crate::theme::Theme;
+
+/// The shared context handed to a screen's `handle`, so interactive screens can
+/// persist progress. Read-only screens ignore it.
+pub struct Ctx<'a> {
+    pub store: &'a SqliteStore,
+    pub profile_id: Option<i64>,
+}
 
 /// A top-level navigation destination (mirrors the Go `nav.Screen`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -70,9 +78,10 @@ enum Flow {
 }
 
 enum Screen {
-    Menu(Menu),
+    Menu(Box<Menu>),
     Stats(Stats),
-    KanaChart(KanaChart),
+    KanaChart(Box<KanaChart>),
+    Kana(Box<KanaTrainer>),
     Placeholder(Placeholder),
 }
 
@@ -108,7 +117,7 @@ impl App {
             store,
             course,
             profile_id,
-            stack: vec![Screen::Menu(menu)],
+            stack: vec![Screen::Menu(Box::new(menu))],
         })
     }
 
@@ -118,16 +127,24 @@ impl App {
             Screen::Menu(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Stats(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::KanaChart(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::Kana(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Placeholder(s) => s.render(f, inner, &self.theme),
         }
     }
 
     fn handle(&mut self, code: KeyCode, mods: KeyModifiers) -> Flow {
-        let transition = match self.stack.last_mut().expect("stack is never empty") {
-            Screen::Menu(s) => s.handle(code, mods),
-            Screen::Stats(s) => s.handle(code, mods),
-            Screen::KanaChart(s) => s.handle(code, mods),
-            Screen::Placeholder(s) => s.handle(code, mods),
+        let transition = {
+            let ctx = Ctx {
+                store: &self.store,
+                profile_id: self.profile_id,
+            };
+            match self.stack.last_mut().expect("stack is never empty") {
+                Screen::Menu(s) => s.handle(code, mods, &ctx),
+                Screen::Stats(s) => s.handle(code, mods, &ctx),
+                Screen::KanaChart(s) => s.handle(code, mods, &ctx),
+                Screen::Kana(s) => s.handle(code, mods, &ctx),
+                Screen::Placeholder(s) => s.handle(code, mods, &ctx),
+            }
         };
         match transition {
             Transition::Stay => Flow::Continue,
@@ -152,7 +169,12 @@ impl App {
     fn build_screen(&self, dest: Dest) -> Screen {
         match dest {
             Dest::Stats => Screen::Stats(Stats::new(&self.store, &self.course, self.profile_id)),
-            Dest::KanaChart => Screen::KanaChart(KanaChart::new(&self.course)),
+            Dest::KanaChart => Screen::KanaChart(Box::new(KanaChart::new(&self.course))),
+            Dest::Kana => Screen::Kana(Box::new(KanaTrainer::new(
+                &self.store,
+                &self.course,
+                self.profile_id,
+            ))),
             other => Screen::Placeholder(Placeholder::new(other)),
         }
     }
@@ -164,7 +186,11 @@ impl App {
             return;
         }
         if let Ok(summary) = Summary::build(&self.store, &self.course, self.profile_id) {
-            self.stack[0] = Screen::Menu(Menu::new(self.msgs, summary, self.version.clone()));
+            self.stack[0] = Screen::Menu(Box::new(Menu::new(
+                self.msgs,
+                summary,
+                self.version.clone(),
+            )));
         }
     }
 }

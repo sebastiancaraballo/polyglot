@@ -263,7 +263,12 @@ impl Menu {
         }
     }
 
-    pub fn handle(&mut self, code: KeyCode, mods: KeyModifiers) -> Transition {
+    pub fn handle(
+        &mut self,
+        code: KeyCode,
+        mods: KeyModifiers,
+        _ctx: &crate::app::Ctx<'_>,
+    ) -> Transition {
         match code {
             KeyCode::Char('c') if mods.contains(KeyModifiers::CONTROL) => Transition::Quit,
             KeyCode::Char('q') => Transition::Quit,
@@ -470,19 +475,28 @@ mod tests {
         assert!(screen.contains('★'), "shows the XP line");
     }
 
+    fn ctx(store: &polyglot_core::storage::SqliteStore) -> crate::app::Ctx<'_> {
+        crate::app::Ctx {
+            store,
+            profile_id: None,
+        }
+    }
+
     #[test]
     fn drills_into_category_and_back() {
         let msgs = polyglot_core::i18n::default();
+        let store = polyglot_core::storage::SqliteStore::open_in_memory().unwrap();
+        let c = ctx(&store);
         let mut menu = Menu::new(msgs, Summary::default(), "0.1.0".to_string());
         // cursor starts at 1 (first category "Aprender"); ENTER descends.
         assert!(matches!(
-            menu.handle(KeyCode::Enter, KeyModifiers::NONE),
+            menu.handle(KeyCode::Enter, KeyModifiers::NONE, &c),
             Transition::Stay
         ));
         assert_eq!(menu.section, 0);
         assert_eq!(menu.cursor, 0);
         // ESC returns to the top level, restoring the cursor to the category.
-        menu.handle(KeyCode::Esc, KeyModifiers::NONE);
+        menu.handle(KeyCode::Esc, KeyModifiers::NONE, &c);
         assert_eq!(menu.section, TOP_LEVEL);
         assert_eq!(menu.cursor, 1);
     }
@@ -490,15 +504,17 @@ mod tests {
     #[test]
     fn locked_item_shows_notice_instead_of_navigating() {
         let msgs = polyglot_core::i18n::default();
+        let store = polyglot_core::storage::SqliteStore::open_in_memory().unwrap();
+        let c = ctx(&store);
         let summary = Summary {
             reading_locked: true,
             ..Default::default()
         };
         let mut menu = Menu::new(msgs, summary, "0.1.0".to_string());
         // Descend into "Aprender", move to Flashcards (locked), activate.
-        menu.handle(KeyCode::Enter, KeyModifiers::NONE);
-        menu.handle(KeyCode::Down, KeyModifiers::NONE);
-        let t = menu.handle(KeyCode::Enter, KeyModifiers::NONE);
+        menu.handle(KeyCode::Enter, KeyModifiers::NONE, &c);
+        menu.handle(KeyCode::Down, KeyModifiers::NONE, &c);
+        let t = menu.handle(KeyCode::Enter, KeyModifiers::NONE, &c);
         assert!(matches!(t, Transition::Stay));
         assert!(!menu.notice.is_empty(), "a locked item sets the notice");
     }

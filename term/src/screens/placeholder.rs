@@ -22,7 +22,12 @@ impl Placeholder {
         }
     }
 
-    pub fn handle(&mut self, code: KeyCode, mods: KeyModifiers) -> Transition {
+    pub fn handle(
+        &mut self,
+        code: KeyCode,
+        mods: KeyModifiers,
+        _ctx: &crate::app::Ctx<'_>,
+    ) -> Transition {
         match code {
             KeyCode::Char('c') if mods.contains(KeyModifiers::CONTROL) => Transition::Quit,
             KeyCode::Esc | KeyCode::Left | KeyCode::Backspace | KeyCode::Char('q') => {
