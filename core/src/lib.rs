@@ -9,6 +9,7 @@ pub mod content;
 pub mod i18n;
 pub mod license;
 pub mod model;
+pub mod review;
 pub mod srs;
 pub mod storage;
 pub mod study;
