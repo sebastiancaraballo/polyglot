@@ -8,4 +8,5 @@ rust-version.workspace = true
 
 [dependencies]
 chrono.workspace = true
+rand = "0.8"
 unicode-general-category = "1"

@@ -7,3 +7,4 @@
 
 pub mod model;
 pub mod srs;
+pub mod study;
