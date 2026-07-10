@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-07-09
+
 ### Added
 - Reverse kana trainer (romaji → kana recall): the kana trainer now offers a second drill direction alongside the existing recognition drill (glyph shown, pick the romaji). In reverse mode the prompt is the romaji reading and the four options are kana glyphs, so the learner must *produce* the character — the retrieval direction that recognition alone doesn't exercise (paired-associate learning). The direction is a toggle in the group picker (←/→), shown as a "Dirección:" line; it reuses all the existing session machinery — the same groups, the hiragana→katakana gate, SRS grading, and XP. Mastery tracks the character, not the presentation: a correct answer in either direction advances the same per-kana streak (no schema change). Options render with the accent kana styling so glyphs stay legible, and the layout is frame-fit-tested in both directions.
 - N5 mock assessment (capstone level exam): a new "Examen N5" activity that certifies the level with a cross-curriculum retrieval test. It samples up to 15 questions round-robin across the three learnable strands — vocabulary (recall a word's Japanese form), kana (read a character), and grammar (fill a blanked slot in a Rikai pattern) — and grades against the same 80% mastery band as the end-of-chapter challenge (`study.ChallengePassed`). Like the challenge, every answer flows through the regular spaced-repetition, XP, and mastery paths (vocab/pattern fillers as SRS reviews, kana as an automaticity streak, pattern slots as a correctness streak), so a failed attempt is still learning and retries are immediate. It is unlocked only after mastering every N5 story chapter (the capstone gate) and its result is persisted (`assessment_result` table): the pass is sticky (Mastery Learning — never revoked) and the best score is kept, surfaced as a "✓ aprobado" badge on the menu entry. The exam screen wraps all prose to the frame and caps its review list by height, and a test renders every phase/question kind against the frame to guard against overflow.
@@ -88,5 +90,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Japanese long-vowel romaji now uses pronunciation forms with macrons in lesson cards, with kana input forms documented in notes.
 - Spacebar shortcuts now work with Bubble Tea v2 key names across the menu, onboarding, kana trainer, quiz, and flashcards screens.
 
-[Unreleased]: https://github.com/sebastiancaraballo/polyglot/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/sebastiancaraballo/polyglot/compare/v0.0.2...HEAD
+[0.0.2]: https://github.com/sebastiancaraballo/polyglot/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/sebastiancaraballo/polyglot/releases/tag/v0.0.1
