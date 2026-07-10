@@ -8,5 +8,8 @@ rust-version.workspace = true
 
 [dependencies]
 chrono.workspace = true
+include_dir = "0.7"
 rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_yaml_ng = "0.10"
 unicode-general-category = "1"

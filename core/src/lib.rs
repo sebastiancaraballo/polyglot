@@ -5,6 +5,7 @@
 //! `license`, `i18n`). It is UI-free: terminal, mobile, and desktop frontends
 //! consume it (natively as a crate, or via FFI bindings).
 
+pub mod content;
 pub mod model;
 pub mod srs;
 pub mod study;
