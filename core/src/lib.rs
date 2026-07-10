@@ -6,6 +6,8 @@
 //! consume it (natively as a crate, or via FFI bindings).
 
 pub mod content;
+pub mod i18n;
+pub mod license;
 pub mod model;
 pub mod srs;
 pub mod study;

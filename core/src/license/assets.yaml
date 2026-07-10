@@ -1,0 +1,36 @@
+# Third-party asset manifest — the single source of truth for every external
+# asset bundled into or derived into this repository.
+#
+# Polyglot is MIT, and that promise extends to all assets, not just code (see
+# CLAUDE.md "Hard constraints"). In-house authored content (lessons, kana,
+# communicative functions) is NOT listed here — it is covered by the repo's MIT
+# LICENSE. Only third-party assets belong here, each with its source, license,
+# and required attribution.
+#
+# Allowed licenses: Public Domain / CC0, the CC-BY family (no -NC, no -SA), MIT,
+# BSD, Apache-2.0. Rejected: NonCommercial (-NC), ShareAlike / copyleft (-SA,
+# GPL/LGPL/AGPL), and anything of unclear provenance.
+#
+# The repo-root NOTICE file is GENERATED from this manifest — after editing,
+# run: go run ./tools/gennotice
+assets:
+  - id: natural-earth-land
+    name: "Natural Earth 1:110m land polygons"
+    kind: data
+    license: "Public Domain"
+    source: "https://www.naturalearthdata.com/"
+    attribution: "Made with Natural Earth (https://www.naturalearthdata.com/), public domain."
+    used_by:
+      - "tools/genglobe"
+      - "internal/art/globe.go"
+    notes: "Fetched at globe-generation time and baked into the braille globe frames."
+
+  - id: tatoeba-ja
+    name: "Tatoeba Project — Japanese sentences"
+    kind: data
+    license: "CC-BY-2.0-FR"
+    source: "https://tatoeba.org/en/downloads"
+    attribution: "Sentences from the Tatoeba Project (https://tatoeba.org), used under CC BY 2.0 FR."
+    used_by:
+      - "content/ja/frequency.tsv"
+    notes: "Corpus the Japanese word-frequency list is derived from; snapshot 2026-06-25. See docs/adr/0001-japanese-frequency-list.md."
