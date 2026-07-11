@@ -5,6 +5,7 @@ pub mod flashcards;
 pub mod kana;
 pub mod kanachart;
 pub mod menu;
+pub mod onboarding;
 pub mod placeholder;
 pub mod profiles;
 pub mod profilesetup;

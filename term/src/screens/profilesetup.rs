@@ -66,7 +66,12 @@ impl ProfileSetup {
         match ctx.store.create_profile(&self.name) {
             Ok(p) => {
                 let _ = ctx.store.set_active_profile_id(p.id);
-                Transition::ReloadRoot
+                // First run runs the tutorial; the switcher's "create" does not.
+                if self.tutorial {
+                    Transition::StartOnboarding
+                } else {
+                    Transition::ReloadRoot
+                }
             }
             Err(_) => {
                 self.error = true;

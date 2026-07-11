@@ -20,6 +20,7 @@ use crate::screens::flashcards::Flashcards;
 use crate::screens::kana::KanaTrainer;
 use crate::screens::kanachart::KanaChart;
 use crate::screens::menu::{Menu, Summary};
+use crate::screens::onboarding::Onboarding;
 use crate::screens::placeholder::Placeholder;
 use crate::screens::profiles::Profiles;
 use crate::screens::profilesetup::ProfileSetup;
@@ -83,6 +84,8 @@ pub enum Transition {
     /// Re-resolve the active profile and rebuild the menu from scratch, after a
     /// profile switch/create/delete or a data wipe.
     ReloadRoot,
+    /// Like `ReloadRoot`, then open first-run onboarding for the new profile.
+    StartOnboarding,
 }
 
 #[derive(PartialEq, Eq)]
@@ -103,6 +106,7 @@ enum Screen {
     Rikai(Box<Rikai>),
     Assessment(Box<Assessment>),
     ProfileSetup(ProfileSetup),
+    Onboarding(Onboarding),
     Placeholder(Placeholder),
 }
 
@@ -161,6 +165,7 @@ impl App {
             Screen::Rikai(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Assessment(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::ProfileSetup(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::Onboarding(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Placeholder(s) => s.render(f, inner, &self.theme),
         }
     }
@@ -183,6 +188,7 @@ impl App {
                 Screen::Rikai(s) => s.handle(code, mods, &ctx),
                 Screen::Assessment(s) => s.handle(code, mods, &ctx),
                 Screen::ProfileSetup(s) => s.handle(code, mods, &ctx),
+                Screen::Onboarding(s) => s.handle(code, mods, &ctx),
                 Screen::Placeholder(s) => s.handle(code, mods, &ctx),
             }
         };
@@ -202,17 +208,28 @@ impl App {
                 Flow::Continue
             }
             Transition::ReloadRoot => {
-                self.profile_id = resolve_profile(&self.store).ok().flatten().map(|p| p.id);
-                let summary =
-                    Summary::build(&self.store, &self.course, self.profile_id).unwrap_or_default();
-                self.stack = vec![Screen::Menu(Box::new(Menu::new(
-                    self.msgs,
-                    summary,
-                    self.version.clone(),
-                )))];
+                self.reload_root();
+                Flow::Continue
+            }
+            Transition::StartOnboarding => {
+                self.reload_root();
+                self.stack
+                    .push(Screen::Onboarding(Onboarding::new(self.profile_id)));
                 Flow::Continue
             }
         }
+    }
+
+    /// Re-resolves the active profile and resets the stack to just the menu.
+    fn reload_root(&mut self) {
+        self.profile_id = resolve_profile(&self.store).ok().flatten().map(|p| p.id);
+        let summary =
+            Summary::build(&self.store, &self.course, self.profile_id).unwrap_or_default();
+        self.stack = vec![Screen::Menu(Box::new(Menu::new(
+            self.msgs,
+            summary,
+            self.version.clone(),
+        )))];
     }
 
     /// Builds the screen for a destination, reading its data from the shared
