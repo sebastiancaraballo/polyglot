@@ -7,12 +7,12 @@
 
 use polyglot_core::content::Course;
 use polyglot_core::i18n::Messages;
-use polyglot_core::model::Profile;
+use polyglot_core::model::{Card, Profile};
+use polyglot_core::review::{self, Item, Strand};
 use polyglot_core::storage::{SqliteStore, StorageError};
+use polyglot_core::study::Decoder;
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::Frame;
-
-use polyglot_core::review;
 
 use crate::frame::draw_frame;
 use crate::screens::assessment::Assessment;
@@ -229,16 +229,21 @@ impl App {
                 &self.course,
                 self.profile_id,
             ))),
-            Dest::Flashcards => Screen::Flashcards(Box::new(Flashcards::new(
-                &self.store,
-                self.profile_id,
-                &review::vocab_items(&self.course.lessons),
-                self.msgs.flash_title.clone(),
-                self.show_romaji(),
-            ))),
+            Dest::Flashcards => {
+                let items =
+                    decodable_items(review::vocab_items(&self.course.lessons), &self.decoder());
+                Screen::Flashcards(Box::new(Flashcards::new(
+                    &self.store,
+                    self.profile_id,
+                    &items,
+                    self.msgs.flash_title.clone(),
+                    self.show_romaji(),
+                )))
+            }
             Dest::Review => {
                 let mut items = review::vocab_items(&self.course.lessons);
                 items.extend(review::kana_items(&self.course.kana));
+                let items = decodable_items(items, &self.decoder());
                 Screen::Flashcards(Box::new(Flashcards::new(
                     &self.store,
                     self.profile_id,
@@ -248,12 +253,13 @@ impl App {
                 )))
             }
             Dest::Quiz => {
-                let cards: Vec<_> = self
+                let cards: Vec<Card> = self
                     .course
                     .lessons
                     .iter()
                     .flat_map(|l| l.cards.iter().cloned())
                     .collect();
+                let cards = decodable_cards(cards, &self.decoder());
                 Screen::Quiz(Box::new(Quiz::new(cards, self.show_romaji())))
             }
             Dest::Settings => Screen::Settings(Settings::new(self.show_romaji())),
@@ -274,6 +280,16 @@ impl App {
             )),
             Dest::ProfileSetup => Screen::ProfileSetup(ProfileSetup::new(false)),
         }
+    }
+
+    /// A decoder over the active profile's mastered kana, for the progressive
+    /// decodable-texts filter on reading activities.
+    fn decoder(&self) -> Decoder {
+        let progress = self
+            .profile_id
+            .and_then(|pid| self.store.get_kana_progress(pid).ok())
+            .unwrap_or_default();
+        Decoder::new(&self.course.kana, &progress)
     }
 
     /// The active profile's romaji preference (default on when unknown).
@@ -297,6 +313,20 @@ impl App {
             )));
         }
     }
+}
+
+/// Keeps every non-vocabulary item (e.g. kana) and only the vocab items the
+/// learner can already read (decodable-texts approach).
+fn decodable_items(items: Vec<Item>, dec: &Decoder) -> Vec<Item> {
+    items
+        .into_iter()
+        .filter(|it| it.strand != Strand::Vocab || dec.decodable(&it.answer))
+        .collect()
+}
+
+/// Keeps only the cards the learner can already read.
+fn decodable_cards(cards: Vec<Card>, dec: &Decoder) -> Vec<Card> {
+    cards.into_iter().filter(|c| dec.decodable(&c.jp)).collect()
 }
 
 /// Returns the persisted active profile, the first existing profile, or `None`

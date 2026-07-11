@@ -71,8 +71,17 @@ impl Summary {
         let stats = store.get_stats(pid)?;
         let learned = store.count_learned_cards(pid)?;
 
+        // Reading is locked only while nothing is decodable yet; once the learner
+        // can read at least one word, the reading activities open and show the
+        // growing decodable subset (matches the Go menu's gate).
         let kana_progress = store.get_kana_progress(pid)?;
-        let gate = study::new_gate(&course.kana, &kana_progress);
+        let decoder = study::Decoder::new(&course.kana, &kana_progress);
+        let readable = course
+            .lessons
+            .iter()
+            .flat_map(|l| &l.cards)
+            .filter(|c| decoder.decodable(&c.jp))
+            .count();
 
         let card_states = store.get_card_states(pid)?;
         let known: HashSet<String> = card_states
@@ -99,7 +108,7 @@ impl Summary {
             streak: stats.streak,
             learned,
             total,
-            reading_locked: !gate.reading_unlocked(),
+            reading_locked: readable == 0,
             rikai_locked,
             assessment_locked: !all_mastered,
             assessment_passed,
