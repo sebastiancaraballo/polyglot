@@ -22,6 +22,7 @@ use crate::screens::menu::{Menu, Summary};
 use crate::screens::placeholder::Placeholder;
 use crate::screens::profiles::Profiles;
 use crate::screens::quiz::Quiz;
+use crate::screens::rikai::Rikai;
 use crate::screens::settings::Settings;
 use crate::screens::stats::Stats;
 use crate::theme::Theme;
@@ -97,6 +98,7 @@ enum Screen {
     Quiz(Box<Quiz>),
     Settings(Settings),
     Profiles(Box<Profiles>),
+    Rikai(Box<Rikai>),
     Placeholder(Placeholder),
 }
 
@@ -147,6 +149,7 @@ impl App {
             Screen::Quiz(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Settings(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Profiles(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::Rikai(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Placeholder(s) => s.render(f, inner, &self.theme),
         }
     }
@@ -166,6 +169,7 @@ impl App {
                 Screen::Quiz(s) => s.handle(code, mods, &ctx),
                 Screen::Settings(s) => s.handle(code, mods, &ctx),
                 Screen::Profiles(s) => s.handle(code, mods, &ctx),
+                Screen::Rikai(s) => s.handle(code, mods, &ctx),
                 Screen::Placeholder(s) => s.handle(code, mods, &ctx),
             }
         };
@@ -240,6 +244,10 @@ impl App {
             Dest::Profiles => {
                 Screen::Profiles(Box::new(Profiles::new(&self.store, self.profile_id)))
             }
+            Dest::Rikai => Screen::Rikai(Box::new(
+                Rikai::new(&self.store, &self.course, self.profile_id)
+                    .with_romaji(self.show_romaji()),
+            )),
             other => Screen::Placeholder(Placeholder::new(other)),
         }
     }

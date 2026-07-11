@@ -7,5 +7,6 @@ pub mod menu;
 pub mod placeholder;
 pub mod profiles;
 pub mod quiz;
+pub mod rikai;
 pub mod settings;
 pub mod stats;
