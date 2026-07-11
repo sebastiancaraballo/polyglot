@@ -16,11 +16,11 @@ expression: "snapshot(|f, inner, theme| m.render(f, inner, theme, msgs()))"
         │   ⠀⣠⣾⣿⣿⣶⣶⣄⣀⣀⡰⠿⠉⠑⢄⠀                                           │
         │   ⠰⣷⣿⣿⣿⣿⣿⣿⡛⠩⠀⠀⠀⠀⠈⠆       ★ XP: 42                            │
         │   ⡏⣿⣿⣿⣿⣿⢿⠛⡄⠀⠀⠀⠀⠀⠀⢸       ▲ Racha: 3 días                     │
-        │   ⡇⠏⠹⣿⠿⢿⠈⠈⠁⠀⠀⠀⠀⠀⠀⢸       5/100 tarjetas aprendidas           │
-        │   ⠰⡀⠀⡜⠀⠐⡄⠀⠀⠀⠀⠀⠀⠀⢀⠆                                           │
-        │   ⠀⠑⢄⠀⠹⠑⠀⠠⠤⠀⠀⢀⠀⡠⠊⠀       ▸ あ   Entrenador de Kana            │
-        │   ⠀⠀⠀⠑⠢⠶⣿⣷⣾⣦⠠⠔⠊⠀⠀⠀         ⊘  Flashcards                     │
-        │                            ⊘  Rikai (gramática)              │
+        │   ⡇⠏⠹⣿⠿⢿⠈⠈⠁⠀⠀⠀⠀⠀⠀⢸                                           │
+        │   ⠰⡀⠀⡜⠀⠐⡄⠀⠀⠀⠀⠀⠀⠀⢀⠆       ▸ あ   Entrenador de Kana            │
+        │   ⠀⠑⢄⠀⠹⠑⠀⠠⠤⠀⠀⢀⠀⡠⠊⠀         ⊘  Flashcards                     │
+        │   ⠀⠀⠀⠑⠢⠶⣿⣷⣾⣦⠠⠔⠊⠀⠀⠀         ⊘  Rikai (gramática)              │
+        │                                                              │
         │                                                              │
         │                                                              │
         │                                                              │

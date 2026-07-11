@@ -36,7 +36,11 @@ pub struct Summary {
     pub name: String,
     pub xp: i64,
     pub streak: i64,
+    // Computed for parity with the Go `Summary`, but not shown in the menu
+    // (the learned/total figure lives on the stats screen).
+    #[allow(dead_code)]
     pub learned: i64,
+    #[allow(dead_code)]
     pub total: i64,
     pub reading_locked: bool,
     pub rikai_locked: bool,
@@ -455,13 +459,8 @@ impl Menu {
             ),
             theme.subtle,
         ));
-        lines.push(Line::styled(
-            format!(
-                "{}/{} {}",
-                self.summary.learned, self.summary.total, msgs.learned_suffix
-            ),
-            theme.subtle,
-        ));
+        // The menu header shows XP and streak only; the learned/total figure
+        // lives on the stats screen (matching the Go menu).
         lines.push(Line::raw(""));
 
         if self.section == TOP_LEVEL {
