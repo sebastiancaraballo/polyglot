@@ -19,7 +19,7 @@ use crate::theme::Theme;
 /// The gojūon column order.
 const VOWELS: [&str; 5] = ["a", "i", "u", "e", "o"];
 /// Fixed display width of every column, so columns align across pages.
-const COL_WIDTH: usize = 12;
+const COL_WIDTH: usize = 10;
 
 struct Page {
     title: String,
@@ -103,7 +103,7 @@ impl KanaChart {
             ),
             Line::raw(""),
         ];
-        lines.extend(grid_lines(&page.items, theme));
+        lines.extend(grid_lines(&page.items, theme, inner.width));
 
         let body = Rect {
             height: inner.height.saturating_sub(1),
@@ -179,22 +179,27 @@ fn gojuon_rows(items: &[KanaItem]) -> ([bool; 5], Vec<[Option<KanaItem>; 5]>) {
     (present, rows)
 }
 
-fn grid_lines<'a>(items: &[KanaItem], theme: &Theme) -> Vec<Line<'a>> {
+fn grid_lines<'a>(items: &[KanaItem], theme: &Theme, width: u16) -> Vec<Line<'a>> {
     if items.is_empty() {
         return Vec::new();
     }
     let (present, rows) = gojuon_rows(items);
 
+    // Center the whole grid by a uniform left pad, so the five columns stay
+    // aligned across rows while the block sits centered in the frame.
+    let grid_w = VOWELS.len() * COL_WIDTH;
+    let lead = " ".repeat((width as usize).saturating_sub(grid_w) / 2);
+
     let mut lines = Vec::new();
     // Header row of vowels in the used columns.
-    let mut header = String::new();
+    let mut header = lead.clone();
     for (i, v) in VOWELS.iter().enumerate() {
         header.push_str(&pad(if present[i] { v } else { "" }, COL_WIDTH));
     }
     lines.push(Line::styled(header, theme.subtle));
 
     for row in &rows {
-        let mut cells = String::new();
+        let mut cells = lead.clone();
         for cell in row {
             let text = match cell {
                 Some(it) => format!("{} {}", it.char, it.romaji),

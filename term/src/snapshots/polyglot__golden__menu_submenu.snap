@@ -7,6 +7,8 @@ expression: "snapshot(|f, inner, theme| m.render(f, inner, theme, msgs()))"
 
         ╭──────────────────────────────────────────────────────────────╮
         │                                                              │
+        │                                                              │
+        │                                                              │
         │   ██████ ██████ ██     ██  ██ ██████ ██     ██████ ██████    │
         │   ██  ██ ██  ██ ██      ████  ██     ██     ██  ██   ██      │
         │   ██████ ██  ██ ██       ██   ██ ███ ██     ██  ██   ██      │
@@ -20,8 +22,6 @@ expression: "snapshot(|f, inner, theme| m.render(f, inner, theme, msgs()))"
         │   ⠰⡀⠀⡜⠀⠐⡄⠀⠀⠀⠀⠀⠀⠀⢀⠆       ▸ あ   Entrenador de Kana            │
         │   ⠀⠑⢄⠀⠹⠑⠀⠠⠤⠀⠀⢀⠀⡠⠊⠀         ⊘  Flashcards                     │
         │   ⠀⠀⠀⠑⠢⠶⣿⣷⣾⣦⠠⠔⠊⠀⠀⠀         ⊘  Rikai (gramática)              │
-        │                                                              │
-        │                                                              │
         │                                                              │
         │                                                              │
         │                                                              │

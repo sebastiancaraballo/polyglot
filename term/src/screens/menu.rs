@@ -182,6 +182,9 @@ pub struct Menu {
 /// ~25s at a 160ms tick.
 const REST_HOLD: usize = 156;
 
+/// Display height of a globe frame (braille rows).
+const GLOBE_HEIGHT: u16 = 8;
+
 impl Menu {
     pub fn new(msgs: &Messages, summary: Summary, version: String) -> Menu {
         let assessment_label = if summary.assessment_passed {
@@ -391,29 +394,48 @@ impl Menu {
         };
 
         // Reserve the bottom row for the help/notice line.
-        let [content, help_area] =
+        let [area, help_area] =
             Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).areas(inner);
 
         // Show the block wordmark when it fits horizontally and leaves room for
         // the globe/info columns below it; otherwise the info column keeps the
         // plain-text title (the Go fallback).
-        let show_wordmark = inner.width >= 55 && content.height >= 13;
+        let show_wordmark = area.width >= 55 && area.height >= 13;
+        let show_globe = area.width >= 44;
+        let info = self.info_lines(theme, msgs, show_wordmark);
+
+        // Measure the header block so it can be centered vertically in the frame
+        // (matching the Go menu, which centers its content rather than anchoring
+        // it to the top).
+        let cols_h = if show_globe {
+            (info.len() as u16).max(GLOBE_HEIGHT)
+        } else {
+            info.len() as u16
+        };
+        let wm_h = if show_wordmark { 5 } else { 0 }; // 4 rows + 1 gap
+        let block_h = (wm_h + cols_h).min(area.height);
+        let top_pad = area.height.saturating_sub(block_h) / 2;
+        let block = Rect {
+            y: area.y + top_pad,
+            height: block_h,
+            ..area
+        };
+
         let cols = if show_wordmark {
             let [wm, _gap, rest] = Layout::vertical([
                 Constraint::Length(4),
                 Constraint::Length(1),
                 Constraint::Min(0),
             ])
-            .areas(content);
+            .areas(block);
             f.render_widget(Paragraph::new(art::WORDMARK).style(theme.title), wm);
             rest
         } else {
-            content
+            block
         };
 
-        let info = self.info_lines(theme, msgs, show_wordmark);
         // Draw the rotating globe beside the info column when there is room.
-        if cols.width >= 44 {
+        if show_globe {
             let [globe, _gap, info_area] = Layout::horizontal([
                 Constraint::Length(16),
                 Constraint::Length(7),
