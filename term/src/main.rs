@@ -1,8 +1,7 @@
 //! Polyglot terminal frontend (ratatui).
 //!
 //! Wires storage + content + the ratatui router, mirroring the Go
-//! `cmd/polyglot` + `internal/app`. During the TUI port the menu, stats, and
-//! kana chart are real; other destinations render a placeholder.
+//! `cmd/polyglot` + `internal/app`.
 
 mod app;
 mod art;
@@ -12,6 +11,7 @@ mod textfmt;
 mod theme;
 
 use std::error::Error;
+use std::path::PathBuf;
 
 use polyglot_core::content::{self};
 use polyglot_core::i18n;
@@ -29,7 +29,12 @@ fn main() {
 
 fn real_main() -> Result<(), Box<dyn Error>> {
     let course = content::load_embedded(content::DEFAULT_PAIR)?;
-    let db_path = polyglot_core::storage::default_path()?;
+    // `POLYGLOT_DB` overrides the database location — useful for trying the app
+    // against a throwaway database without touching the real profile data.
+    let db_path = match std::env::var_os("POLYGLOT_DB") {
+        Some(p) => PathBuf::from(p),
+        None => polyglot_core::storage::default_path()?,
+    };
     let store = SqliteStore::open(&db_path)?;
 
     let app = App::new(
