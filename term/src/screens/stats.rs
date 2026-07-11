@@ -10,7 +10,7 @@ use polyglot_core::storage::SqliteStore;
 use ratatui::crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::layout::Rect;
 use ratatui::text::Line;
-use ratatui::widgets::Paragraph;
+use ratatui::widgets::{Paragraph, Wrap};
 use ratatui::Frame;
 
 use crate::app::Transition;
@@ -123,7 +123,7 @@ impl Stats {
             height: 1,
             ..inner
         };
-        f.render_widget(Paragraph::new(lines), body);
+        f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), body);
         f.render_widget(
             Paragraph::new(Line::styled(msgs.back_help.clone(), theme.help)),
             help_area,

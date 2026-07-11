@@ -618,4 +618,35 @@ mod tests {
         assert!(matches!(t, Transition::Stay));
         assert!(!menu.notice.is_empty(), "a locked item sets the notice");
     }
+
+    #[test]
+    fn reading_gate_opens_once_something_is_decodable() {
+        use polyglot_core::model::KanaProgress;
+        let store = polyglot_core::storage::SqliteStore::open_in_memory().unwrap();
+        let course = polyglot_core::content::load_embedded("es-ja").unwrap();
+        let p = store.create_profile("A").unwrap();
+
+        // Fresh profile: nothing is decodable yet, so reading is locked.
+        let s = Summary::build(&store, &course, Some(p.id)).unwrap();
+        assert!(s.reading_locked, "reading locked while nothing decodable");
+
+        // Master every kana: words become decodable and reading unlocks.
+        for k in &course.kana {
+            store
+                .save_kana_progress(
+                    p.id,
+                    &KanaProgress {
+                        char: k.char.clone(),
+                        mastered: true,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+        }
+        let s = Summary::build(&store, &course, Some(p.id)).unwrap();
+        assert!(
+            !s.reading_locked,
+            "reading unlocks once a word is decodable"
+        );
+    }
 }

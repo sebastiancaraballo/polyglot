@@ -930,3 +930,34 @@ fn empty_chapter() -> Chapter {
 fn is_confirm(code: KeyCode) -> bool {
     matches!(code, KeyCode::Enter | KeyCode::Char(' '))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::Ctx;
+    use polyglot_core::content;
+    use polyglot_core::storage::SqliteStore;
+
+    #[test]
+    fn picker_starts_the_first_chapter() {
+        let store = SqliteStore::open_in_memory().unwrap();
+        let course = content::load_embedded("es-ja").unwrap();
+        let pid = store.create_profile("A").unwrap().id;
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut s = Story::new(&store, &course, Some(pid));
+        assert!(s.picking);
+        assert!(!s.entries.is_empty(), "the course ships story chapters");
+        assert!(!s.entries[0].locked, "the first chapter is always open");
+        assert!(
+            s.entries[1..].iter().all(|e| e.locked),
+            "later chapters gated"
+        );
+
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // start chapter 0
+        assert!(!s.picking, "a chapter was started");
+        assert!(!s.chapter.beats.is_empty());
+    }
+}

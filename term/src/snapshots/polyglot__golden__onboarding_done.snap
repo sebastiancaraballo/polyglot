@@ -1,0 +1,30 @@
+---
+source: term/src/golden.rs
+expression: "snapshot(|f, inner, theme| o.render(f, inner, theme, msgs()))"
+---
+
+
+
+        ╭──────────────────────────────────────────────────────────────╮
+        │                                                              │
+        │   ¡Todo listo!                                               │
+        │                                                              │
+        │   Te recomiendo empezar por el Entrenador de Kana.           │
+        │                                                              │
+        │   ENTER  ir al menú principal                                │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        ╰──────────────────────────────────────────────────────────────╯

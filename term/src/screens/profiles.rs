@@ -9,7 +9,7 @@ use polyglot_core::storage::SqliteStore;
 use ratatui::crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::layout::Rect;
 use ratatui::text::Line;
-use ratatui::widgets::Paragraph;
+use ratatui::widgets::{Paragraph, Wrap};
 use ratatui::Frame;
 
 use crate::app::{Ctx, Dest, Transition};
@@ -102,7 +102,7 @@ impl Profiles {
         lines.push(Line::raw(""));
         lines.push(Line::styled(msgs.profiles_help.clone(), theme.help));
 
-        f.render_widget(Paragraph::new(lines), inner);
+        f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);
     }
 
     fn profile_line(&self, p: &Profile, msgs: &Messages) -> String {

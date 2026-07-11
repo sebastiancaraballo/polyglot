@@ -9,7 +9,7 @@ use polyglot_core::i18n::Messages;
 use ratatui::crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::layout::Rect;
 use ratatui::text::Line;
-use ratatui::widgets::Paragraph;
+use ratatui::widgets::{Paragraph, Wrap};
 use ratatui::Frame;
 
 use crate::app::{Ctx, Transition};
@@ -156,7 +156,7 @@ impl Settings {
         } else {
             self.list_lines(theme, msgs)
         };
-        f.render_widget(Paragraph::new(lines), inner);
+        f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);
     }
 
     fn list_lines<'a>(&self, theme: &Theme, msgs: &Messages) -> Vec<Line<'a>> {

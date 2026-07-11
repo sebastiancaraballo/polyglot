@@ -1,0 +1,30 @@
+---
+source: term/src/golden.rs
+expression: "snapshot(|f, inner, theme| p.render(f, inner, theme, msgs()))"
+---
+
+
+
+        ╭──────────────────────────────────────────────────────────────╮
+        │                                                              │
+        │   Perfiles                                                   │
+        │                                                              │
+        │   ▸ Yui  ● actual                                            │
+        │     ＋  Crear nuevo perfil                                    │
+        │                                                              │
+        │   ↑/↓ mover · ENTER elegir · ESC menú                        │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        ╰──────────────────────────────────────────────────────────────╯

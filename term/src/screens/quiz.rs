@@ -294,3 +294,49 @@ impl Quiz {
 fn is_confirm(code: KeyCode) -> bool {
     matches!(code, KeyCode::Enter | KeyCode::Char(' '))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::Ctx;
+    use polyglot_core::storage::SqliteStore;
+
+    fn card(jp: &str) -> Card {
+        Card {
+            id: jp.to_string(),
+            source: format!("gloss-{jp}"),
+            jp: jp.to_string(),
+            romaji: String::new(),
+            notes: String::new(),
+            jlpt: None,
+            functions: Vec::new(),
+            freq: 0,
+        }
+    }
+
+    #[test]
+    fn answering_correctly_scores_and_advances() {
+        let store = SqliteStore::open_in_memory().unwrap();
+        let pid = store.create_profile("A").unwrap().id;
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let cards = ["みず", "ひ", "て", "き", "こ"].map(card).to_vec();
+        let mut q = Quiz::new(cards, false);
+        assert!(!q.finished());
+
+        // Press the key of the correct option; it reveals and scores.
+        let key = (b'1' + q.correct as u8) as char;
+        q.handle(KeyCode::Char(key), KeyModifiers::NONE, &ctx);
+        assert!(q.answered);
+        assert_eq!(q.score, 1);
+
+        // Confirm advances to the next question.
+        q.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert_eq!(q.index, 1);
+        assert!(!q.answered);
+        // The graded card was persisted as a review.
+        assert_eq!(store.count_learned_cards(pid).unwrap(), 1);
+    }
+}

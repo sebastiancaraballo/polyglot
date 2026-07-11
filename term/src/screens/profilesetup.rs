@@ -10,7 +10,7 @@ use polyglot_core::model::{self, NameError, MAX_NAME_LEN};
 use ratatui::crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::layout::Rect;
 use ratatui::text::Line;
-use ratatui::widgets::Paragraph;
+use ratatui::widgets::{Paragraph, Wrap};
 use ratatui::Frame;
 
 use crate::app::{Ctx, Transition};
@@ -114,7 +114,7 @@ impl ProfileSetup {
         };
         lines.push(Line::styled(help, theme.help));
 
-        f.render_widget(Paragraph::new(lines), inner);
+        f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);
     }
 
     fn validation_text(&self, msgs: &Messages) -> Option<String> {

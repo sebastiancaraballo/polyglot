@@ -1,0 +1,30 @@
+---
+source: term/src/golden.rs
+expression: "snapshot(|f, inner, theme| s.render(f, inner, theme, msgs()))"
+---
+
+
+
+        ╭──────────────────────────────────────────────────────────────╮
+        │                                                              │
+        │   Borrar mi perfil                                           │
+        │                                                              │
+        │   Esto borra solo el perfil actual y su progreso. No se      │
+        │   puede deshacer.                                            │
+        │                                                              │
+        │   ▸ Cancelar                                                 │
+        │     Sí, borrar mi perfil                                     │
+        │                                                              │
+        │   ↑/↓ elegir · ENTER confirmar · ESC cancelar                │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        ╰──────────────────────────────────────────────────────────────╯

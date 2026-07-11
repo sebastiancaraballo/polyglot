@@ -10,6 +10,11 @@ mod screens;
 mod textfmt;
 mod theme;
 
+#[cfg(test)]
+mod golden;
+#[cfg(test)]
+mod testutil;
+
 use std::error::Error;
 use std::path::PathBuf;
 

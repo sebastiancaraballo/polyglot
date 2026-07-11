@@ -1,0 +1,30 @@
+---
+source: term/src/golden.rs
+expression: "snapshot(|f, inner, theme| s.render(f, inner, theme, msgs()))"
+---
+
+
+
+        ╭──────────────────────────────────────────────────────────────╮
+        │                                                              │
+        │   Crea tu perfil                                             │
+        │                                                              │
+        │   ¿Cómo te llamas?                                           │
+        │                                                              │
+        │   > Tu nombre                                                │
+        │                                                              │
+        │   Escribe tu nombre · ENTER crear perfil                     │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        ╰──────────────────────────────────────────────────────────────╯

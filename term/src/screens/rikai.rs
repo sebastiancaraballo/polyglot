@@ -459,3 +459,24 @@ fn placeholder_pattern() -> Pattern {
 fn is_confirm(code: KeyCode) -> bool {
     matches!(code, KeyCode::Enter | KeyCode::Char(' '))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use polyglot_core::content;
+    use polyglot_core::storage::SqliteStore;
+
+    #[test]
+    fn patterns_locked_without_known_vocab() {
+        let store = SqliteStore::open_in_memory().unwrap();
+        let course = content::load_embedded("es-ja").unwrap();
+        let pid = store.create_profile("A").unwrap().id;
+        let r = Rikai::new(&store, &course, Some(pid));
+        assert!(r.picking);
+        assert!(!r.entries.is_empty(), "the course ships grammar patterns");
+        assert!(
+            r.entries.iter().all(|(_, locked)| *locked),
+            "every pattern is locked until its filler vocab is known"
+        );
+    }
+}

@@ -528,3 +528,38 @@ fn missed_line(q: &AssessQuestion, show_romaji: bool) -> String {
 fn is_confirm(code: KeyCode) -> bool {
     matches!(code, KeyCode::Enter | KeyCode::Char(' '))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::Ctx;
+    use polyglot_core::content;
+    use polyglot_core::storage::SqliteStore;
+
+    #[test]
+    fn intro_then_answer_a_question() {
+        let store = SqliteStore::open_in_memory().unwrap();
+        let course = content::load_embedded("es-ja").unwrap();
+        let pid = store.create_profile("A").unwrap().id;
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut a = Assessment::new(&store, &course, Some(pid));
+        assert!(a.phase == Phase::Intro);
+        assert!(!a.deck.is_empty(), "N5 content yields an assessment deck");
+
+        a.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // intro -> questions
+        assert!(a.phase == Phase::Question);
+
+        // Answer the current question correctly; it reveals.
+        let correct = a.deck[a.index].correct;
+        a.handle(
+            KeyCode::Char((b'1' + correct as u8) as char),
+            KeyModifiers::NONE,
+            &ctx,
+        );
+        assert!(a.answered);
+        assert_eq!(a.correct_count, 1);
+    }
+}

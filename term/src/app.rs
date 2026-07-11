@@ -376,3 +376,52 @@ pub fn run(mut app: App) -> std::io::Result<()> {
     ratatui::restore();
     result
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn vocab(answer: &str) -> Item {
+        Item {
+            card_id: answer.to_string(),
+            strand: Strand::Vocab,
+            prompt: String::new(),
+            answer: answer.to_string(),
+            secondary: String::new(),
+            notes: String::new(),
+            freq: 0,
+        }
+    }
+
+    #[test]
+    fn decodable_filter_drops_unreadable_vocab_keeps_kana() {
+        // A decoder with nothing mastered can read no vocabulary.
+        let dec = Decoder::new(&[], &HashMap::new());
+        let items = vec![
+            vocab("みず"), // not decodable yet
+            Item {
+                strand: Strand::Kana,
+                ..vocab("あ")
+            },
+        ];
+        let out = decodable_items(items, &dec);
+        assert_eq!(out.len(), 1, "kana kept, unreadable vocab dropped");
+        assert_eq!(out[0].strand, Strand::Kana);
+
+        let cards = vec![Card {
+            id: "c".to_string(),
+            source: String::new(),
+            jp: "みず".to_string(),
+            romaji: String::new(),
+            notes: String::new(),
+            jlpt: None,
+            functions: Vec::new(),
+            freq: 0,
+        }];
+        assert!(
+            decodable_cards(cards, &dec).is_empty(),
+            "unreadable card dropped"
+        );
+    }
+}
