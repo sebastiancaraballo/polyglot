@@ -7,6 +7,7 @@
 mod app;
 mod frame;
 mod screens;
+mod textfmt;
 mod theme;
 
 use std::error::Error;

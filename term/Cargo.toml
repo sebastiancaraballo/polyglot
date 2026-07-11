@@ -12,5 +12,6 @@ path = "src/main.rs"
 
 [dependencies]
 polyglot-core = { path = "../core" }
+chrono.workspace = true
 rand = "0.8"
 ratatui = "0.29"

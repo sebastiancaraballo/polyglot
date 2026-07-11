@@ -566,6 +566,7 @@ dependencies = [
 name = "polyglot-term"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "polyglot-core",
  "rand",
  "ratatui",

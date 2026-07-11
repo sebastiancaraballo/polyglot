@@ -12,11 +12,15 @@ use polyglot_core::storage::{SqliteStore, StorageError};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::Frame;
 
+use polyglot_core::review;
+
 use crate::frame::draw_frame;
+use crate::screens::flashcards::Flashcards;
 use crate::screens::kana::KanaTrainer;
 use crate::screens::kanachart::KanaChart;
 use crate::screens::menu::{Menu, Summary};
 use crate::screens::placeholder::Placeholder;
+use crate::screens::quiz::Quiz;
 use crate::screens::stats::Stats;
 use crate::theme::Theme;
 
@@ -82,6 +86,8 @@ enum Screen {
     Stats(Stats),
     KanaChart(Box<KanaChart>),
     Kana(Box<KanaTrainer>),
+    Flashcards(Box<Flashcards>),
+    Quiz(Box<Quiz>),
     Placeholder(Placeholder),
 }
 
@@ -128,6 +134,8 @@ impl App {
             Screen::Stats(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::KanaChart(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Kana(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::Flashcards(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::Quiz(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Placeholder(s) => s.render(f, inner, &self.theme),
         }
     }
@@ -143,6 +151,8 @@ impl App {
                 Screen::Stats(s) => s.handle(code, mods, &ctx),
                 Screen::KanaChart(s) => s.handle(code, mods, &ctx),
                 Screen::Kana(s) => s.handle(code, mods, &ctx),
+                Screen::Flashcards(s) => s.handle(code, mods, &ctx),
+                Screen::Quiz(s) => s.handle(code, mods, &ctx),
                 Screen::Placeholder(s) => s.handle(code, mods, &ctx),
             }
         };
@@ -175,8 +185,42 @@ impl App {
                 &self.course,
                 self.profile_id,
             ))),
+            Dest::Flashcards => Screen::Flashcards(Box::new(Flashcards::new(
+                &self.store,
+                self.profile_id,
+                &review::vocab_items(&self.course.lessons),
+                self.msgs.flash_title.clone(),
+                self.show_romaji(),
+            ))),
+            Dest::Review => {
+                let mut items = review::vocab_items(&self.course.lessons);
+                items.extend(review::kana_items(&self.course.kana));
+                Screen::Flashcards(Box::new(Flashcards::new(
+                    &self.store,
+                    self.profile_id,
+                    &items,
+                    self.msgs.review_screen_title.clone(),
+                    self.show_romaji(),
+                )))
+            }
+            Dest::Quiz => {
+                let cards: Vec<_> = self
+                    .course
+                    .lessons
+                    .iter()
+                    .flat_map(|l| l.cards.iter().cloned())
+                    .collect();
+                Screen::Quiz(Box::new(Quiz::new(cards, self.show_romaji())))
+            }
             other => Screen::Placeholder(Placeholder::new(other)),
         }
+    }
+
+    /// The active profile's romaji preference (default on when unknown).
+    fn show_romaji(&self) -> bool {
+        self.profile_id
+            .and_then(|id| self.store.get_profile(id).ok())
+            .is_none_or(|p| p.show_romaji)
     }
 
     /// Rebuilds the menu's progress summary after returning to it, so gating and
