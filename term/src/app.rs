@@ -21,6 +21,7 @@ use crate::screens::kanachart::KanaChart;
 use crate::screens::menu::{Menu, Summary};
 use crate::screens::placeholder::Placeholder;
 use crate::screens::quiz::Quiz;
+use crate::screens::settings::Settings;
 use crate::screens::stats::Stats;
 use crate::theme::Theme;
 
@@ -73,6 +74,9 @@ pub enum Transition {
     Quit,
     Push(Dest),
     Pop,
+    /// Re-resolve the active profile and rebuild the menu from scratch, after a
+    /// profile switch/create/delete or a data wipe.
+    ReloadRoot,
 }
 
 #[derive(PartialEq, Eq)]
@@ -88,6 +92,7 @@ enum Screen {
     Kana(Box<KanaTrainer>),
     Flashcards(Box<Flashcards>),
     Quiz(Box<Quiz>),
+    Settings(Settings),
     Placeholder(Placeholder),
 }
 
@@ -136,6 +141,7 @@ impl App {
             Screen::Kana(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Flashcards(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Quiz(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::Settings(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Placeholder(s) => s.render(f, inner, &self.theme),
         }
     }
@@ -153,6 +159,7 @@ impl App {
                 Screen::Kana(s) => s.handle(code, mods, &ctx),
                 Screen::Flashcards(s) => s.handle(code, mods, &ctx),
                 Screen::Quiz(s) => s.handle(code, mods, &ctx),
+                Screen::Settings(s) => s.handle(code, mods, &ctx),
                 Screen::Placeholder(s) => s.handle(code, mods, &ctx),
             }
         };
@@ -169,6 +176,17 @@ impl App {
                     self.stack.pop();
                 }
                 self.refresh_menu();
+                Flow::Continue
+            }
+            Transition::ReloadRoot => {
+                self.profile_id = resolve_profile(&self.store).ok().flatten().map(|p| p.id);
+                let summary =
+                    Summary::build(&self.store, &self.course, self.profile_id).unwrap_or_default();
+                self.stack = vec![Screen::Menu(Box::new(Menu::new(
+                    self.msgs,
+                    summary,
+                    self.version.clone(),
+                )))];
                 Flow::Continue
             }
         }
@@ -212,6 +230,7 @@ impl App {
                     .collect();
                 Screen::Quiz(Box::new(Quiz::new(cards, self.show_romaji())))
             }
+            Dest::Settings => Screen::Settings(Settings::new(self.show_romaji())),
             other => Screen::Placeholder(Placeholder::new(other)),
         }
     }
