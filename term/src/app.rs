@@ -20,6 +20,7 @@ use crate::screens::kana::KanaTrainer;
 use crate::screens::kanachart::KanaChart;
 use crate::screens::menu::{Menu, Summary};
 use crate::screens::placeholder::Placeholder;
+use crate::screens::profiles::Profiles;
 use crate::screens::quiz::Quiz;
 use crate::screens::settings::Settings;
 use crate::screens::stats::Stats;
@@ -42,6 +43,7 @@ pub enum Dest {
     Stats,
     Settings,
     Profiles,
+    ProfileSetup,
     KanaChart,
     Rikai,
     Story,
@@ -60,6 +62,7 @@ impl Dest {
             Dest::Stats => "Mis estadísticas",
             Dest::Settings => "Ajustes",
             Dest::Profiles => "Perfiles",
+            Dest::ProfileSetup => "Crea tu perfil",
             Dest::KanaChart => "Tabla de Kana",
             Dest::Rikai => "Rikai",
             Dest::Story => "Katsudoo",
@@ -93,6 +96,7 @@ enum Screen {
     Flashcards(Box<Flashcards>),
     Quiz(Box<Quiz>),
     Settings(Settings),
+    Profiles(Box<Profiles>),
     Placeholder(Placeholder),
 }
 
@@ -142,6 +146,7 @@ impl App {
             Screen::Flashcards(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Quiz(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Settings(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::Profiles(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Placeholder(s) => s.render(f, inner, &self.theme),
         }
     }
@@ -160,6 +165,7 @@ impl App {
                 Screen::Flashcards(s) => s.handle(code, mods, &ctx),
                 Screen::Quiz(s) => s.handle(code, mods, &ctx),
                 Screen::Settings(s) => s.handle(code, mods, &ctx),
+                Screen::Profiles(s) => s.handle(code, mods, &ctx),
                 Screen::Placeholder(s) => s.handle(code, mods, &ctx),
             }
         };
@@ -231,6 +237,9 @@ impl App {
                 Screen::Quiz(Box::new(Quiz::new(cards, self.show_romaji())))
             }
             Dest::Settings => Screen::Settings(Settings::new(self.show_romaji())),
+            Dest::Profiles => {
+                Screen::Profiles(Box::new(Profiles::new(&self.store, self.profile_id)))
+            }
             other => Screen::Placeholder(Placeholder::new(other)),
         }
     }
