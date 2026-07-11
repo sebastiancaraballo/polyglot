@@ -15,6 +15,7 @@ use ratatui::Frame;
 use polyglot_core::review;
 
 use crate::frame::draw_frame;
+use crate::screens::assessment::Assessment;
 use crate::screens::flashcards::Flashcards;
 use crate::screens::kana::KanaTrainer;
 use crate::screens::kanachart::KanaChart;
@@ -99,6 +100,7 @@ enum Screen {
     Settings(Settings),
     Profiles(Box<Profiles>),
     Rikai(Box<Rikai>),
+    Assessment(Box<Assessment>),
     Placeholder(Placeholder),
 }
 
@@ -150,6 +152,7 @@ impl App {
             Screen::Settings(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Profiles(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Rikai(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::Assessment(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Placeholder(s) => s.render(f, inner, &self.theme),
         }
     }
@@ -170,6 +173,7 @@ impl App {
                 Screen::Settings(s) => s.handle(code, mods, &ctx),
                 Screen::Profiles(s) => s.handle(code, mods, &ctx),
                 Screen::Rikai(s) => s.handle(code, mods, &ctx),
+                Screen::Assessment(s) => s.handle(code, mods, &ctx),
                 Screen::Placeholder(s) => s.handle(code, mods, &ctx),
             }
         };
@@ -246,6 +250,10 @@ impl App {
             }
             Dest::Rikai => Screen::Rikai(Box::new(
                 Rikai::new(&self.store, &self.course, self.profile_id)
+                    .with_romaji(self.show_romaji()),
+            )),
+            Dest::Assessment => Screen::Assessment(Box::new(
+                Assessment::new(&self.store, &self.course, self.profile_id)
                     .with_romaji(self.show_romaji()),
             )),
             other => Screen::Placeholder(Placeholder::new(other)),

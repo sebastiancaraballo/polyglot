@@ -1,5 +1,6 @@
 //! Terminal screens.
 
+pub mod assessment;
 pub mod flashcards;
 pub mod kana;
 pub mod kanachart;
