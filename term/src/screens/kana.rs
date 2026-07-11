@@ -501,26 +501,30 @@ fn is_confirm(code: KeyCode) -> bool {
     matches!(code, KeyCode::Enter | KeyCode::Char(' '))
 }
 
-/// Renders a stimulus as a small bordered focal tile, centered in `width`.
+/// Renders a stimulus as a large bordered focal tile, centered in `width`. A
+/// terminal cannot change the font size, so prominence comes from a wide border
+/// and generous padding (2 rows, 6 columns), mirroring the Go tile.
 fn big_tile(stimulus: &str, width: u16) -> Vec<String> {
-    let inner_w = display_width(stimulus) + 6; // padding around the glyph
-    let top = format!("╭{}╮", "─".repeat(inner_w));
-    let pad = inner_w.saturating_sub(display_width(stimulus)) / 2;
-    let mid = format!(
-        "│{}{}{}│",
-        " ".repeat(pad),
-        stimulus,
-        " ".repeat(inner_w - display_width(stimulus) - pad)
+    const PAD_H: usize = 6;
+    const PAD_V: usize = 2;
+    let sw = display_width(stimulus);
+    let inner_w = sw + PAD_H * 2;
+    let lead = " ".repeat((width as usize).saturating_sub(inner_w + 2) / 2);
+
+    let border = |l: &str, r: &str| format!("{lead}{l}{}{r}", "─".repeat(inner_w));
+    let blank = format!("{lead}│{}│", " ".repeat(inner_w));
+    let glyph = format!(
+        "{lead}│{}{stimulus}{}│",
+        " ".repeat(PAD_H),
+        " ".repeat(inner_w - sw - PAD_H)
     );
-    let bottom = format!("╰{}╯", "─".repeat(inner_w));
-    let box_w = inner_w + 2;
-    let lead = (width as usize).saturating_sub(box_w) / 2;
-    let indent = " ".repeat(lead);
-    vec![
-        format!("{indent}{top}"),
-        format!("{indent}{mid}"),
-        format!("{indent}{bottom}"),
-    ]
+
+    let mut rows = vec![border("╭", "╮")];
+    rows.extend(std::iter::repeat_n(blank.clone(), PAD_V));
+    rows.push(glyph);
+    rows.extend(std::iter::repeat_n(blank, PAD_V));
+    rows.push(border("╰", "╯"));
+    rows
 }
 
 fn display_width(s: &str) -> usize {
@@ -598,5 +602,16 @@ mod tests {
         // Progress for the current kana was persisted.
         let saved = store.get_kana_progress(pid).unwrap();
         assert!(!saved.is_empty(), "an answer persisted kana progress");
+    }
+
+    #[test]
+    fn big_tile_is_a_padded_centered_box() {
+        let rows = big_tile("あ", 40);
+        assert_eq!(rows.len(), 7, "top + 2 pad + glyph + 2 pad + bottom");
+        assert!(rows[0].contains('╭') && rows[0].contains('╮'));
+        assert!(rows[3].contains('あ'), "the glyph sits in the middle row");
+        assert!(rows[6].contains('╰') && rows[6].contains('╯'));
+        // Centered: the box is indented from the left edge.
+        assert!(rows[0].starts_with(' '));
     }
 }
