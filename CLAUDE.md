@@ -2,6 +2,22 @@
 
 Guidance for working in this repository. Read before making changes.
 
+## ⚠️ Rust rewrite in progress
+
+The project is being rewritten from Go to **Rust (language-agnostic core) +
+ratatui (terminal UI)** to enable a future universal/offline client (see the
+`#58` spike). The Rust work lives in a **Cargo workspace** — `core/` (engine) and
+`term/` (TUI) — alongside the **frozen Go implementation** (`cmd/`, `internal/`),
+which stays intact and untouched until the Rust client is verified end-to-end and
+the cutover is approved. Shared content (`content/`) is embedded by both.
+
+- Rust commands (run from the repo root): `cargo build`, `cargo test`,
+  `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all`,
+  `cargo run -p polyglot-term`.
+- The Rust core mirrors the Go `internal/*` packages faithfully (same test
+  cases). When changing behavior, change the Rust side; the Go side is frozen.
+- The Go workflow below still applies to the frozen Go tree until it is retired.
+
 ## Workflow checklist
 
 Follow this order for **every** change. The ★ steps are process steps that nothing

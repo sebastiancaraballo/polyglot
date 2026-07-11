@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Rewrite in progress: Rust core + ratatui TUI.** The language-agnostic engine
+  and the terminal client are being ported from Go to Rust, to enable a future
+  universal/offline client (a Rust core reused by native mobile/desktop UIs via
+  FFI). The work lives in a Cargo workspace (`core/` + `term/`) alongside the
+  frozen Go implementation, which stays intact until the Rust client is verified
+  end-to-end and the cutover is approved. Status:
+  - **Core (done, verified):** all engine packages ported with unit tests — SM-2
+    scheduler (`srs`), domain model, study logic (kana automaticity, decoding
+    gate, Rikai, challenge, assessment sampling), the YAML/Markdown content
+    loader + validators (embedding the real `es-ja` course via `include_dir`),
+    Spanish `i18n`, the third-party-asset `license` manifest (its generated
+    `NOTICE` matches the Go one byte-for-byte), SQLite storage via `rusqlite`
+    (bundled, no system dependency) with a `user_version` migration runner, and
+    the cross-curriculum spaced-repetition `review` queue.
+  - **TUI (done):** a ratatui event loop, screen-stack router, `NO_COLOR`/
+    high-contrast theme, fixed 64×23 frame, and all 13 screens (menu, kana
+    trainer, kana chart, flashcards, review, quiz, Rikai, Katsudoo story runner,
+    N5 assessment, stats, settings, profile switcher, profile setup, onboarding)
+    over the real core with progress persistence.
+  - **Deferred:** the animated braille globe and block wordmark (`art`) — the menu
+    uses its existing text fallback; and the final Go-code removal / primary
+    cutover, pending an end-to-end run and approval.
+
 ## [0.0.2] - 2026-07-09
 
 ### Added
