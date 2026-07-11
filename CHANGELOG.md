@@ -22,14 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `NOTICE` matches the Go one byte-for-byte), SQLite storage via `rusqlite`
     (bundled, no system dependency) with a `user_version` migration runner, and
     the cross-curriculum spaced-repetition `review` queue.
-  - **TUI (done):** a ratatui event loop, screen-stack router, `NO_COLOR`/
-    high-contrast theme, fixed 64×23 frame, and all 13 screens (menu, kana
+  - **TUI (done):** a ratatui event loop with idle-tick animation, screen-stack
+    router, `NO_COLOR`/high-contrast theme, fixed 64×23 frame, the animated
+    braille globe and block wordmark (`art`), and all 13 screens (menu, kana
     trainer, kana chart, flashcards, review, quiz, Rikai, Katsudoo story runner,
     N5 assessment, stats, settings, profile switcher, profile setup, onboarding)
     over the real core with progress persistence.
-  - **Deferred:** the animated braille globe and block wordmark (`art`) — the menu
-    uses its existing text fallback; and the final Go-code removal / primary
-    cutover, pending an end-to-end run and approval.
+  - **Deferred:** the final Go-code removal / primary cutover, pending an
+    end-to-end run and approval.
 
 ## [0.0.2] - 2026-07-09
 

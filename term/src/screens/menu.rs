@@ -1,9 +1,9 @@
 //! The main menu screen: grouped, drill-down navigation.
 //!
-//! Port of the Go `internal/screens/menu`. The animated header globe and block
-//! wordmark (from `internal/art`) are deferred to the art phase; this uses the
-//! plain-text title fallback the Go menu itself falls back to when the art does
-//! not fit.
+//! Port of the Go `internal/screens/menu`. Shows the block wordmark header and
+//! the rotating braille globe (from `crate::art`) beside the progress/info
+//! column, falling back to a plain-text title on frames too narrow or short to
+//! fit them — the same fallback the Go menu uses.
 
 use std::collections::HashSet;
 
@@ -13,12 +13,13 @@ use polyglot_core::model::Jlpt;
 use polyglot_core::storage::{SqliteStore, StorageError};
 use polyglot_core::study;
 use ratatui::crossterm::event::{KeyCode, KeyModifiers};
-use ratatui::layout::Rect;
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::text::Line;
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 
 use crate::app::{Dest, Transition};
+use crate::art;
 use crate::theme::Theme;
 
 /// Marks a menu item gated behind kana fluency. A non-color symbol (never relies
@@ -158,7 +159,15 @@ pub struct Menu {
     section: i32,
     cursor: i32,
     notice: String,
+    // Header globe animation.
+    animate: bool,
+    frame: usize,
+    holding: usize,
 }
+
+/// How many ticks the globe rests on frame 0 (facing Japan) between turns:
+/// ~25s at a 160ms tick.
+const REST_HOLD: usize = 156;
 
 impl Menu {
     pub fn new(msgs: &Messages, summary: Summary, version: String) -> Menu {
@@ -236,6 +245,27 @@ impl Menu {
             section: TOP_LEVEL,
             cursor: 1, // the profile switcher occupies cursor 0
             notice: String::new(),
+            // Honor reduced-motion: keep the globe static (resting on Japan) when
+            // color is disabled, which also keeps it readable.
+            animate: !crate::theme::no_color() && crate::art::GLOBE_FRAMES.len() > 1,
+            frame: 0,
+            holding: 0,
+        }
+    }
+
+    /// Advances the header globe one animation frame, pausing on the resting
+    /// frame (Japan) between full turns.
+    pub fn tick(&mut self) {
+        if !self.animate {
+            return;
+        }
+        if self.frame == 0 && self.holding < REST_HOLD {
+            self.holding += 1;
+            return;
+        }
+        self.frame = (self.frame + 1) % crate::art::GLOBE_FRAMES.len();
+        if self.frame == 0 {
+            self.holding = 0;
         }
     }
 
@@ -339,12 +369,71 @@ impl Menu {
     }
 
     pub fn render(&self, f: &mut Frame, inner: Rect, theme: &Theme, msgs: &Messages) {
+        let help = if !self.notice.is_empty() {
+            Line::styled(format!("{LOCK_GLYPH} {}", self.notice), theme.subtle)
+        } else if self.section == TOP_LEVEL {
+            Line::styled(msgs.menu_help.clone(), theme.help)
+        } else {
+            Line::styled(msgs.menu_help_sub.clone(), theme.help)
+        };
+
+        // Reserve the bottom row for the help/notice line.
+        let [content, help_area] =
+            Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).areas(inner);
+
+        // Show the block wordmark when it fits horizontally and leaves room for
+        // the globe/info columns below it; otherwise the info column keeps the
+        // plain-text title (the Go fallback).
+        let show_wordmark = inner.width >= 55 && content.height >= 13;
+        let cols = if show_wordmark {
+            let [wm, _gap, rest] = Layout::vertical([
+                Constraint::Length(4),
+                Constraint::Length(1),
+                Constraint::Min(0),
+            ])
+            .areas(content);
+            f.render_widget(Paragraph::new(art::WORDMARK).style(theme.title), wm);
+            rest
+        } else {
+            content
+        };
+
+        let info = self.info_lines(theme, msgs, show_wordmark);
+        // Draw the rotating globe beside the info column when there is room.
+        if cols.width >= 44 {
+            let [globe, _gap, info_area] = Layout::horizontal([
+                Constraint::Length(16),
+                Constraint::Length(7),
+                Constraint::Min(0),
+            ])
+            .areas(cols);
+            f.render_widget(
+                Paragraph::new(art::GLOBE_FRAMES[self.frame]).style(theme.accent),
+                globe,
+            );
+            f.render_widget(Paragraph::new(info), info_area);
+        } else {
+            f.render_widget(Paragraph::new(info), cols);
+        }
+        f.render_widget(Paragraph::new(help), help_area);
+    }
+
+    /// The info column: title/progress block plus the menu options. `show_name`
+    /// is false when the block wordmark already carries the app name.
+    fn info_lines<'a>(&self, theme: &Theme, msgs: &Messages, show_name: bool) -> Vec<Line<'a>> {
         let mut lines: Vec<Line> = Vec::new();
-        lines.push(Line::styled(
-            format!("{}  v{}", msgs.app_name, self.version),
-            theme.title,
-        ));
-        lines.push(Line::styled(msgs.tagline.clone(), theme.subtle));
+        if show_name {
+            lines.push(Line::styled(
+                format!("v{} · {}", self.version, msgs.tagline),
+                theme.subtle,
+            ));
+        } else {
+            lines.push(Line::styled(
+                format!("{}  v{}", msgs.app_name, self.version),
+                theme.title,
+            ));
+            lines.push(Line::styled(msgs.tagline.clone(), theme.subtle));
+        }
         lines.push(Line::raw(""));
         lines.push(Line::styled(
             format!("★ {}: {}", msgs.xp_label, self.summary.xp),
@@ -401,26 +490,7 @@ impl Menu {
             };
             lines.push(Line::styled(format!("{prefix}{icon}  {label}"), style));
         }
-
-        let help = if !self.notice.is_empty() {
-            Line::styled(format!("{LOCK_GLYPH} {}", self.notice), theme.subtle)
-        } else if self.section == TOP_LEVEL {
-            Line::styled(msgs.menu_help.clone(), theme.help)
-        } else {
-            Line::styled(msgs.menu_help_sub.clone(), theme.help)
-        };
-
-        let body = Rect {
-            height: inner.height.saturating_sub(1),
-            ..inner
-        };
-        let help_area = Rect {
-            y: inner.y + inner.height.saturating_sub(1),
-            height: 1,
-            ..inner
-        };
-        f.render_widget(Paragraph::new(lines), body);
-        f.render_widget(Paragraph::new(help), help_area);
+        lines
     }
 }
 
@@ -468,11 +538,32 @@ mod tests {
             .unwrap();
 
         let screen = flatten(&terminal);
-        assert!(screen.contains("Polyglot"), "shows the app name");
+        // At this width the block wordmark carries the app name.
+        assert!(screen.contains('█'), "shows the block wordmark");
         assert!(screen.contains("Aprender"), "shows the Aprender category");
         assert!(screen.contains("Evaluar"), "shows the Evaluar category");
         assert!(screen.contains("Yui"), "shows the profile name");
         assert!(screen.contains('★'), "shows the XP line");
+    }
+
+    #[test]
+    fn narrow_frame_falls_back_to_text_title() {
+        let msgs = polyglot_core::i18n::default();
+        let menu = Menu::new(msgs, Summary::default(), "0.1.0".to_string());
+        let theme = Theme::plain();
+        // A short terminal drops the wordmark; the info column keeps the name.
+        let backend = TestBackend::new(80, 12);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|f| {
+                let inner = draw_frame(f, &theme);
+                menu.render(f, inner, &theme, msgs);
+            })
+            .unwrap();
+        assert!(
+            flatten(&terminal).contains("Polyglot"),
+            "text title fallback"
+        );
     }
 
     fn ctx(store: &polyglot_core::storage::SqliteStore) -> crate::app::Ctx<'_> {

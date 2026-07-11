@@ -211,8 +211,15 @@ impl App {
         )))];
     }
 
+    /// Advances any running animation (the menu's header globe) on an idle tick.
+    fn tick(&mut self) {
+        if let Some(Screen::Menu(m)) = self.stack.last_mut() {
+            m.tick();
+        }
+    }
+
     /// Builds the screen for a destination, reading its data from the shared
-    /// context. Unported destinations fall back to a placeholder.
+    /// context.
     fn build_screen(&self, dest: Dest) -> Screen {
         match dest {
             Dest::Stats => Screen::Stats(Stats::new(&self.store, &self.course, self.profile_id)),
@@ -312,6 +319,9 @@ fn resolve_profile(store: &SqliteStore) -> Result<Option<Profile>, StorageError>
     }
 }
 
+/// The animation tick interval; also the input poll timeout.
+const TICK: std::time::Duration = std::time::Duration::from_millis(160);
+
 /// Runs the terminal event loop until the user quits.
 pub fn run(mut app: App) -> std::io::Result<()> {
     let mut terminal = ratatui::init();
@@ -319,13 +329,17 @@ pub fn run(mut app: App) -> std::io::Result<()> {
         if let Err(e) = terminal.draw(|f| app.render(f)) {
             break Err(e);
         }
-        match event::read() {
-            Ok(Event::Key(key)) if key.kind == KeyEventKind::Press => {
-                if app.handle(key.code, key.modifiers) == Flow::Quit {
-                    break Ok(());
+        match event::poll(TICK) {
+            Ok(true) => match event::read() {
+                Ok(Event::Key(key)) if key.kind == KeyEventKind::Press => {
+                    if app.handle(key.code, key.modifiers) == Flow::Quit {
+                        break Ok(());
+                    }
                 }
-            }
-            Ok(_) => {}
+                Ok(_) => {}
+                Err(e) => break Err(e),
+            },
+            Ok(false) => app.tick(), // idle: advance animation
             Err(e) => break Err(e),
         }
     };

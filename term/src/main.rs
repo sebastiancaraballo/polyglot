@@ -5,6 +5,7 @@
 //! kana chart are real; other destinations render a placeholder.
 
 mod app;
+mod art;
 mod frame;
 mod screens;
 mod textfmt;
