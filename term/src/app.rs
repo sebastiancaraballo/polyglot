@@ -22,6 +22,7 @@ use crate::screens::kanachart::KanaChart;
 use crate::screens::menu::{Menu, Summary};
 use crate::screens::placeholder::Placeholder;
 use crate::screens::profiles::Profiles;
+use crate::screens::profilesetup::ProfileSetup;
 use crate::screens::quiz::Quiz;
 use crate::screens::rikai::Rikai;
 use crate::screens::settings::Settings;
@@ -101,6 +102,7 @@ enum Screen {
     Profiles(Box<Profiles>),
     Rikai(Box<Rikai>),
     Assessment(Box<Assessment>),
+    ProfileSetup(ProfileSetup),
     Placeholder(Placeholder),
 }
 
@@ -129,6 +131,11 @@ impl App {
         let profile_id = resolve_profile(&store)?.map(|p| p.id);
         let summary = Summary::build(&store, &course, profile_id)?;
         let menu = Menu::new(msgs, summary, version.clone());
+        // First run (no profile yet): open the name-setup flow over the menu.
+        let mut stack: Vec<Screen> = vec![Screen::Menu(Box::new(menu))];
+        if profile_id.is_none() {
+            stack.push(Screen::ProfileSetup(ProfileSetup::new(true)));
+        }
         Ok(App {
             theme,
             msgs,
@@ -136,7 +143,7 @@ impl App {
             store,
             course,
             profile_id,
-            stack: vec![Screen::Menu(Box::new(menu))],
+            stack,
         })
     }
 
@@ -153,6 +160,7 @@ impl App {
             Screen::Profiles(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Rikai(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Assessment(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::ProfileSetup(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Placeholder(s) => s.render(f, inner, &self.theme),
         }
     }
@@ -174,6 +182,7 @@ impl App {
                 Screen::Profiles(s) => s.handle(code, mods, &ctx),
                 Screen::Rikai(s) => s.handle(code, mods, &ctx),
                 Screen::Assessment(s) => s.handle(code, mods, &ctx),
+                Screen::ProfileSetup(s) => s.handle(code, mods, &ctx),
                 Screen::Placeholder(s) => s.handle(code, mods, &ctx),
             }
         };
@@ -256,6 +265,7 @@ impl App {
                 Assessment::new(&self.store, &self.course, self.profile_id)
                     .with_romaji(self.show_romaji()),
             )),
+            Dest::ProfileSetup => Screen::ProfileSetup(ProfileSetup::new(false)),
             other => Screen::Placeholder(Placeholder::new(other)),
         }
     }
