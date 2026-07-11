@@ -21,13 +21,13 @@ use crate::screens::kana::KanaTrainer;
 use crate::screens::kanachart::KanaChart;
 use crate::screens::menu::{Menu, Summary};
 use crate::screens::onboarding::Onboarding;
-use crate::screens::placeholder::Placeholder;
 use crate::screens::profiles::Profiles;
 use crate::screens::profilesetup::ProfileSetup;
 use crate::screens::quiz::Quiz;
 use crate::screens::rikai::Rikai;
 use crate::screens::settings::Settings;
 use crate::screens::stats::Stats;
+use crate::screens::story::Story;
 use crate::theme::Theme;
 
 /// The shared context handed to a screen's `handle`, so interactive screens can
@@ -52,27 +52,6 @@ pub enum Dest {
     Rikai,
     Story,
     Assessment,
-}
-
-impl Dest {
-    /// A human-readable title, used by the placeholder screen until the real
-    /// screen is ported.
-    pub fn title(self) -> &'static str {
-        match self {
-            Dest::Kana => "Entrenador de Kana",
-            Dest::Flashcards => "Flashcards",
-            Dest::Review => "Repaso",
-            Dest::Quiz => "Quiz",
-            Dest::Stats => "Mis estadísticas",
-            Dest::Settings => "Ajustes",
-            Dest::Profiles => "Perfiles",
-            Dest::ProfileSetup => "Crea tu perfil",
-            Dest::KanaChart => "Tabla de Kana",
-            Dest::Rikai => "Rikai",
-            Dest::Story => "Katsudoo",
-            Dest::Assessment => "Examen N5",
-        }
-    }
 }
 
 /// The outcome of a key press within a screen.
@@ -105,9 +84,9 @@ enum Screen {
     Profiles(Box<Profiles>),
     Rikai(Box<Rikai>),
     Assessment(Box<Assessment>),
+    Story(Box<Story>),
     ProfileSetup(ProfileSetup),
     Onboarding(Onboarding),
-    Placeholder(Placeholder),
 }
 
 /// The running application: shared context (storage, content, active profile)
@@ -164,9 +143,9 @@ impl App {
             Screen::Profiles(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Rikai(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Assessment(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::Story(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::ProfileSetup(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Onboarding(s) => s.render(f, inner, &self.theme, self.msgs),
-            Screen::Placeholder(s) => s.render(f, inner, &self.theme),
         }
     }
 
@@ -187,9 +166,9 @@ impl App {
                 Screen::Profiles(s) => s.handle(code, mods, &ctx),
                 Screen::Rikai(s) => s.handle(code, mods, &ctx),
                 Screen::Assessment(s) => s.handle(code, mods, &ctx),
+                Screen::Story(s) => s.handle(code, mods, &ctx),
                 Screen::ProfileSetup(s) => s.handle(code, mods, &ctx),
                 Screen::Onboarding(s) => s.handle(code, mods, &ctx),
-                Screen::Placeholder(s) => s.handle(code, mods, &ctx),
             }
         };
         match transition {
@@ -282,8 +261,11 @@ impl App {
                 Assessment::new(&self.store, &self.course, self.profile_id)
                     .with_romaji(self.show_romaji()),
             )),
+            Dest::Story => Screen::Story(Box::new(
+                Story::new(&self.store, &self.course, self.profile_id)
+                    .with_romaji(self.show_romaji()),
+            )),
             Dest::ProfileSetup => Screen::ProfileSetup(ProfileSetup::new(false)),
-            other => Screen::Placeholder(Placeholder::new(other)),
         }
     }
 
