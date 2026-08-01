@@ -113,7 +113,10 @@ write clear issues and PRs; be welcoming and document decisions.
   which is how you run against a scratch database instead of your real progress.
   Local profiles: progress is keyed by `profile_id`.
 - **Content:** YAML lessons + Markdown guides under `content/<pair>/` (v1: `es-ja/`),
-  embedded with `include_dir`. Cards are tagged with their JLPT level.
+  embedded with `include_dir`. Cards are tagged with their JLPT level. Kana tables
+  are required; `grammar/`, `story/` and `kanji/` are optional per pair. Anything
+  *evaluable* (cards, pattern fillers, practice beats) may only use characters the
+  pair actually teaches — the loader enforces it for both kana and kanji.
 
 ## Hard constraints
 

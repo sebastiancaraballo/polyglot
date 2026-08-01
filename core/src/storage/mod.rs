@@ -15,7 +15,8 @@ use chrono::{DateTime, Datelike, SecondsFormat, TimeZone, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::model::{
-    AssessmentResult, CardState, Jlpt, KanaProgress, PatternProgress, Profile, Stats, StoryProgress,
+    AssessmentResult, CardState, Jlpt, KanaProgress, KanjiProgress, PatternProgress, Profile,
+    Stats, StoryProgress,
 };
 
 /// An error from the storage layer.
@@ -302,6 +303,49 @@ impl SqliteStore {
                streak = excluded.streak, attempts = excluded.attempts, \
                mastered = excluded.mastered, best_ms = excluded.best_ms",
             params![profile_id, p.char, p.streak, p.attempts, p.mastered, p.best_ms],
+        )?;
+        Ok(())
+    }
+
+    // --- Kanji progress ---------------------------------------------------
+
+    /// Returns the profile's kanji progress, keyed by character.
+    pub fn get_kanji_progress(
+        &self,
+        profile_id: i64,
+    ) -> Result<std::collections::HashMap<String, KanjiProgress>, StorageError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT char, streak, attempts, mastered FROM kanji_progress WHERE profile_id = ?1",
+        )?;
+        let rows = stmt.query_map(params![profile_id], |row| {
+            Ok(KanjiProgress {
+                char: row.get(0)?,
+                streak: row.get(1)?,
+                attempts: row.get(2)?,
+                mastered: row.get(3)?,
+            })
+        })?;
+        let mut map = std::collections::HashMap::new();
+        for r in rows {
+            let p = r?;
+            map.insert(p.char.clone(), p);
+        }
+        Ok(map)
+    }
+
+    /// Inserts or updates the progress for one kanji.
+    pub fn save_kanji_progress(
+        &self,
+        profile_id: i64,
+        p: &KanjiProgress,
+    ) -> Result<(), StorageError> {
+        self.conn.execute(
+            "INSERT INTO kanji_progress (profile_id, char, streak, attempts, mastered) \
+             VALUES (?1, ?2, ?3, ?4, ?5) \
+             ON CONFLICT (profile_id, char) DO UPDATE SET \
+               streak = excluded.streak, attempts = excluded.attempts, \
+               mastered = excluded.mastered",
+            params![profile_id, p.char, p.streak, p.attempts, p.mastered],
         )?;
         Ok(())
     }
@@ -1122,6 +1166,50 @@ mod tests {
         let got = s.get_kana_progress(p.id).unwrap();
         assert_eq!(got.len(), 1, "saving again upserts rather than duplicating");
         assert_eq!(got["あ"].streak, 3);
+    }
+
+    #[test]
+    fn kanji_progress_upserts_and_cascades() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        assert!(s.get_kanji_progress(p.id).unwrap().is_empty());
+
+        let mut want = KanjiProgress {
+            char: "日".to_string(),
+            streak: 2,
+            attempts: 5,
+            mastered: true,
+        };
+        s.save_kanji_progress(p.id, &want).unwrap();
+        assert_eq!(s.get_kanji_progress(p.id).unwrap()["日"], want);
+
+        want.streak = 3;
+        want.attempts = 6;
+        s.save_kanji_progress(p.id, &want).unwrap();
+        let got = s.get_kanji_progress(p.id).unwrap();
+        assert_eq!(got.len(), 1, "saving again upserts rather than duplicating");
+        assert_eq!(got["日"].streak, 3);
+
+        s.delete_profile(p.id).unwrap();
+        assert_eq!(count_rows(&s, "kanji_progress", p.id), 0);
+    }
+
+    /// Kanji progress is per-profile, like every other progress table.
+    #[test]
+    fn kanji_progress_is_isolated_per_profile() {
+        let s = store();
+        let a = s.create_profile("a").unwrap();
+        let b = s.create_profile("b").unwrap();
+        s.save_kanji_progress(
+            a.id,
+            &KanjiProgress {
+                char: "日".to_string(),
+                mastered: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert!(s.get_kanji_progress(b.id).unwrap().is_empty());
     }
 
     #[test]

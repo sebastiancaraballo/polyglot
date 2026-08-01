@@ -631,6 +631,7 @@ mod tests {
             pair: "es-xx".to_string(),
             lessons: Vec::new(),
             kana,
+            kanji: Vec::new(),
             patterns: Vec::new(),
             chapters: Vec::new(),
         }

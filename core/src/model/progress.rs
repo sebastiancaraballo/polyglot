@@ -16,6 +16,22 @@ pub struct KanaProgress {
     pub best_ms: i64,
 }
 
+/// Tracks a learner's progress toward reading one kanji. Mirrors
+/// [`KanaProgress`] — a correctness streak driving a sticky `mastered` flag —
+/// because the decoding gate asks the same question of both: can the learner
+/// read this character yet? Readings are not tracked individually; a kanji is
+/// mastered as a unit.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct KanjiProgress {
+    pub char: String,
+    /// Current run of correct answers.
+    pub streak: i64,
+    /// Total answers seen.
+    pub attempts: i64,
+    /// Reached the mastery threshold at least once; never revoked.
+    pub mastered: bool,
+}
+
 /// Tracks a learner's progress drilling one slot of one grammar pattern to a
 /// correctness-based mastery streak — the same automaticity idiom used for
 /// [`KanaProgress`]. Slots are tracked independently so words-before-sentences

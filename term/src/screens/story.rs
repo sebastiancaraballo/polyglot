@@ -1064,6 +1064,7 @@ mod tests {
                     category: polyglot_core::model::KanaCategory::Base,
                 },
             ],
+            kanji: Vec::new(),
             patterns: Vec::new(),
             chapters,
         }

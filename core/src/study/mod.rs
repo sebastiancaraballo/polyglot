@@ -17,7 +17,7 @@ mod streak;
 mod xp;
 
 pub use assessment::{build_assessment, AssessKind, AssessQuestion, ASSESSMENT_LENGTH};
-pub use automaticity::{grade_kana, MASTERY_STREAK};
+pub use automaticity::{grade_kana, grade_kanji, MASTERY_STREAK};
 pub use challenge::{
     build_challenge, challenge_needed, challenge_passed, ChallengeQuestion, CHALLENGE_LENGTH,
 };

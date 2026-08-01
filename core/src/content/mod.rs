@@ -13,6 +13,7 @@ mod fsys;
 mod functions;
 mod grammar;
 mod kana;
+mod kanji;
 mod lessons;
 mod story;
 
@@ -21,7 +22,7 @@ use std::io;
 
 pub use fsys::{ContentFs, DirFs, EmbeddedFs};
 
-use crate::model::{Chapter, FreqEntry, KanaItem, Lesson, Pattern};
+use crate::model::{Chapter, FreqEntry, KanaItem, KanjiItem, Lesson, Pattern};
 
 /// The language pair shipped in v1.
 pub const DEFAULT_PAIR: &str = "es-ja";
@@ -36,6 +37,8 @@ pub struct Course {
     pub pair: String,
     pub lessons: Vec<Lesson>,
     pub kana: Vec<KanaItem>,
+    /// Teachable kanji. Empty for a pair that teaches none.
+    pub kanji: Vec<KanjiItem>,
     pub patterns: Vec<Pattern>,
     pub chapters: Vec<Chapter>,
 }
@@ -77,13 +80,19 @@ pub fn load(fsys: &dyn ContentFs, pair: &str) -> Result<Course, LoadError> {
     let catalog = functions::load_functions(fsys)?;
     let mut lessons = lessons::load_lessons(fsys, pair, &catalog)?;
     let kana = kana::load_kana(fsys, pair)?;
+    let kanji = kanji::load_kanji(fsys, pair)?;
     let patterns = grammar::load_patterns(fsys, pair)?;
 
-    // Every kana a card depends on must be teachable (present in the tables).
+    // Every kana and kanji a card depends on must be teachable (present in the
+    // tables). Without the kanji half, a card written with kanji would load
+    // cleanly and then be undecodable forever — valid content nobody ever sees.
     let set = coverage::kana_set(&kana);
+    let kanji_set = coverage::kanji_set(&kanji);
     for lesson in &lessons {
         for card in &lesson.cards {
             coverage::check_kana_coverage(&card.jp, &set)
+                .map_err(|e| LoadError::new(format!("card {:?} {e}", card.id)))?;
+            coverage::check_kanji_coverage(&card.jp, &kanji_set)
                 .map_err(|e| LoadError::new(format!("card {:?} {e}", card.id)))?;
         }
     }
@@ -127,6 +136,7 @@ pub fn load(fsys: &dyn ContentFs, pair: &str) -> Result<Course, LoadError> {
         pair: pair.to_string(),
         lessons,
         kana,
+        kanji,
         patterns,
         chapters,
     })
@@ -927,20 +937,128 @@ mod tests {
         }
     }
 
-    /// Kanji support is not implemented yet, and the kana-coverage check skips
-    /// non-kana characters — so pin the assumption that no content carries kanji.
+    const VALID_KANJI: &str =
+        "items:\n  - char: 日\n    on: [ニチ]\n    kun: [ひ]\n    meaning: día\n    jlpt: N5\n";
+
+    /// A pair with no kanji directory loads exactly as before — every pair
+    /// shipped today is in that state.
     #[test]
-    fn embedded_content_is_kanji_free() {
+    fn kanji_table_is_optional() {
+        let f = Fixture::new(&valid_files());
+        let course = f.load("xx").expect("a pair without kanji still loads");
+        assert!(course.kanji.is_empty());
+    }
+
+    #[test]
+    fn loads_a_kanji_table() {
+        let mut files = valid_files();
+        files.push(("xx/kanji/n5.yaml", VALID_KANJI));
+        let f = Fixture::new(&files);
+        let course = f.load("xx").expect("kanji table loads");
+        assert_eq!(course.kanji.len(), 1);
+        let k = &course.kanji[0];
+        assert_eq!(k.char, "日");
+        assert_eq!(k.readings(), vec!["ニチ", "ひ"]);
+        assert_eq!(k.meaning, "día");
+        assert_eq!(k.jlpt, Some(Jlpt::N5));
+    }
+
+    /// A card may only use kanji the course actually teaches — otherwise it
+    /// would load fine and then be undecodable forever.
+    #[test]
+    fn card_using_an_untaught_kanji_is_rejected() {
+        let mut files = valid_files();
+        files.push((
+            "xx/lessons/02.yaml",
+            "id: k\ntitle: t\njlpt: N5\nfunctions: [greet-daytime]\ncards:\n  - es: Japón\n    jp: 日本\n    romaji: nihon\n",
+        ));
+        let f = Fixture::new(&files);
+        assert!(
+            f.load("xx").is_err(),
+            "a card with untaught kanji must fail the load"
+        );
+
+        // Teaching both kanji makes the same card valid.
+        let mut files = valid_files();
+        files.push((
+            "xx/lessons/02.yaml",
+            "id: k\ntitle: t\njlpt: N5\nfunctions: [greet-daytime]\ncards:\n  - es: Japón\n    jp: 日本\n    romaji: nihon\n",
+        ));
+        files.push((
+            "xx/kanji/n5.yaml",
+            "items:\n  - char: 日\n    on: [ニチ]\n    meaning: día\n  - char: 本\n    kun: [もと]\n    meaning: libro\n",
+        ));
+        let f = Fixture::new(&files);
+        f.load("xx").expect("taught kanji make the card valid");
+    }
+
+    /// The kanji table validates its own entries.
+    #[test]
+    fn rejects_invalid_kanji_entries() {
+        let cases = [
+            (
+                "not a kanji",
+                "items:\n  - char: あ\n    on: [ア]\n    meaning: a\n",
+            ),
+            (
+                "multi-character",
+                "items:\n  - char: 日本\n    on: [ニ]\n    meaning: x\n",
+            ),
+            ("no readings", "items:\n  - char: 日\n    meaning: día\n"),
+            ("no meaning", "items:\n  - char: 日\n    on: [ニチ]\n"),
+            (
+                "invalid jlpt",
+                "items:\n  - char: 日\n    on: [ニチ]\n    meaning: día\n    jlpt: N9\n",
+            ),
+            ("empty table", "items: []\n"),
+        ];
+        for (name, body) in cases {
+            let mut files = valid_files();
+            files.push(("xx/kanji/n5.yaml", body));
+            let f = Fixture::new(&files);
+            assert!(f.load("xx").is_err(), "expected a validation error: {name}");
+        }
+    }
+
+    /// The same kanji may not be declared twice across tables.
+    #[test]
+    fn rejects_duplicate_kanji() {
+        let mut files = valid_files();
+        files.push(("xx/kanji/a.yaml", VALID_KANJI));
+        files.push(("xx/kanji/b.yaml", VALID_KANJI));
+        let f = Fixture::new(&files);
+        assert!(f.load("xx").is_err(), "duplicate kanji must fail the load");
+    }
+
+    /// Every kanji in *evaluable* content must be in the kanji table — the same
+    /// "teach it before you test it" rule kana obey. This replaces the old
+    /// kanji-free tripwire, which only held because no kanji existed anywhere.
+    #[test]
+    fn embedded_evaluable_content_only_uses_taught_kanji() {
         let course = load_embedded(DEFAULT_PAIR).unwrap();
+        let set = coverage::kanji_set(&course.kanji);
         for lesson in &course.lessons {
             for card in &lesson.cards {
-                for ch in card.jp.chars() {
-                    assert!(
-                        !is_han(ch),
-                        "card {:?} contains kanji {ch:?}; kanji support is not implemented yet",
-                        card.id
-                    );
-                }
+                coverage::check_kanji_coverage(&card.jp, &set)
+                    .unwrap_or_else(|e| panic!("card {:?} ({}): {e}", card.id, card.jp));
+            }
+        }
+    }
+
+    /// The es-ja course teaches no kanji yet, so its evaluable content must
+    /// still be kanji-free. This is the state the N5 kanji slice will change —
+    /// when it lands, this test goes and the coverage test above carries on.
+    #[test]
+    fn embedded_course_teaches_no_kanji_yet() {
+        let course = load_embedded(DEFAULT_PAIR).unwrap();
+        assert!(course.kanji.is_empty(), "no kanji table ships yet");
+        for lesson in &course.lessons {
+            for card in &lesson.cards {
+                assert!(
+                    !card.jp.chars().any(crate::model::is_han),
+                    "card {:?} uses kanji before any are taught",
+                    card.id
+                );
             }
         }
     }
@@ -978,17 +1096,9 @@ mod tests {
         }
     }
 
-    /// CJK Unified Ideographs, i.e. the Unicode `Han` script.
-    fn is_han(c: char) -> bool {
-        let u = c as u32;
-        (0x4E00..=0x9FFF).contains(&u)
-            || (0x3400..=0x4DBF).contains(&u)
-            || (0xF900..=0xFAFF).contains(&u)
-    }
-
     fn is_japanese(c: char) -> bool {
         let u = c as u32;
-        (0x3040..=0x309F).contains(&u) || (0x30A0..=0x30FF).contains(&u) || is_han(c)
+        (0x3040..=0x309F).contains(&u) || (0x30A0..=0x30FF).contains(&u) || crate::model::is_han(c)
     }
 
     #[test]

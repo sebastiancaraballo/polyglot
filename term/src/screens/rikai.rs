@@ -514,6 +514,7 @@ mod tests {
                 cards,
             }],
             kana: Vec::new(),
+            kanji: Vec::new(),
             patterns: vec![Pattern {
                 id: "test-pattern".to_string(),
                 title: "X wa N desu".to_string(),
