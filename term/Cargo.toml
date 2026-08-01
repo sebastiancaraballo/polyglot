@@ -1,0 +1,20 @@
+[package]
+name = "polyglot-term"
+description = "Terminal (ratatui) frontend for Polyglot."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "polyglot"
+path = "src/main.rs"
+
+[dependencies]
+polyglot-core = { path = "../core" }
+chrono.workspace = true
+rand = "0.8"
+ratatui = "0.29"
+
+[dev-dependencies]
+insta = "1"

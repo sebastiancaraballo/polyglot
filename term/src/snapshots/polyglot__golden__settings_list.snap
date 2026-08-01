@@ -1,0 +1,30 @@
+---
+source: term/src/golden.rs
+expression: "snapshot(|f, inner, theme| s.render(f, inner, theme, msgs()))"
+---
+
+
+
+        ╭──────────────────────────────────────────────────────────────╮
+        │                                                              │
+        │   Ajustes                                                    │
+        │                                                              │
+        │   ▸ Mostrar romaji: Sí                                       │
+        │     Borrar mi perfil                                         │
+        │     Borrar todos los datos                                   │
+        │                                                              │
+        │   ↑/↓ moverse · ENTER cambiar/confirmar · ESC volver         │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        ╰──────────────────────────────────────────────────────────────╯

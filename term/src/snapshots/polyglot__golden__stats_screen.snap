@@ -1,0 +1,30 @@
+---
+source: term/src/golden.rs
+expression: "snapshot(|f, inner, theme| s.render(f, inner, theme, msgs()))"
+---
+
+
+
+        ╭──────────────────────────────────────────────────────────────╮
+        │                                                              │
+        │   Mis estadísticas                                           │
+        │                                                              │
+        │   ★ XP: 30                                                   │
+        │   0/1024 tarjetas aprendidas                                 │
+        │   ▲ Racha: 0 días  (récord: 0)                               │
+        │   Hiragana: 104   Katakana: 104                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │   ESC volver al menú                                         │
+        │                                                              │
+        ╰──────────────────────────────────────────────────────────────╯

@@ -1,0 +1,30 @@
+---
+source: term/src/golden.rs
+expression: "snapshot(|frame, inner, theme| f.render(frame, inner, theme, msgs()))"
+---
+
+
+
+        ╭──────────────────────────────────────────────────────────────╮
+        │                                                              │
+        │   Flashcards  1/10                                           │
+        │   5 tarjetas nuevas en espera: entran poco a poco para       │
+        │   consolidar lo aprendido.                                   │
+        │                                                              │
+        │   palabra 0                                                  │
+        │                                                              │
+        │   ESPACIO revelar · ESC menú                                 │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        ╰──────────────────────────────────────────────────────────────╯

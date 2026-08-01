@@ -1,0 +1,1 @@
+ALTER TABLE profiles ADD COLUMN kana_onboarded INTEGER NOT NULL DEFAULT 0;

@@ -6,13 +6,18 @@
 *.so
 *.dylib
 
-# Test & coverage artifacts
+# Test & coverage artifacts (anchored to the repo root: an unanchored
+# `coverage.*` also matches source files such as core/src/content/coverage.rs)
 *.test
 *.out
-coverage.*
+/coverage.*
 
 # GoReleaser / build output
 /dist/
+
+# Rust / Cargo build output
+/target/
+**/*.rs.bk
 
 # Local app data (never commit a user's database)
 *.db

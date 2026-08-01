@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Rewritten in Rust; the Go implementation is retired.** The app is now a Cargo
+  workspace: `core/` holds the language-agnostic engine and `term/` the ratatui
+  terminal client. The engine is UI-free, which is what lets a future
+  universal/offline client (mobile/desktop over FFI) reuse it — the motivation
+  for the rewrite (see issue #58). Everything the Go version did, it still does:
+  - **Core:** SM-2 scheduler (`srs`), domain model, study logic (kana
+    automaticity, decoding gate, Rikai, challenge, N5 assessment sampling), the
+    YAML/Markdown content loader and its validators (embedding the real `es-ja`
+    course via `include_dir`), Spanish `i18n`, the third-party-asset `license`
+    manifest — whose generated `NOTICE` matches the Go one byte for byte — SQLite
+    storage via `rusqlite` (bundled, no system dependency), and the
+    cross-curriculum spaced-repetition `review` queue.
+  - **Client:** a ratatui event loop with idle-tick animation, screen-stack
+    router, `NO_COLOR`/high-contrast theme, the fixed 64×23 frame, the animated
+    braille globe and block wordmark, and all 13 screens over the real core with
+    progress persistence.
+  - **Your progress carries over.** The migration runner adopts databases created
+    by the Go implementation's `goose` migrations: the resulting schema is
+    identical (verified by applying both and diffing), and an existing profile
+    opens in the Rust client with its XP, streak, card scheduling, kana mastery,
+    grammar and story progress intact.
+  - **Tooling:** CI and the release workflow now build, test, lint and package
+    with Cargo (`.goreleaser.yaml` is gone). `POLYGLOT_DB` overrides the database
+    path, so you can run against a scratch database instead of real progress.
+  - The offline asset generators under `tools/` (`genfreq`, `genglobe`,
+    `gennotice`) are still Go. They are not part of the binary and have no Rust
+    equivalent yet.
+- **Main menu layout.** The options now lead on the left and the rotating globe
+  sits on the right, vertically centered against them; XP and streak moved below
+  the options, where they read as context rather than as a header.
+
+### Fixed
+- The block wordmark lost the trailing padding on two of its four rows when it
+  was ported, leaving it 53 columns wide instead of 55.
+- A menu level long enough to overflow the frame's fixed content height now drops
+  the wordmark instead of silently clipping its own rows off-screen, matching the
+  Go behavior.
+- `core/src/content/coverage.rs` was matched by an unanchored `coverage.*` rule in
+  `.gitignore` — a source file of the engine was never committed, so a fresh
+  clone did not compile.
+
 ## [0.0.2] - 2026-07-09
 
 ### Added

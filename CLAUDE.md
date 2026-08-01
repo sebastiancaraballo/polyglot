@@ -2,6 +2,26 @@
 
 Guidance for working in this repository. Read before making changes.
 
+## Stack
+
+Polyglot is a **Rust** workspace: `core/` is the language-agnostic engine (content
+model, spaced repetition, study logic, storage) and `term/` the ratatui terminal
+client. The engine is UI-free on purpose — it is what a future mobile/desktop
+client reuses over FFI (see issue `#58`).
+
+The Go implementation this replaced was retired in the cutover; its history is in
+the git log. The only Go left in the repo is `tools/`, three offline asset
+generators (`genfreq`, `genglobe`, `gennotice`) that are not part of the binary
+and have no Rust equivalent yet.
+
+```sh
+cargo run -p polyglot-term                                 # run the app
+cargo build --workspace
+cargo test --workspace
+cargo clippy --workspace --all-targets -- -D warnings
+cargo fmt --all
+```
+
 ## Workflow checklist
 
 Follow this order for **every** change. The ★ steps are process steps that nothing
@@ -11,13 +31,13 @@ skip them. Each item links to its authoritative detail below.
 1. ★ **Before editing any file, create a worktree** for the change:
    `git worktree add ../polyglot-<feature> -b <feature>`. See [Worktrees](#worktrees).
 2. Write code, comments, and commits in English; keep user-facing strings in
-   `internal/i18n` (Spanish). See [Language conventions](#language-conventions).
-3. Keep it pure Go — no CGO, permissive deps only. See [Hard constraints](#hard-constraints).
+   `core/src/i18n.rs` (Spanish). See [Language conventions](#language-conventions).
+3. Only permissive dependencies. See [Hard constraints](#hard-constraints).
 4. ★ **Update `CHANGELOG.md` and any affected docs (e.g. README) in the same change.**
-5. ★ **Before finishing, run and pass** `gofmt -l .`, `go vet ./...`,
-   `golangci-lint run ./...`, and `go test ./...` (regenerate goldens with
-   `-update`). Note: `golangci-lint` (it runs staticcheck) catches issues `go vet`
-   does not, and CI fails on them — run it locally too. See [Quality](#quality).
+5. ★ **Before finishing, run and pass** `cargo fmt --all`, `cargo clippy
+   --workspace --all-targets -- -D warnings`, and `cargo test --workspace`
+   (regenerate snapshots with `INSTA_UPDATE=always`, and review every changed
+   snapshot before accepting it). See [Quality](#quality).
 6. The PR **description must include a Keep a Changelog changelog**. See
    [Git & GitHub workflow](#git--github-workflow).
 7. ★ **Never merge a PR unless explicitly asked to.**
@@ -78,19 +98,22 @@ write clear issues and PRs; be welcoming and document decisions.
 
 - **Code, comments, identifiers, commit messages, PRs, and docs: English.**
 - **User-facing UI strings: Spanish** (v1). Never hardcode UI strings in logic — put
-  them in `internal/i18n` so more UI languages can be added later.
+  them in `core/src/i18n.rs` so more UI languages can be added later.
 
-## Tech stack & import paths
+## Tech stack & layout
 
-- **Go 1.26+**, standard layout: `cmd/` (entry points) + `internal/` (packages).
-- **TUI:** Charm's Bubble Tea / Lipgloss / Bubbles **v2**. ⚠️ The v2 modules use the
-  `charm.land/...` import paths (e.g. `charm.land/bubbletea/v2`), **not**
-  `github.com/charmbracelet/...`.
-- **Persistence:** SQLite via `modernc.org/sqlite` (pure Go). Schema migrations via
-  `github.com/pressly/goose/v3`, embedded with `go:embed`. The database lives under
-  `os.UserConfigDir()/polyglot`. Local profiles: progress is keyed by `profile_id`.
+- **Rust 1.90+**, a Cargo workspace: `core/` (engine, no UI) + `term/` (ratatui TUI).
+- **TUI:** [ratatui](https://ratatui.rs) with the crossterm backend. Screens are plain
+  structs with `handle`/`render`; navigation is a screen stack driven by `Transition`.
+- **Persistence:** SQLite via `rusqlite` (bundled, no system dependency). Schema
+  migrations are a `user_version`-tracked runner in `core/src/storage/migrations.rs`,
+  which also adopts databases created by the retired Go implementation's `goose`
+  migrations — never renumber an existing migration. The database lives under the
+  platform config dir (`dirs::config_dir()/polyglot`); `POLYGLOT_DB` overrides it,
+  which is how you run against a scratch database instead of your real progress.
+  Local profiles: progress is keyed by `profile_id`.
 - **Content:** YAML lessons + Markdown guides under `content/<pair>/` (v1: `es-ja/`),
-  embedded with `go:embed`. Cards are tagged with their JLPT level.
+  embedded with `include_dir`. Cards are tagged with their JLPT level.
 
 ## Hard constraints
 
@@ -102,25 +125,28 @@ write clear issues and PRs; be welcoming and document decisions.
   every external asset's source, license, and required attribution (e.g. in `NOTICE`).
   When a license is unclear or incompatible, stop and flag it — prefer public-domain
   sources or content we author ourselves; don't assume "it's just facts".
-- **No CGO.** CGO breaks single-binary cross-compilation. Keep all deps pure Go
-  (this is why we use `modernc.org/sqlite`, not the cgo SQLite driver).
+- **Ship a single self-contained binary.** No system libraries at runtime (this is
+  why `rusqlite` is used with its `bundled` feature).
 - **Never commit a user database** (`*.db` is gitignored).
 
 ## Accessibility
 
-Responsive layout (react to `WindowSizeMsg`, no fixed widths), high-contrast theme,
+Responsive layout (ratatui reflows on resize; lay out against the frame's content
+rect, never a fixed width), high-contrast theme,
 honor `NO_COLOR`, keyboard-first navigation, never rely on color alone (pair with
 symbols/text), keep romaji visible alongside Japanese.
 
 ## Quality
 
-- Format with `gofmt`; keep `go vet ./...` and `golangci-lint` clean.
-- Tests: `go test ./...`. Prefer table-driven unit tests. Validate all YAML content in
-  tests. For TUI screens, use golden-file tests via `github.com/charmbracelet/x/exp/golden`
-  (`teatest` is Bubble Tea v1 only and is incompatible with the v2 models): drive the model
-  through `Update`/`View().Content` and snapshot it. Render with `ui.PlainTheme()` for stable,
-  escape-free output, and regenerate goldens with `go test ./... -update`.
-- Wrap errors with `%w`.
+- Format with `cargo fmt --all`; keep `cargo clippy --workspace --all-targets --
+  -D warnings` clean — CI fails on either.
+- Tests: `cargo test --workspace`. Prefer table-driven unit tests. Validate all YAML
+  content in tests. For TUI screens, snapshot the rendered frame with `insta` via
+  `testutil::snapshot` (plain theme, escape-free output); screens that draw with an
+  RNG get behavior tests in their own module instead. Regenerate snapshots with
+  `INSTA_UPDATE=always cargo test`, and **read every changed snapshot** before
+  accepting it — an unreviewed snapshot records a bug as if it were the spec.
+- Accessibility is testable: assert symbols and text, never color alone.
 
 ## Git & GitHub workflow
 
@@ -141,30 +167,27 @@ symbols/text), keep romaji visible alongside Japanese.
   working copy and branch stay isolated: `git worktree add ../polyglot-<feature> -b <feature>`,
   and `git worktree remove ../polyglot-<feature>` once the PR is merged. This is
   step 1 for every change, including docs-only ones like editing this file.
-- No extra data isolation is configured, and none is needed: tests open their own
-  throwaway databases via `t.TempDir()`, and the app's real database
-  (`os.UserConfigDir()/polyglot`) is only touched by `go run ./cmd/polyglot`, which
-  is not part of this workflow. If running the app locally from a worktree ever
-  becomes necessary, add a data-directory override first so it doesn't share the
-  real database.
+- Tests open their own in-memory databases, so they never touch real progress. The
+  app's real database is only used by `cargo run -p polyglot-term`; set `POLYGLOT_DB`
+  to a scratch path when running from a worktree.
 - **At the end of an implementation done in a worktree, always finish the reply
   with the copy-paste command to run the app from that worktree**, so it's easy to
   try locally:
 
   ```sh
-  cd ../polyglot-<feature> && go run ./cmd/polyglot
+  cd ../polyglot-<feature> && cargo run -p polyglot-term
   ```
 
-  (Note: this uses the real database at `os.UserConfigDir()/polyglot` per the
-  caveat above.)
+  (Note: this uses the real database per the caveat above. Set `POLYGLOT_DB` to a
+  scratch path to leave your own progress alone.)
 
 ## Common commands
 
 ```sh
-go run ./cmd/polyglot     # run the app
-go build ./...            # build
-go test ./...             # tests
-go vet ./...              # static checks
-golangci-lint run ./...  # lint (staticcheck etc.; stricter than go vet, matches CI)
-gofmt -l .               # formatting check
+cargo run -p polyglot-term                             # run the app
+cargo build --workspace                                # build
+cargo test --workspace                                 # tests
+cargo clippy --workspace --all-targets -- -D warnings  # lint (CI fails on warnings)
+cargo fmt --all                                        # format
+INSTA_UPDATE=always cargo test --workspace             # refresh TUI snapshots
 ```

@@ -1,0 +1,30 @@
+---
+source: term/src/golden.rs
+expression: "snapshot(|frame, inner, theme| f.render(frame, inner, theme, msgs()))"
+---
+
+
+
+        ╭──────────────────────────────────────────────────────────────╮
+        │                                                              │
+        │   Flashcards  1/1                                            │
+        │                                                              │
+        │   Gracias                                                    │
+        │                                                              │
+        │   ESPACIO revelar · ESC menú                                 │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        ╰──────────────────────────────────────────────────────────────╯

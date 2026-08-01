@@ -1,0 +1,30 @@
+---
+source: term/src/golden.rs
+expression: "snapshot(|f, inner, theme| o.render(f, inner, theme, msgs()))"
+---
+
+
+
+        ╭──────────────────────────────────────────────────────────────╮
+        │                                                              │
+        │   Práctica guiada                                            │
+        │                                                              │
+        │   み ず   (mizu)                                               │
+        │   ¿Qué significa esta palabra?                               │
+        │                                                              │
+        │     1) Fuego                                                 │
+        │   ✓ 2) Agua  ◀ pista: ¡es esta!                              │
+        │     3) Gato                                                  │
+        │     4) Árbol                                                 │
+        │                                                              │
+        │   ¡Genial! Ya sabes lo básico.                               │
+        │   ENTER  continuar →                                         │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        ╰──────────────────────────────────────────────────────────────╯
