@@ -422,10 +422,14 @@ mod tests {
         let course = course_with_kanji();
         let msgs = polyglot_core::i18n::default();
 
-        // Walk a whole session, checking the question and answered views of each
-        // character: the help line must survive every one of them.
+        // Walk EVERY kanji in the table, not a sampled session: the answered
+        // view's width and height depend on that character's readings, so the
+        // one that overflows is exactly the one a random deck may not draw.
         let mut t = KanjiTrainer::new(&store, &course, Some(pid));
-        for _ in 0..t.deck.len() {
+        for k in &course.kanji {
+            t.deck = vec![k.clone()];
+            t.index = 0;
+            t.set_question();
             for answered in [false, true] {
                 if answered {
                     t.selected = t.correct;
@@ -434,10 +438,10 @@ mod tests {
                 let v = view(&t);
                 assert!(
                     v.contains(&msgs.choice_help) || v.contains(&msgs.continue_help),
-                    "the help line is cut off; view:\n{v}"
+                    "{:?}: the help line is cut off; view:\n{v}",
+                    k.char
                 );
             }
-            t.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
         }
     }
 

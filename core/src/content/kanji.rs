@@ -86,6 +86,15 @@ fn parse_kanji(fsys: &dyn ContentFs, file: &str) -> Result<Vec<KanjiItem>, LoadE
                 it.char
             )));
         }
+        for r in it.on.iter().chain(it.kun.iter()) {
+            if !valid_reading(r) {
+                return Err(LoadError::new(format!(
+                    "{file}: item {n} {:?} has invalid reading {r:?} \
+                     (kana, with okurigana in a trailing parenthesized group)",
+                    it.char
+                )));
+            }
+        }
         if it.meaning.trim().is_empty() {
             return Err(LoadError::new(format!(
                 "{file}: item {n} {:?} has no meaning",
@@ -114,4 +123,34 @@ fn parse_kanji(fsys: &dyn ContentFs, file: &str) -> Result<Vec<KanjiItem>, LoadE
         });
     }
     Ok(items)
+}
+
+/// A reading is kana, optionally ending in one parenthesized okurigana group:
+/// `みず`, `た(べる)`, `あたら(しい)`. The parentheses mark the inflectional
+/// ending written in kana after the kanji — the dictionary convention — so a
+/// stem is never shown bare and unpronounceable.
+fn valid_reading(r: &str) -> bool {
+    #[derive(PartialEq)]
+    enum St {
+        Stem,
+        Okurigana,
+        Closed,
+    }
+    let is_kana = |c: char| {
+        let u = c as u32;
+        (0x3040..=0x309F).contains(&u) || (0x30A0..=0x30FF).contains(&u)
+    };
+    let mut st = St::Stem;
+    let mut saw_kana = false;
+    let mut group_has_kana = false;
+    for c in r.chars() {
+        match (c, &st) {
+            ('(', St::Stem) if saw_kana => st = St::Okurigana,
+            (')', St::Okurigana) if group_has_kana => st = St::Closed,
+            (_, St::Stem) if is_kana(c) => saw_kana = true,
+            (_, St::Okurigana) if is_kana(c) => group_has_kana = true,
+            _ => return false, // non-kana, nested/unopened paren, or text after ')'
+        }
+    }
+    saw_kana && st != St::Okurigana
 }

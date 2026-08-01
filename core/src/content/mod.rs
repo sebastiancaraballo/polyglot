@@ -1063,14 +1063,18 @@ mod tests {
             assert!(!k.readings().is_empty(), "{:?} has readings", k.char);
             assert!(!k.meaning.trim().is_empty(), "{:?} has a meaning", k.char);
             assert_eq!(k.jlpt, Some(Jlpt::N5), "{:?} is tagged N5", k.char);
-            // Readings are written in kana, which is what the trainer displays.
+            // Readings are kana plus the okurigana parentheses of the
+            // convention the loader enforces (e.g. た(べる)).
             for r in k.readings() {
                 assert!(
                     r.chars().all(|c| {
                         let u = c as u32;
-                        (0x3040..=0x309F).contains(&u) || (0x30A0..=0x30FF).contains(&u)
+                        c == '('
+                            || c == ')'
+                            || (0x3040..=0x309F).contains(&u)
+                            || (0x30A0..=0x30FF).contains(&u)
                     }),
-                    "reading {r:?} of {:?} must be written in kana",
+                    "reading {r:?} of {:?} must be kana with okurigana parens",
                     k.char
                 );
             }
