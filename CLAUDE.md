@@ -57,6 +57,14 @@ Development is organized as a set of parallel **tracks**, coordinated through th
 **Project board** (Projects v3, user project #3) — the single source of truth for what to
 work on next.
 
+**Tickets live on the board as draft items — never as repository issues.** Do not use
+`gh issue create` / the repo's Issues tab for new work: create a draft item on the board
+(`addProjectV2DraftIssue` via the `gh` GraphQL API) with the full ticket body (scope,
+non-goals, acceptance criteria), and set its Status/Priority/Track fields
+(`updateProjectV2ItemFieldValue`). Because a PR cannot `Closes` a draft item, move the
+item to `Done` by hand when its PR merges. Pre-existing repository issues are honored
+until closed, but no new ones are opened.
+
 ### Tracks
 
 - **Core / Platform** (built once; a prerequisite for everything): the engine and shared
@@ -159,10 +167,11 @@ symbols/text), keep romaji visible alongside Japanese.
 - **Merging:** never merge a PR unless explicitly asked to.
 - **Versioning:** Semantic Versioning. Keep `CHANGELOG.md` updated
   ([Keep a Changelog](https://keepachangelog.com/) format).
-- **Project board:** when a PR is merged, move its corresponding item in the GitHub
-  Project (Projects v3, user project #3) from its current status (e.g. `Todo`) to
-  `Done`. Use the `gh` GraphQL API (`updateProjectV2ItemFieldValue` on the Status
-  field) to set it.
+- **Project board:** tickets are board draft items, not repository issues (see
+  [Operating model](#operating-model)). When a PR is merged, move its corresponding
+  item from its current status (e.g. `In Progress`) to `Done` by hand — drafts cannot
+  be auto-closed by a PR. Use the `gh` GraphQL API (`updateProjectV2ItemFieldValue`
+  on the Status field) to set it.
 
 ### Worktrees
 
