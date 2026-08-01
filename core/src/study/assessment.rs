@@ -239,6 +239,8 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::SeedableRng;
 
+    use crate::model::{KanaCategory, KanaType, Slot};
+
     fn card(id: &str, jp: &str) -> Card {
         Card {
             id: id.to_string(),
@@ -250,6 +252,126 @@ mod tests {
             functions: Vec::new(),
             freq: 0,
         }
+    }
+
+    fn lesson(id: &str, jlpt: Jlpt, cards: Vec<Card>) -> Lesson {
+        Lesson {
+            id: id.to_string(),
+            title: String::new(),
+            jlpt: Some(jlpt),
+            functions: Vec::new(),
+            cards,
+        }
+    }
+
+    fn kana_item(ch: &str, romaji: &str) -> KanaItem {
+        KanaItem {
+            char: ch.to_string(),
+            romaji: romaji.to_string(),
+            kana_type: KanaType::Hiragana,
+            category: KanaCategory::Base,
+        }
+    }
+
+    /// Two N5 lessons and one N4 lesson, so the sampler's level filter is
+    /// observable.
+    fn assessment_lessons() -> Vec<Lesson> {
+        vec![
+            lesson(
+                "greetings",
+                Jlpt::N5,
+                vec![
+                    card("greetings:1", "こんにちは"),
+                    card("greetings:2", "ありがとう"),
+                    card("greetings:3", "さようなら"),
+                    card("greetings:4", "はい"),
+                ],
+            ),
+            lesson(
+                "self-intro",
+                Jlpt::N5,
+                vec![
+                    card("self-intro:1", "わたし"),
+                    card("self-intro:2", "あなた"),
+                    card("self-intro:3", "がくせい"),
+                ],
+            ),
+            lesson(
+                "n4-extra",
+                Jlpt::N4,
+                vec![Card {
+                    jlpt: Some(Jlpt::N4),
+                    ..card("n4-extra:1", "けいざい")
+                }],
+            ),
+        ]
+    }
+
+    fn assessment_kana() -> Vec<KanaItem> {
+        vec![
+            kana_item("あ", "a"),
+            kana_item("い", "i"),
+            kana_item("う", "u"),
+        ]
+    }
+
+    fn assessment_patterns() -> Vec<Pattern> {
+        vec![
+            Pattern {
+                id: "x-wa-n-desu".to_string(),
+                title: String::new(),
+                jlpt: Some(Jlpt::N5),
+                frame: "{X}は{N}です".to_string(),
+                slots: vec![
+                    Slot {
+                        name: "X".to_string(),
+                        card_ids: vec!["self-intro:1".to_string(), "self-intro:2".to_string()],
+                        default: "self-intro:1".to_string(),
+                    },
+                    Slot {
+                        name: "N".to_string(),
+                        card_ids: vec!["self-intro:3".to_string(), "greetings:4".to_string()],
+                        default: "self-intro:3".to_string(),
+                    },
+                ],
+                notes: String::new(),
+            },
+            Pattern {
+                id: "n4-pattern".to_string(),
+                title: String::new(),
+                jlpt: Some(Jlpt::N4),
+                frame: "{X}".to_string(),
+                slots: vec![Slot {
+                    name: "X".to_string(),
+                    card_ids: vec!["n4-extra:1".to_string()],
+                    default: "n4-extra:1".to_string(),
+                }],
+                notes: String::new(),
+            },
+        ]
+    }
+
+    fn assessment_cards(lessons: &[Lesson]) -> HashMap<String, Card> {
+        lessons
+            .iter()
+            .flat_map(|l| &l.cards)
+            .map(|c| (c.id.clone(), c.clone()))
+            .collect()
+    }
+
+    /// Builds an assessment over the shared fixture with a fixed seed.
+    fn sample(seed: u64) -> Vec<AssessQuestion> {
+        let lessons = assessment_lessons();
+        let cards = assessment_cards(&lessons);
+        let mut rng = StdRng::seed_from_u64(seed);
+        build_assessment(
+            &mut rng,
+            Jlpt::N5,
+            &lessons,
+            &assessment_kana(),
+            &assessment_patterns(),
+            &cards,
+        )
     }
 
     #[test]
@@ -292,5 +414,114 @@ mod tests {
             qs.iter().any(|q| q.kind == AssessKind::Kana),
             "kana strand contributes"
         );
+    }
+
+    /// Every strand the curriculum supplies contributes questions.
+    #[test]
+    fn samples_every_strand() {
+        let qs = sample(1);
+        assert!(!qs.is_empty());
+        for kind in [AssessKind::Vocab, AssessKind::Kana, AssessKind::Pattern] {
+            assert!(
+                qs.iter().any(|q| q.kind == kind),
+                "{kind:?} strand should contribute"
+            );
+        }
+    }
+
+    /// The draw is capped at the exam length and never repeats an item.
+    #[test]
+    fn caps_and_dedupes() {
+        let qs = sample(2);
+        assert!(qs.len() <= ASSESSMENT_LENGTH);
+        let keys: HashSet<_> = qs.iter().map(|q| q.key()).collect();
+        assert_eq!(keys.len(), qs.len(), "no duplicate items");
+    }
+
+    /// Material above the assessed level never leaks in.
+    #[test]
+    fn filters_by_level() {
+        for q in sample(3) {
+            match q.kind {
+                AssessKind::Vocab => assert_ne!(
+                    q.card.as_ref().unwrap().id,
+                    "n4-extra:1",
+                    "an N4 card leaked into an N5 assessment"
+                ),
+                AssessKind::Pattern => assert_ne!(
+                    q.pattern.as_ref().unwrap().id,
+                    "n4-pattern",
+                    "an N4 pattern leaked into an N5 assessment"
+                ),
+                AssessKind::Kana => {}
+            }
+        }
+    }
+
+    /// Every question offers options, and the `correct` index really points at
+    /// the right answer.
+    #[test]
+    fn options_are_valid() {
+        for q in sample(4) {
+            assert!(!q.options.is_empty(), "question {} has no options", q.key());
+            assert!(
+                q.correct < q.options.len(),
+                "question {} correct index {} out of range ({} options)",
+                q.key(),
+                q.correct,
+                q.options.len()
+            );
+            let want = match q.kind {
+                AssessKind::Kana => q.kana.as_ref().unwrap().romaji.clone(),
+                // Vocab prompt card, or the pattern's correct filler.
+                _ => q.card.as_ref().unwrap().jp.clone(),
+            };
+            assert_eq!(q.options[q.correct], want, "question {}", q.key());
+        }
+    }
+
+    /// A pattern question blanks exactly one slot and pre-fills all the others.
+    #[test]
+    fn pattern_blanks_a_valid_slot() {
+        let mut found = false;
+        for q in sample(5) {
+            if q.kind != AssessKind::Pattern {
+                continue;
+            }
+            found = true;
+            let pattern = q.pattern.as_ref().unwrap();
+            assert!(
+                q.slot_idx < pattern.slots.len(),
+                "pattern {:?} blanked slot {} out of range",
+                pattern.id,
+                q.slot_idx
+            );
+            let blanked = &pattern.slots[q.slot_idx].name;
+            assert!(
+                !q.fill.contains_key(blanked),
+                "pattern {:?} pre-filled the blanked slot {blanked:?}",
+                pattern.id
+            );
+            for (i, s) in pattern.slots.iter().enumerate() {
+                if i == q.slot_idx {
+                    continue;
+                }
+                assert!(
+                    q.fill.contains_key(&s.name),
+                    "pattern {:?} missing fill for non-blank slot {:?}",
+                    pattern.id,
+                    s.name
+                );
+            }
+        }
+        assert!(found, "expected at least one pattern question");
+    }
+
+    /// An empty curriculum yields no questions rather than panicking.
+    #[test]
+    fn empty_curriculum_yields_nothing() {
+        let mut rng = StdRng::seed_from_u64(6);
+        let qs = build_assessment(&mut rng, Jlpt::N5, &[], &[], &[], &HashMap::new());
+        assert!(qs.is_empty());
     }
 }

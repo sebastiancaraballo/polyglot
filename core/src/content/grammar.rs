@@ -190,4 +190,17 @@ mod tests {
         assert_eq!(find_placeholders("no slots"), Vec::<String>::new());
         assert_eq!(find_placeholders("{1bad}"), Vec::<String>::new()); // must start with a letter
     }
+
+    /// Every embedded pattern's frame and slot declarations agree: each
+    /// placeholder has a slot and each slot appears in the frame.
+    #[test]
+    fn embedded_frames_match_their_slots() {
+        let course = crate::content::load_embedded(crate::content::DEFAULT_PAIR).unwrap();
+        assert!(!course.patterns.is_empty());
+        for p in &course.patterns {
+            let names: HashSet<String> = p.slots.iter().map(|s| s.name.clone()).collect();
+            check_frame_placeholders(&p.frame, &names)
+                .unwrap_or_else(|e| panic!("pattern {:?}: {e}", p.id));
+        }
+    }
 }

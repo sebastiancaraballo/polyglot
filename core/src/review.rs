@@ -251,10 +251,63 @@ fn interleave(items: Vec<Scheduled>) -> Vec<Scheduled> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Card, KanaCategory, KanaType};
+    use crate::model::{Card, KanaCategory, KanaType, DEFAULT_EASE};
+    use chrono::{Duration, TimeZone};
 
     fn mem_store() -> SqliteStore {
         SqliteStore::open_in_memory().unwrap()
+    }
+
+    /// A bare item, mirroring the Go test helper of the same name.
+    fn item(id: &str, strand: Strand) -> Item {
+        Item {
+            card_id: id.to_string(),
+            strand,
+            prompt: id.to_string(),
+            answer: id.to_string(),
+            secondary: String::new(),
+            notes: String::new(),
+            freq: 0,
+        }
+    }
+
+    fn freq_item(id: &str, freq: i64) -> Item {
+        Item {
+            freq,
+            ..item(id, Strand::Vocab)
+        }
+    }
+
+    /// Stores a due review card (reviewed before, so not a new card).
+    fn save(store: &SqliteStore, profile_id: i64, id: &str, due: DateTime<Utc>) {
+        save_state(store, profile_id, id, due, 0);
+    }
+
+    /// Stores a due review card carrying a lapse.
+    fn save_lapsed(store: &SqliteStore, profile_id: i64, id: &str, due: DateTime<Utc>) {
+        save_state(store, profile_id, id, due, 1);
+    }
+
+    fn save_state(store: &SqliteStore, profile_id: i64, id: &str, due: DateTime<Utc>, lapses: i64) {
+        let state = CardState {
+            card_id: id.to_string(),
+            interval: 1,
+            ease: DEFAULT_EASE,
+            reps: 1,
+            lapses,
+            due_at: Some(due),
+            last_reviewed_at: Some(due),
+        };
+        store.save_card_state(profile_id, &state).unwrap();
+    }
+
+    fn ids(q: &Queue) -> Vec<&str> {
+        q.items.iter().map(|s| s.item.card_id.as_str()).collect()
+    }
+
+    /// The fixed clock the ordering tests schedule around.
+    fn at() -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(2026, 6, 25, 9, 0, 0).unwrap()
     }
 
     fn lesson(cards: Vec<Card>) -> Lesson {
@@ -291,12 +344,36 @@ mod tests {
 
     #[test]
     fn budget_rules() {
-        assert_eq!(new_card_budget(0, 0, 0), 10); // no cap, no reviews
-        assert_eq!(new_card_budget(0, 0, 5), 5); // session cap
-        assert_eq!(new_card_budget(20, 0, 0), 10); // no session limit
-        assert_eq!(new_card_budget(3, 0, 5), 2); // reviews consume seats
-        assert_eq!(new_card_budget(4, 2, 0), 5); // lapse-heavy halves intake
-        assert_eq!(new_card_budget(10, 0, 5), 0); // reviews exceed limit
+        // (name, due_reviews, lapsed_reviews, limit, want)
+        let cases = [
+            (
+                "fresh profile: gentle intake, not a full-session dump",
+                0,
+                0,
+                20,
+                10,
+            ),
+            ("light day: full intake", 5, 0, 20, 10),
+            ("light but lapse-heavy: half intake", 5, 3, 20, 5),
+            ("seats left after reviews", 12, 2, 20, 8),
+            ("seats left, halved by lapses", 12, 6, 20, 4),
+            ("nearly full session of reviews", 18, 0, 20, 2),
+            ("full backlog: reviews only", 20, 0, 20, 0),
+            ("overloaded backlog: reviews only", 35, 10, 20, 0),
+            ("all-lapsed small set: halved", 6, 6, 20, 5),
+            ("uncapped queue still paces intake", 0, 0, 0, 10),
+            ("uncapped and lapse-heavy still halves", 4, 2, 0, 5),
+            ("session cap below the intake ceiling", 0, 0, 5, 5),
+            ("reviews consume seats", 3, 0, 5, 2),
+            ("reviews exceed the limit", 10, 0, 5, 0),
+        ];
+        for (name, due, lapsed, limit, want) in cases {
+            assert_eq!(
+                new_card_budget(due, lapsed, limit),
+                want,
+                "new_card_budget({due}, {lapsed}, {limit}) — {name}"
+            );
+        }
     }
 
     #[test]
@@ -355,5 +432,178 @@ mod tests {
         let items = vocab_items(std::slice::from_ref(&lesson(vec![card("l:0", 0)])));
         let q = build_queue(&s, p.id, &items, Utc::now(), 0).unwrap();
         assert!(q.items.is_empty(), "a future-scheduled card is not due");
+    }
+
+    /// Never-seen items have no due date, so they are immediately due.
+    #[test]
+    fn new_items_are_due() {
+        let s = mem_store();
+        let p = s.create_profile("A").unwrap();
+        let items = [item("v:1", Strand::Vocab), item("v:2", Strand::Vocab)];
+        let q = build_queue(&s, p.id, &items, Utc::now(), 0).unwrap();
+        assert_eq!(q.items.len(), 2);
+    }
+
+    /// Items scheduled in the future are excluded; the due one survives.
+    #[test]
+    fn filters_not_due() {
+        let s = mem_store();
+        let p = s.create_profile("A").unwrap();
+        let now = at();
+        save(&s, p.id, "v:1", now - Duration::hours(1)); // due
+        save(&s, p.id, "v:2", now + Duration::hours(48)); // not due
+
+        let items = [item("v:1", Strand::Vocab), item("v:2", Strand::Vocab)];
+        let q = build_queue(&s, p.id, &items, now, 0).unwrap();
+        assert_eq!(ids(&q), ["v:1"]);
+    }
+
+    /// Within a strand the queue is most-overdue first; across strands it is
+    /// pulled round-robin.
+    #[test]
+    fn overdue_first_interleaved() {
+        let s = mem_store();
+        let p = s.create_profile("A").unwrap();
+        let now = at();
+        let day = Duration::days(1);
+        save(&s, p.id, "v:1", now - day * 3);
+        save(&s, p.id, "v:2", now - day);
+        save(&s, p.id, "v:3", now - day * 2);
+        save(&s, p.id, "k:1", now - day * 5);
+        save(&s, p.id, "k:2", now - day * 4);
+
+        let items = [
+            item("v:1", Strand::Vocab),
+            item("v:2", Strand::Vocab),
+            item("v:3", Strand::Vocab),
+            item("k:1", Strand::Kana),
+            item("k:2", Strand::Kana),
+        ];
+        let q = build_queue(&s, p.id, &items, now, 0).unwrap();
+        assert_eq!(ids(&q), ["v:1", "k:1", "v:3", "k:2", "v:2"]);
+    }
+
+    #[test]
+    fn respects_limit() {
+        let s = mem_store();
+        let p = s.create_profile("A").unwrap();
+        let items = [
+            item("v:1", Strand::Vocab),
+            item("v:2", Strand::Vocab),
+            item("v:3", Strand::Vocab),
+        ];
+        let q = build_queue(&s, p.id, &items, Utc::now(), 2).unwrap();
+        assert_eq!(q.items.len(), 2);
+    }
+
+    /// A fresh profile's all-new queue is paced: at most `MAX_NEW_PER_SESSION`
+    /// enter, and the rest are reported as held back rather than dropped.
+    #[test]
+    fn paces_new_cards() {
+        let s = mem_store();
+        let p = s.create_profile("A").unwrap();
+        let items: Vec<Item> = (0..15)
+            .map(|i| item(&format!("v:{i}"), Strand::Vocab))
+            .collect();
+        let q = build_queue(&s, p.id, &items, Utc::now(), 20).unwrap();
+        assert_eq!(q.items.len(), 10, "new cards admitted");
+        assert_eq!(q.held_back_new, 5);
+        assert_eq!(q.due_reviews, 0);
+    }
+
+    /// Due reviews take every seat they need; new cards only fill what's left.
+    #[test]
+    fn reviews_take_priority_over_new() {
+        let s = mem_store();
+        let p = s.create_profile("A").unwrap();
+        let now = at();
+        let mut items = Vec::new();
+        for i in 0..18 {
+            let id = format!("r:{i}");
+            save(&s, p.id, &id, now - Duration::hours(1));
+            items.push(item(&id, Strand::Vocab));
+        }
+        items.extend((0..6).map(|i| item(&format!("n:{i}"), Strand::Vocab)));
+
+        let q = build_queue(&s, p.id, &items, now, 20).unwrap();
+        assert_eq!(q.due_reviews, 18);
+        // 18 reviews leave 2 seats: 2 new admitted, 4 held back.
+        assert_eq!(q.items.len(), 20);
+        assert_eq!(q.held_back_new, 4);
+    }
+
+    /// A lapse-heavy due set halves the new-card intake end-to-end.
+    #[test]
+    fn lapse_heavy_set_halves_intake() {
+        let s = mem_store();
+        let p = s.create_profile("A").unwrap();
+        let now = at();
+        let mut items = Vec::new();
+        for i in 0..4 {
+            let id = format!("r:{i}");
+            save_lapsed(&s, p.id, &id, now - Duration::hours(1));
+            items.push(item(&id, Strand::Vocab));
+        }
+        items.extend((0..12).map(|i| item(&format!("n:{i}"), Strand::Vocab)));
+
+        let q = build_queue(&s, p.id, &items, now, 20).unwrap();
+        // 4 due reviews, all lapsed → budget 10 halved to 5.
+        assert_eq!(q.items.len(), 9, "4 reviews + 5 new");
+        assert_eq!(q.held_back_new, 7);
+    }
+
+    /// The budget cut prefers the most frequent words: ranked cards enter
+    /// most-frequent-first, unranked ones only after them.
+    #[test]
+    fn admits_most_frequent_new_cards_first() {
+        let s = mem_store();
+        let p = s.create_profile("A").unwrap();
+        let items = [
+            freq_item("unranked-a", 0),
+            freq_item("rare", 900),
+            freq_item("common", 14),
+            freq_item("mid", 300),
+            freq_item("unranked-b", 0),
+        ];
+        // limit 3, no due reviews → budget 3: the ranked cards, most frequent
+        // first; both unranked cards held back behind them.
+        let q = build_queue(&s, p.id, &items, Utc::now(), 3).unwrap();
+        assert_eq!(ids(&q), ["common", "mid", "rare"]);
+        assert_eq!(q.held_back_new, 2);
+    }
+
+    /// Strand interleaving still operates on the admitted set.
+    #[test]
+    fn interleaves_admitted_new_cards() {
+        let s = mem_store();
+        let p = s.create_profile("A").unwrap();
+        let items = [
+            item("v:1", Strand::Vocab),
+            item("v:2", Strand::Vocab),
+            item("k:1", Strand::Kana),
+            item("k:2", Strand::Kana),
+        ];
+        let q = build_queue(&s, p.id, &items, Utc::now(), 20).unwrap();
+        assert_eq!(ids(&q), ["v:1", "k:1", "v:2", "k:2"]);
+    }
+
+    #[test]
+    fn kana_card_id_is_prefixed() {
+        assert_eq!(kana_card_id(&kana("あ")), "kana:あ");
+    }
+
+    #[test]
+    fn kana_items_map_fields() {
+        let items = kana_items(&[KanaItem {
+            char: "あ".to_string(),
+            romaji: "a".to_string(),
+            kana_type: KanaType::Hiragana,
+            category: KanaCategory::Base,
+        }]);
+        assert_eq!(items.len(), 1);
+        let it = &items[0];
+        assert_eq!(it.prompt, "あ");
+        assert_eq!(it.answer, "a");
+        assert_eq!(it.strand, Strand::Kana);
     }
 }

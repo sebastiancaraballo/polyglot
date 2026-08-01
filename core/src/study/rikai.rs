@@ -135,4 +135,33 @@ mod tests {
         assert_eq!(p.streak, 0);
         assert!(p.mastered); // never revoked
     }
+
+    /// A slot masters exactly on the streak threshold, not before, and every
+    /// answer counts as an attempt.
+    #[test]
+    fn grade_slot_mastery_requires_an_accurate_run() {
+        let mut p = PatternProgress::default();
+        for i in 1..=MASTERY_STREAK {
+            p = grade_pattern_slot(p, true);
+            assert_eq!(p.mastered, i >= MASTERY_STREAK, "after {i} correct answers");
+        }
+        assert_eq!(p.streak, MASTERY_STREAK);
+        assert_eq!(p.attempts, MASTERY_STREAK);
+    }
+
+    /// A card counts as known once it has been reviewed at least once.
+    #[test]
+    fn card_known_after_one_review() {
+        for (name, reps, want) in [
+            ("never reviewed", 0, false),
+            ("reviewed once", 1, true),
+            ("reviewed many times", 5, true),
+        ] {
+            let state = CardState {
+                reps,
+                ..CardState::new("c")
+            };
+            assert_eq!(card_known(&state), want, "{name}");
+        }
+    }
 }

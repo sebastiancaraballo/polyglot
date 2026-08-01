@@ -39,4 +39,24 @@ mod tests {
         assert_eq!(xp_for_answer(true), xp_for_grade(Grade::Good));
         assert_eq!(xp_for_answer(false), xp_for_grade(Grade::Again));
     }
+
+    /// The award per grade is pinned: changing it changes every learner's
+    /// progression, so it should never drift silently.
+    #[test]
+    fn xp_per_grade_is_pinned() {
+        for (grade, want) in [
+            (Grade::Again, 2),
+            (Grade::Hard, 6),
+            (Grade::Good, 10),
+            (Grade::Easy, 14),
+        ] {
+            assert_eq!(xp_for_grade(grade), want, "{grade:?}");
+        }
+    }
+
+    /// A correct answer always outearns an incorrect one.
+    #[test]
+    fn correct_answers_outearn_incorrect() {
+        assert!(xp_for_answer(false) < xp_for_answer(true));
+    }
 }

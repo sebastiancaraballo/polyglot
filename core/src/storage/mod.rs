@@ -658,8 +658,32 @@ mod tests {
     use super::*;
     use crate::srs;
 
+    use std::sync::atomic::{AtomicU32, Ordering};
+
     fn store() -> SqliteStore {
         SqliteStore::open_in_memory().expect("open in-memory db")
+    }
+
+    /// Counts a profile's rows in `table`, to assert `ON DELETE CASCADE`.
+    fn count_rows(s: &SqliteStore, table: &str, profile_id: i64) -> i64 {
+        s.conn
+            .query_row(
+                &format!("SELECT COUNT(*) FROM {table} WHERE profile_id = ?1"),
+                params![profile_id],
+                |r| r.get(0),
+            )
+            .unwrap()
+    }
+
+    /// A unique scratch directory: the tests that exercise on-disk paths need
+    /// real files, and the crate carries no temp-dir dependency.
+    fn scratch_dir(tag: &str) -> PathBuf {
+        static N: AtomicU32 = AtomicU32::new(0);
+        let n = N.fetch_add(1, Ordering::Relaxed);
+        let dir =
+            std::env::temp_dir().join(format!("polyglot-test-{}-{tag}-{n}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
     }
 
     #[test]
@@ -818,5 +842,487 @@ mod tests {
         )
         .unwrap();
         assert!(s.get_story_progress(p.id).unwrap()["ch1"].mastered);
+    }
+
+    #[test]
+    fn open_applies_migrations() {
+        let s = store();
+        for table in ["profiles", "card_states", "stats"] {
+            let found: String = s
+                .conn
+                .query_row(
+                    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?1",
+                    params![table],
+                    |r| r.get(0),
+                )
+                .unwrap_or_else(|e| panic!("expected table {table} to exist: {e}"));
+            assert_eq!(found, table);
+        }
+    }
+
+    #[test]
+    fn set_onboarded_for_unknown_profile_is_not_found() {
+        let s = store();
+        assert!(matches!(s.set_onboarded(999), Err(StorageError::NotFound)));
+    }
+
+    #[test]
+    fn profile_name_round_trip() {
+        let s = store();
+        let created = s.create_profile("Mei").unwrap();
+        assert_eq!(created.name, "Mei");
+        assert_eq!(s.get_profile(created.id).unwrap().name, "Mei");
+    }
+
+    /// Romaji display defaults on, toggles both ways, and rejects unknown ids.
+    #[test]
+    fn show_romaji_toggles() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        assert!(p.show_romaji, "new profiles default to showing romaji");
+
+        s.set_show_romaji(p.id, false).unwrap();
+        assert!(!s.get_profile(p.id).unwrap().show_romaji);
+
+        s.set_show_romaji(p.id, true).unwrap();
+        assert!(s.get_profile(p.id).unwrap().show_romaji);
+
+        assert!(matches!(
+            s.set_show_romaji(9999, false),
+            Err(StorageError::NotFound)
+        ));
+    }
+
+    /// Kana onboarding defaults off, sticks once set, and rejects unknown ids.
+    #[test]
+    fn kana_onboarded_flag() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        assert!(
+            !p.kana_onboarded,
+            "new profiles have not seen kana onboarding"
+        );
+
+        s.set_kana_onboarded(p.id).unwrap();
+        assert!(s.get_profile(p.id).unwrap().kana_onboarded);
+
+        assert!(matches!(
+            s.set_kana_onboarded(9999),
+            Err(StorageError::NotFound)
+        ));
+    }
+
+    /// The active profile id is absent on a fresh database and overwritten —
+    /// not duplicated — by a second set.
+    #[test]
+    fn active_profile_id_overwrites() {
+        let s = store();
+        assert_eq!(s.active_profile_id().unwrap(), None);
+
+        let p = s.create_profile("tester").unwrap();
+        s.set_active_profile_id(p.id).unwrap();
+        assert_eq!(s.active_profile_id().unwrap(), Some(p.id));
+
+        s.set_active_profile_id(p.id + 1).unwrap();
+        assert_eq!(s.active_profile_id().unwrap(), Some(p.id + 1));
+    }
+
+    /// A missing card state is `NotFound`, and both timestamps survive the
+    /// round-trip unchanged.
+    #[test]
+    fn card_state_times_round_trip() {
+        let s = store();
+        let p = s.create_profile("learner").unwrap();
+        assert!(matches!(
+            s.get_card_state(p.id, "card-1"),
+            Err(StorageError::NotFound)
+        ));
+
+        let due = Utc.with_ymd_and_hms(2026, 6, 20, 9, 0, 0).unwrap();
+        let reviewed = Utc.with_ymd_and_hms(2026, 6, 19, 9, 0, 0).unwrap();
+        let mut state = CardState {
+            card_id: "card-1".to_string(),
+            interval: 1,
+            ease: crate::model::DEFAULT_EASE,
+            reps: 1,
+            lapses: 0,
+            due_at: Some(due),
+            last_reviewed_at: Some(reviewed),
+        };
+        s.save_card_state(p.id, &state).unwrap();
+
+        let got = s.get_card_state(p.id, "card-1").unwrap();
+        assert_eq!(got.interval, 1);
+        assert_eq!(got.reps, 1);
+        assert_eq!(got.ease, crate::model::DEFAULT_EASE);
+        assert_eq!(got.due_at, Some(due));
+        assert_eq!(got.last_reviewed_at, Some(reviewed));
+
+        // Update via upsert.
+        state.interval = 3;
+        state.reps = 2;
+        s.save_card_state(p.id, &state).unwrap();
+        let got = s.get_card_state(p.id, "card-1").unwrap();
+        assert_eq!((got.interval, got.reps), (3, 2));
+    }
+
+    #[test]
+    fn get_card_states_maps_every_card() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        assert!(s.get_card_states(p.id).unwrap().is_empty());
+
+        for (id, reps) in [("self-intro:1", 1), ("self-intro:2", 3)] {
+            s.save_card_state(
+                p.id,
+                &CardState {
+                    card_id: id.to_string(),
+                    interval: reps,
+                    ease: crate::model::DEFAULT_EASE,
+                    reps,
+                    lapses: 0,
+                    due_at: None,
+                    last_reviewed_at: None,
+                },
+            )
+            .unwrap();
+        }
+
+        let got = s.get_card_states(p.id).unwrap();
+        assert_eq!(got.len(), 2);
+        assert_eq!(got["self-intro:1"].reps, 1);
+        assert_eq!(got["self-intro:2"].reps, 3);
+    }
+
+    /// Card states are per-profile: one profile never sees another's.
+    #[test]
+    fn card_state_cascade_isolation() {
+        let s = store();
+        let a = s.create_profile("a").unwrap();
+        let b = s.create_profile("b").unwrap();
+
+        let state = srs::review(&srs::new_card("shared"), srs::Grade::Good, Utc::now());
+        s.save_card_state(a.id, &state).unwrap();
+
+        assert!(matches!(
+            s.get_card_state(b.id, "shared"),
+            Err(StorageError::NotFound)
+        ));
+    }
+
+    /// Only reviewed cards (`reps > 0`) count as learned.
+    #[test]
+    fn count_learned_cards_ignores_new_cards() {
+        let s = store();
+        let p = s.create_profile("learner").unwrap();
+        assert_eq!(s.count_learned_cards(p.id).unwrap(), 0);
+
+        let now = Utc::now();
+        for (id, reps) in [("a", 1), ("b", 0)] {
+            s.save_card_state(
+                p.id,
+                &CardState {
+                    card_id: id.to_string(),
+                    interval: 0,
+                    ease: crate::model::DEFAULT_EASE,
+                    reps,
+                    lapses: 0,
+                    due_at: Some(now),
+                    last_reviewed_at: Some(now),
+                },
+            )
+            .unwrap();
+        }
+        assert_eq!(s.count_learned_cards(p.id).unwrap(), 1);
+    }
+
+    #[test]
+    fn stats_round_trip() {
+        let s = store();
+        let p = s.create_profile("learner").unwrap();
+        let fresh = s.get_stats(p.id).unwrap();
+        assert_eq!(
+            (fresh.streak, fresh.best_streak, fresh.xp),
+            (0, 0, 0),
+            "a fresh profile has zero-valued stats"
+        );
+        assert_eq!(fresh.last_studied_at, None);
+
+        let studied = Utc.with_ymd_and_hms(2026, 6, 19, 20, 0, 0).unwrap();
+        s.save_stats(
+            p.id,
+            &Stats {
+                streak: 5,
+                best_streak: 12,
+                last_studied_at: Some(studied),
+                xp: 150,
+            },
+        )
+        .unwrap();
+
+        let got = s.get_stats(p.id).unwrap();
+        assert_eq!((got.streak, got.best_streak, got.xp), (5, 12, 150));
+        assert_eq!(got.last_studied_at, Some(studied));
+    }
+
+    #[test]
+    fn add_xp_accumulates() {
+        let s = store();
+        let p = s.create_profile("learner").unwrap();
+        s.add_xp(p.id, 10).unwrap();
+        s.add_xp(p.id, 5).unwrap();
+        assert_eq!(s.get_stats(p.id).unwrap().xp, 15);
+
+        assert!(matches!(s.add_xp(9999, 10), Err(StorageError::NotFound)));
+    }
+
+    /// Deleting a profile cascades to its stats and rejects unknown ids.
+    #[test]
+    fn delete_profile_cascades_to_stats() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        s.save_stats(
+            p.id,
+            &Stats {
+                streak: 1,
+                best_streak: 1,
+                last_studied_at: None,
+                xp: 10,
+            },
+        )
+        .unwrap();
+
+        s.delete_profile(p.id).unwrap();
+        assert!(matches!(s.get_stats(p.id), Err(StorageError::NotFound)));
+        assert!(matches!(
+            s.delete_profile(9999),
+            Err(StorageError::NotFound)
+        ));
+    }
+
+    #[test]
+    fn kana_progress_upserts() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        assert!(s.get_kana_progress(p.id).unwrap().is_empty());
+
+        let mut want = KanaProgress {
+            char: "あ".to_string(),
+            streak: 2,
+            attempts: 5,
+            mastered: true,
+            best_ms: 1200,
+        };
+        s.save_kana_progress(p.id, &want).unwrap();
+        assert_eq!(s.get_kana_progress(p.id).unwrap()["あ"], want);
+
+        want.streak = 3;
+        want.attempts = 6;
+        s.save_kana_progress(p.id, &want).unwrap();
+        let got = s.get_kana_progress(p.id).unwrap();
+        assert_eq!(got.len(), 1, "saving again upserts rather than duplicating");
+        assert_eq!(got["あ"].streak, 3);
+    }
+
+    #[test]
+    fn kana_progress_deleted_with_profile() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        s.save_kana_progress(
+            p.id,
+            &KanaProgress {
+                char: "あ".to_string(),
+                streak: 0,
+                attempts: 0,
+                mastered: true,
+                best_ms: 0,
+            },
+        )
+        .unwrap();
+        s.delete_profile(p.id).unwrap();
+        assert_eq!(count_rows(&s, "kana_progress", p.id), 0);
+    }
+
+    #[test]
+    fn pattern_progress_upserts() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        assert!(s.get_pattern_progress(p.id).unwrap().is_empty());
+
+        let mut want = PatternProgress {
+            pattern_id: "x-wa-n-desu".to_string(),
+            slot: "X".to_string(),
+            streak: 2,
+            attempts: 5,
+            mastered: true,
+        };
+        s.save_pattern_progress(p.id, &want).unwrap();
+        assert_eq!(s.get_pattern_progress(p.id).unwrap()["x-wa-n-desu:X"], want);
+
+        want.streak = 3;
+        want.attempts = 6;
+        s.save_pattern_progress(p.id, &want).unwrap();
+        let got = s.get_pattern_progress(p.id).unwrap();
+        assert_eq!(got.len(), 1, "saving again upserts rather than duplicating");
+        assert_eq!(got["x-wa-n-desu:X"].streak, 3);
+    }
+
+    /// Each slot of a pattern is mastered independently.
+    #[test]
+    fn pattern_progress_tracks_slots_independently() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        for (slot, mastered) in [("X", true), ("N", false)] {
+            s.save_pattern_progress(
+                p.id,
+                &PatternProgress {
+                    pattern_id: "x-wa-n-desu".to_string(),
+                    slot: slot.to_string(),
+                    streak: 0,
+                    attempts: 0,
+                    mastered,
+                },
+            )
+            .unwrap();
+        }
+
+        let got = s.get_pattern_progress(p.id).unwrap();
+        assert_eq!(got.len(), 2);
+        assert!(got["x-wa-n-desu:X"].mastered);
+        assert!(!got["x-wa-n-desu:N"].mastered);
+    }
+
+    #[test]
+    fn pattern_progress_deleted_with_profile() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        s.save_pattern_progress(
+            p.id,
+            &PatternProgress {
+                pattern_id: "x-wa-n-desu".to_string(),
+                slot: "X".to_string(),
+                streak: 0,
+                attempts: 0,
+                mastered: true,
+            },
+        )
+        .unwrap();
+        s.delete_profile(p.id).unwrap();
+        assert_eq!(count_rows(&s, "pattern_progress", p.id), 0);
+    }
+
+    #[test]
+    fn story_progress_upserts() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        assert!(s.get_story_progress(p.id).unwrap().is_empty());
+
+        let mut want = StoryProgress {
+            chapter_id: "capitulo-1-asakusa".to_string(),
+            beat_index: 2,
+            completed: false,
+            mastered: false,
+        };
+        s.save_story_progress(p.id, &want).unwrap();
+        assert_eq!(
+            s.get_story_progress(p.id).unwrap()["capitulo-1-asakusa"],
+            want
+        );
+
+        want.beat_index = 5;
+        want.completed = true;
+        want.mastered = true;
+        s.save_story_progress(p.id, &want).unwrap();
+        let got = s.get_story_progress(p.id).unwrap();
+        assert_eq!(got.len(), 1, "saving again upserts rather than duplicating");
+        assert!(got["capitulo-1-asakusa"].completed);
+        assert!(got["capitulo-1-asakusa"].mastered);
+    }
+
+    #[test]
+    fn story_progress_deleted_with_profile() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        s.save_story_progress(
+            p.id,
+            &StoryProgress {
+                chapter_id: "capitulo-1-asakusa".to_string(),
+                beat_index: 1,
+                completed: false,
+                mastered: false,
+            },
+        )
+        .unwrap();
+        s.delete_profile(p.id).unwrap();
+        assert_eq!(count_rows(&s, "story_progress", p.id), 0);
+    }
+
+    /// Re-taking a level updates the stored result in place.
+    #[test]
+    fn assessment_result_upserts_one_row() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        let mut want = AssessmentResult {
+            level: Jlpt::N5,
+            passed: true,
+            best_correct: 13,
+            total: 15,
+            taken_at: Some(Utc.with_ymd_and_hms(2026, 6, 25, 9, 0, 0).unwrap()),
+        };
+        s.save_assessment_result(p.id, &want).unwrap();
+
+        want.best_correct = 15;
+        s.save_assessment_result(p.id, &want).unwrap();
+
+        let got = s.get_assessment_result(p.id, Jlpt::N5).unwrap();
+        assert_eq!(got.best_correct, 15);
+        assert_eq!(count_rows(&s, "assessment_result", p.id), 1);
+    }
+
+    #[test]
+    fn assessment_result_deleted_with_profile() {
+        let s = store();
+        let p = s.create_profile("tester").unwrap();
+        s.save_assessment_result(
+            p.id,
+            &AssessmentResult {
+                level: Jlpt::N5,
+                passed: true,
+                best_correct: 12,
+                total: 15,
+                taken_at: None,
+            },
+        )
+        .unwrap();
+        s.delete_profile(p.id).unwrap();
+        assert_eq!(count_rows(&s, "assessment_result", p.id), 0);
+    }
+
+    /// `remove` deletes the database and its WAL sidecars.
+    #[test]
+    fn remove_deletes_wal_sidecars() {
+        let dir = scratch_dir("remove");
+        let base = dir.join("polyglot.db");
+        let paths = [
+            base.clone(),
+            PathBuf::from(format!("{}-wal", base.display())),
+            PathBuf::from(format!("{}-shm", base.display())),
+        ];
+        for p in &paths {
+            std::fs::write(p, b"x").unwrap();
+        }
+
+        remove(&base).unwrap();
+        for p in &paths {
+            assert!(!p.exists(), "{} still exists after remove", p.display());
+        }
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn remove_missing_is_not_an_error() {
+        let dir = scratch_dir("absent");
+        remove(dir.join("absent.db")).unwrap();
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

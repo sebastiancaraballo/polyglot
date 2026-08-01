@@ -61,4 +61,45 @@ mod tests {
         assert_eq!(p.streak, 0);
         assert_eq!(p.attempts, 2);
     }
+
+    /// Mastery lands exactly on the streak threshold, not before.
+    #[test]
+    fn mastery_requires_an_accurate_run() {
+        let mut p = KanaProgress::default();
+        for i in 1..=MASTERY_STREAK {
+            p = grade_kana(p, true, ms(1000));
+            assert_eq!(p.mastered, i >= MASTERY_STREAK, "after {i} correct answers");
+        }
+        assert_eq!(p.streak, MASTERY_STREAK);
+        assert_eq!(p.attempts, MASTERY_STREAK);
+    }
+
+    /// Response time does not gate the streak: a slow but correct answer counts,
+    /// and still records a best time.
+    #[test]
+    fn slow_answer_still_advances_streak() {
+        let p = grade_kana(KanaProgress::default(), true, Duration::from_secs(30));
+        assert_eq!(p.streak, 1);
+        assert!(p.best_ms > 0, "a correct answer records a best time");
+    }
+
+    /// An untimed answer counts toward mastery but records no best time.
+    #[test]
+    fn untimed_correct_answer_advances_streak() {
+        let p = grade_kana(KanaProgress::default(), true, Duration::ZERO);
+        assert_eq!(p.streak, 1);
+        assert_eq!(p.best_ms, 0);
+    }
+
+    /// Mastery is sticky: a later lapse zeroes the streak but never revokes it.
+    #[test]
+    fn mastery_survives_a_later_lapse() {
+        let mut p = KanaProgress::default();
+        for _ in 0..MASTERY_STREAK {
+            p = grade_kana(p, true, ms(1000));
+        }
+        p = grade_kana(p, false, ms(1000));
+        assert_eq!(p.streak, 0);
+        assert!(p.mastered, "mastery should remain sticky after a lapse");
+    }
 }
