@@ -17,6 +17,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("migrations/00008_story_progress.sql"),
     include_str!("migrations/00009_story_progress_mastered.sql"),
     include_str!("migrations/00010_assessment_result.sql"),
+    include_str!("migrations/00011_kanji_progress.sql"),
 ];
 
 /// Applies every pending migration, in order, each in its own transaction.
@@ -74,6 +75,37 @@ fn goose_version(conn: &Connection) -> Option<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The real interop case: a Go/goose database stops at the last migration
+    /// goose knew about, and the Rust runner must carry it forward from there —
+    /// this is what happens to an existing learner's database on upgrade.
+    #[test]
+    fn applies_new_migrations_on_top_of_a_goose_database() {
+        const GOOSE_VERSION: usize = 10; // the last migration the Go app shipped
+        let conn = Connection::open_in_memory().unwrap();
+        for sql in MIGRATIONS.iter().take(GOOSE_VERSION) {
+            conn.execute_batch(sql).unwrap();
+        }
+        conn.execute_batch(&format!(
+            "CREATE TABLE goose_db_version (\
+               id INTEGER PRIMARY KEY, version_id INTEGER, is_applied INTEGER, tstamp TEXT);\
+             INSERT INTO goose_db_version (version_id, is_applied) VALUES (0, 1), ({GOOSE_VERSION}, 1);"
+        ))
+        .unwrap();
+        conn.pragma_update(None, "user_version", 0i64).unwrap();
+        assert!(!table_exists(&conn, "kanji_progress").unwrap());
+
+        migrate(&conn).unwrap();
+
+        assert!(
+            table_exists(&conn, "kanji_progress").unwrap(),
+            "the post-goose migrations must be applied"
+        );
+        let v: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(v, MIGRATIONS.len() as i64);
+    }
 
     #[test]
     fn adopts_a_goose_created_schema() {

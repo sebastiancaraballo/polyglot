@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Kanji support in the engine** (#62). The engine can now be taught kanji: a
+  `KanjiItem` model with on'yomi/kun'yomi readings and a meaning, an optional
+  `content/<pair>/kanji/*.yaml` table, `kanji_progress` persistence (migration 11)
+  and accuracy-based grading. This is the engine half only — the learning UI and
+  the ~100 N5 kanji themselves are follow-ups, and no pair teaches kanji yet, so
+  nothing changes for learners today.
+
+### Fixed
+- Kanji were validated by neither half of the engine and rejected by the other:
+  the content loader skipped every non-kana character, so a card written with
+  kanji passed validation, while the decoder refused all Han characters
+  outright — the card would have loaded cleanly and then never appeared in a
+  single study session. The loader now requires every kanji in evaluable content
+  to be in the kanji table, and the decoder accepts the ones a learner has
+  mastered. The `is_han` check, previously duplicated with two different sets of
+  Unicode ranges, is now defined once.
+
 ## [0.0.3] - 2026-08-01
 
 ### Changed

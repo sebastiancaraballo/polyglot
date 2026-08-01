@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::model::KanaProgress;
+use crate::model::{KanaProgress, KanjiProgress};
 
 /// The run of correct answers in a row that marks a kana mastered. Mastery
 /// depends on accuracy only: answering correctly several times running shows
@@ -19,6 +19,24 @@ pub fn grade_kana(mut p: KanaProgress, correct: bool, elapsed: Duration) -> Kana
         if ms > 0 && (p.best_ms == 0 || ms < p.best_ms) {
             p.best_ms = ms;
         }
+        p.streak += 1;
+        if p.streak >= MASTERY_STREAK {
+            p.mastered = true;
+        }
+    } else {
+        p.streak = 0;
+    }
+    p
+}
+
+/// Folds one answer into a kanji's progress and returns the updated value.
+/// Same accuracy-only rule as [`grade_kana`]: a run of correct answers marks it
+/// mastered, and mastery is never revoked by a later lapse. Kanji answers are
+/// not timed — a reading recalled slowly is still recalled — so there is no
+/// `elapsed` and no best time. Pure function.
+pub fn grade_kanji(mut p: KanjiProgress, correct: bool) -> KanjiProgress {
+    p.attempts += 1;
+    if correct {
         p.streak += 1;
         if p.streak >= MASTERY_STREAK {
             p.mastered = true;
@@ -89,6 +107,23 @@ mod tests {
         let p = grade_kana(KanaProgress::default(), true, Duration::ZERO);
         assert_eq!(p.streak, 1);
         assert_eq!(p.best_ms, 0);
+    }
+
+    /// Kanji grade on accuracy alone and their mastery is sticky, like kana —
+    /// but they carry no timing, since a reading recalled slowly is recalled.
+    #[test]
+    fn kanji_master_on_accuracy_and_stay_mastered() {
+        let mut p = KanjiProgress::default();
+        for i in 1..=MASTERY_STREAK {
+            p = grade_kanji(p, true);
+            assert_eq!(p.mastered, i >= MASTERY_STREAK, "after {i} correct answers");
+        }
+        assert_eq!(p.streak, MASTERY_STREAK);
+        assert_eq!(p.attempts, MASTERY_STREAK);
+
+        p = grade_kanji(p, false);
+        assert_eq!(p.streak, 0, "a wrong answer resets the streak");
+        assert!(p.mastered, "mastery survives a later lapse");
     }
 
     /// Mastery is sticky: a later lapse zeroes the streak but never revokes it.

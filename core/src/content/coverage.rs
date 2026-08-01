@@ -1,12 +1,37 @@
 use std::collections::HashSet;
 
-use crate::model::{Beat, BeatKind, Chapter, KanaItem, KanaType, Lesson, Pattern, PracticeKind};
+use crate::model::{
+    is_han, Beat, BeatKind, Chapter, KanaItem, KanaType, KanjiItem, Lesson, Pattern, PracticeKind,
+};
 
 /// Builds the set of teachable kana strings from the loaded kana tables.
 /// Combination kana (yōon) are stored as two-scalar strings, so the set
 /// contains both single- and two-scalar entries.
 pub(super) fn kana_set(items: &[KanaItem]) -> HashSet<String> {
     items.iter().map(|it| it.char.clone()).collect()
+}
+
+/// Builds the set of teachable kanji from the loaded kanji table.
+pub(super) fn kanji_set(items: &[KanjiItem]) -> HashSet<String> {
+    items.iter().map(|it| it.char.clone()).collect()
+}
+
+/// Fails when `jp` uses a kanji that is not in the kanji table.
+///
+/// This is the kanji counterpart of [`check_kana_coverage`], and it closes a
+/// real gap: that check skips every non-kana character, so before this existed a
+/// card written with kanji passed validation and then failed the decoding gate
+/// forever — content that loads and is never shown.
+pub(super) fn check_kanji_coverage(jp: &str, set: &HashSet<String>) -> Result<(), String> {
+    for c in jp.chars() {
+        if is_han(c) && !set.contains(&c.to_string()) {
+            return Err(format!(
+                "uses kanji {:?} not present in the kanji table",
+                c.to_string()
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn is_kana(c: char) -> bool {
