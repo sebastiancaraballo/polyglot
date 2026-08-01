@@ -270,4 +270,77 @@ mod tests {
         }
         assert!(screen.contains('あ'), "shows the あ kana");
     }
+
+    fn chart() -> KanaChart {
+        let course = polyglot_core::content::load_embedded(polyglot_core::content::DEFAULT_PAIR)
+            .expect("embedded course");
+        KanaChart::new(&course)
+    }
+
+    fn ctx(store: &polyglot_core::storage::SqliteStore) -> crate::app::Ctx<'_> {
+        crate::app::Ctx {
+            store,
+            profile_id: None,
+        }
+    }
+
+    /// → walks the pages and stops on the last; ← walks back and stops on the
+    /// first.
+    #[test]
+    fn paging_advances_and_clamps() {
+        let store = polyglot_core::storage::SqliteStore::open_in_memory().unwrap();
+        let c = ctx(&store);
+        let mut chart = chart();
+        let last = chart.pages.len() - 1;
+
+        chart.handle(KeyCode::Right, KeyModifiers::NONE, &c);
+        assert_eq!(chart.page, 1, "→ advances a page");
+
+        for _ in 0..chart.pages.len() * 2 {
+            chart.handle(KeyCode::Right, KeyModifiers::NONE, &c);
+        }
+        assert_eq!(chart.page, last, "→ clamps at the last page");
+
+        for _ in 0..chart.pages.len() * 2 {
+            chart.handle(KeyCode::Left, KeyModifiers::NONE, &c);
+        }
+        assert_eq!(chart.page, 0, "← clamps at the first page");
+    }
+
+    /// Each page shows only the kana it covers: the base page carries no
+    /// dakuten, the voiced page carries both dakuten and handakuten, and the
+    /// katakana pages carry no hiragana.
+    #[test]
+    fn each_page_shows_only_its_own_kana() {
+        let store = polyglot_core::storage::SqliteStore::open_in_memory().unwrap();
+        let c = ctx(&store);
+        let msgs = polyglot_core::i18n::default();
+        let mut chart = chart();
+
+        let dense = |chart: &KanaChart| -> String {
+            crate::testutil::snapshot(|f, inner, theme| chart.render(f, inner, theme, msgs))
+                .chars()
+                .filter(|ch| !ch.is_whitespace())
+                .collect()
+        };
+
+        // Page 0: hiragana base.
+        let view = dense(&chart);
+        assert!(view.contains('あ'), "the base page shows あ");
+        assert!(!view.contains('が'), "the base page must not show が");
+
+        // Page 1: hiragana dakuten + handakuten.
+        chart.handle(KeyCode::Right, KeyModifiers::NONE, &c);
+        let view = dense(&chart);
+        assert!(view.contains('が'), "the voiced page shows が");
+        assert!(view.contains('ぱ'), "the voiced page shows ぱ");
+        assert!(!view.contains('あ'), "the voiced page must not show あ");
+
+        // Page 3: katakana base — no hiragana leaks across syllabaries.
+        chart.handle(KeyCode::Right, KeyModifiers::NONE, &c);
+        chart.handle(KeyCode::Right, KeyModifiers::NONE, &c);
+        let view = dense(&chart);
+        assert!(view.contains('ア'), "the katakana page shows ア");
+        assert!(!view.contains('あ'), "the katakana page must not show あ");
+    }
 }

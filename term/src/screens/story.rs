@@ -960,4 +960,488 @@ mod tests {
         assert!(!s.picking, "a chapter was started");
         assert!(!s.chapter.beats.is_empty());
     }
+
+    fn beat(kind: BeatKind, speaker: &str, source: &str, jp: &str) -> Beat {
+        Beat {
+            kind,
+            speaker: speaker.to_string(),
+            place: String::new(),
+            source: source.to_string(),
+            jp: jp.to_string(),
+            romaji: String::new(),
+            practice: None,
+            ref_id: String::new(),
+        }
+    }
+
+    fn practice_beat(kind: PracticeKind, ref_id: &str) -> Beat {
+        Beat {
+            practice: Some(kind),
+            ref_id: ref_id.to_string(),
+            ..beat(BeatKind::Practice, "", "", "")
+        }
+    }
+
+    /// A 4-beat chapter: narration, dialogue, one vocab practice, closing line.
+    fn test_chapter() -> Chapter {
+        Chapter {
+            id: "test-chapter".to_string(),
+            title: "Capítulo de prueba".to_string(),
+            beats: vec![
+                beat(BeatKind::Narration, "", "Es de día.", "昼です。"),
+                beat(BeatKind::Dialogue, "Yui", "Hola.", "こんにちは。"),
+                practice_beat(PracticeKind::Vocab, "test-lesson"),
+                beat(BeatKind::Dialogue, "Yui", "Adiós.", "さようなら。"),
+            ],
+        }
+    }
+
+    /// Sits behind `test_chapter`'s mastery gate in the picker.
+    fn second_chapter() -> Chapter {
+        Chapter {
+            id: "test-chapter-2".to_string(),
+            title: "Segundo capítulo".to_string(),
+            beats: vec![beat(BeatKind::Narration, "", "Sigue.", "続く。")],
+        }
+    }
+
+    /// Nothing to evaluate: completing it masters it.
+    fn no_practice_chapter() -> Chapter {
+        Chapter {
+            id: "no-practice".to_string(),
+            title: "Sin práctica".to_string(),
+            beats: vec![beat(
+                BeatKind::Narration,
+                "",
+                "Solo texto.",
+                "テキストだけ。",
+            )],
+        }
+    }
+
+    fn test_course(chapters: Vec<Chapter>) -> Course {
+        Course {
+            pair: "es-xx".to_string(),
+            lessons: vec![Lesson {
+                id: "test-lesson".to_string(),
+                title: "t".to_string(),
+                jlpt: None,
+                functions: Vec::new(),
+                cards: vec![
+                    Card {
+                        id: "test-lesson:1".to_string(),
+                        source: "Hola".to_string(),
+                        jp: "こんにちは".to_string(),
+                        romaji: "konnichiwa".to_string(),
+                        notes: String::new(),
+                        jlpt: None,
+                        functions: Vec::new(),
+                        freq: 0,
+                    },
+                    Card {
+                        id: "test-lesson:2".to_string(),
+                        source: "Adiós".to_string(),
+                        jp: "さようなら".to_string(),
+                        romaji: "sayounara".to_string(),
+                        notes: String::new(),
+                        jlpt: None,
+                        functions: Vec::new(),
+                        freq: 0,
+                    },
+                ],
+            }],
+            kana: vec![
+                KanaItem {
+                    char: "あ".to_string(),
+                    romaji: "a".to_string(),
+                    kana_type: polyglot_core::model::KanaType::Hiragana,
+                    category: polyglot_core::model::KanaCategory::Base,
+                },
+                KanaItem {
+                    char: "い".to_string(),
+                    romaji: "i".to_string(),
+                    kana_type: polyglot_core::model::KanaType::Hiragana,
+                    category: polyglot_core::model::KanaCategory::Base,
+                },
+            ],
+            patterns: Vec::new(),
+            chapters,
+        }
+    }
+
+    fn store_with_profile() -> (SqliteStore, i64) {
+        let s = SqliteStore::open_in_memory().unwrap();
+        let pid = s.create_profile("tester").unwrap().id;
+        (s, pid)
+    }
+
+    /// Plays `test_chapter`'s four beats to the end, answering its practice beat
+    /// correctly, and leaves the story on the first challenge question.
+    fn finish_beats(s: &mut Story, ctx: &Ctx<'_>) {
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, ctx); // narration -> dialogue
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, ctx); // dialogue -> practice
+        s.selected = s.correct;
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, ctx); // reveal
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, ctx); // -> closing dialogue
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, ctx); // -> finished, challenge
+        assert!(s.challenge.is_some(), "the challenge opened");
+        assert!(s.challenge_intro, "on the challenge intro");
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, ctx); // dismiss the intro
+    }
+
+    /// Answers every remaining challenge question correctly or incorrectly.
+    fn run_challenge(s: &mut Story, ctx: &Ctx<'_>, correct: bool) {
+        while !s.challenge_finished() {
+            s.selected = if correct {
+                s.correct
+            } else {
+                (s.correct + 1) % s.options.len().max(1)
+            };
+            s.handle(KeyCode::Enter, KeyModifiers::NONE, ctx); // reveal
+            s.handle(KeyCode::Enter, KeyModifiers::NONE, ctx); // record + advance
+        }
+    }
+
+    /// With no chapters at all the screen still renders.
+    #[test]
+    fn empty_course_renders_without_panicking() {
+        let (store, pid) = store_with_profile();
+        let s = Story::new(&store, &test_course(Vec::new()), Some(pid));
+        assert!(s.entries.is_empty());
+        let msgs = polyglot_core::i18n::default();
+        let _ = crate::testutil::snapshot(|f, inner, theme| s.render(f, inner, theme, msgs));
+    }
+
+    /// The picker lists every chapter and gates all but the first.
+    #[test]
+    fn picker_lists_chapters_and_gates_them() {
+        let (store, pid) = store_with_profile();
+        let s = Story::new(
+            &store,
+            &test_course(vec![test_chapter(), second_chapter()]),
+            Some(pid),
+        );
+        assert_eq!(s.entries.len(), 2);
+        assert!(!s.entries[0].locked);
+        assert!(s.entries[1].locked, "chapter 2 is gated on chapter 1");
+
+        let msgs = polyglot_core::i18n::default();
+        let view = crate::testutil::snapshot(|f, inner, theme| s.render(f, inner, theme, msgs));
+        assert!(view.contains("Capítulo de prueba"));
+        assert!(view.contains("Segundo capítulo"));
+    }
+
+    /// Starting a chapter enters its first beat; confirming walks narration and
+    /// dialogue until a practice beat asks a question.
+    #[test]
+    fn advancing_reaches_the_practice_beat() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut s = Story::new(&store, &test_course(vec![test_chapter()]), Some(pid));
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert_eq!(s.beat_index, 0, "starts on the first beat");
+
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert_eq!(s.beat_index, 1);
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert_eq!(s.beat_index, 2);
+        assert_eq!(s.practice_kind, Some(PracticeKind::Vocab));
+        assert!(!s.options.is_empty(), "the practice beat asks a question");
+    }
+
+    /// A vocab practice answer persists card state and awards XP.
+    #[test]
+    fn answering_vocab_practice_persists_card_state_and_xp() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut s = Story::new(&store, &test_course(vec![test_chapter()]), Some(pid));
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // start
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // on the practice beat
+        s.selected = s.correct;
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // reveal
+
+        assert!(
+            !store.get_card_states(pid).unwrap().is_empty(),
+            "the answer scheduled the card"
+        );
+        assert!(
+            store.get_stats(pid).unwrap().xp > 0,
+            "the answer awarded XP"
+        );
+    }
+
+    /// A kana practice beat records progress under the character.
+    #[test]
+    fn answering_kana_practice_persists_kana_progress() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let chapter = Chapter {
+            id: "kana-chapter".to_string(),
+            title: "Kana".to_string(),
+            beats: vec![practice_beat(PracticeKind::Kana, "hiragana")],
+        };
+        let mut s = Story::new(&store, &test_course(vec![chapter]), Some(pid));
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // start on the practice beat
+        assert_eq!(s.practice_kind, Some(PracticeKind::Kana));
+        s.selected = s.correct;
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // reveal
+
+        assert!(
+            !store.get_kana_progress(pid).unwrap().is_empty(),
+            "the answer recorded kana progress"
+        );
+    }
+
+    /// Failing the end-of-chapter challenge neither masters the chapter nor
+    /// unlocks the next one.
+    #[test]
+    fn failing_the_challenge_keeps_the_next_chapter_locked() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut s = Story::new(
+            &store,
+            &test_course(vec![test_chapter(), second_chapter()]),
+            Some(pid),
+        );
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        finish_beats(&mut s, &ctx);
+        run_challenge(&mut s, &ctx, false);
+
+        assert!(!s.challenge_passed(), "all-wrong answers must not pass");
+        s.refresh_chapters(&store, Some(pid));
+        assert!(s.entries[1].locked, "the next chapter stays locked");
+        let progress = store.get_story_progress(pid).unwrap();
+        assert!(
+            !progress["test-chapter"].mastered,
+            "a failed challenge must not persist mastery"
+        );
+    }
+
+    /// Passing masters the chapter, persists it, and unlocks the next one.
+    #[test]
+    fn passing_the_challenge_masters_and_unlocks() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut s = Story::new(
+            &store,
+            &test_course(vec![test_chapter(), second_chapter()]),
+            Some(pid),
+        );
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        finish_beats(&mut s, &ctx);
+        run_challenge(&mut s, &ctx, true);
+
+        assert!(s.challenge_passed(), "all-correct answers pass");
+        let progress = store.get_story_progress(pid).unwrap();
+        assert!(
+            progress["test-chapter"].mastered,
+            "passing persists mastery"
+        );
+
+        // Confirming on the done screen returns to a picker that reflects it.
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert!(s.picking, "confirming returns to the picker");
+        assert!(s.entries[0].progress.mastered, "the picker shows mastery");
+        assert!(!s.entries[1].locked, "the next chapter is unlocked");
+    }
+
+    /// A failed challenge can be retried immediately with a fresh draw.
+    #[test]
+    fn challenge_retry_rebuilds_questions() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut s = Story::new(&store, &test_course(vec![test_chapter()]), Some(pid));
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        finish_beats(&mut s, &ctx);
+        run_challenge(&mut s, &ctx, false);
+        assert!(s.challenge_finished() && !s.challenge_passed());
+
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // retry
+        assert_eq!(
+            s.challenge_idx, 0,
+            "the retry starts from the first question"
+        );
+        assert_eq!(s.challenge_right, 0, "the score is reset");
+        assert!(s.challenge_intro, "the retry re-opens the intro");
+    }
+
+    /// A chapter with nothing to practice masters on completion.
+    #[test]
+    fn no_practice_chapter_auto_masters() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut s = Story::new(&store, &test_course(vec![no_practice_chapter()]), Some(pid));
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // start
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // the single narration beat
+
+        assert!(s.challenge.is_none(), "no practice, no challenge");
+        let progress = store.get_story_progress(pid).unwrap();
+        assert!(
+            progress["no-practice"].mastered,
+            "completing a no-practice chapter masters it"
+        );
+    }
+
+    /// A partially played chapter resumes where the learner left off; a
+    /// completed one replays from the start, keeping its mastery.
+    #[test]
+    fn resume_and_replay() {
+        let (store, pid) = store_with_profile();
+        store
+            .save_story_progress(
+                pid,
+                &StoryProgress {
+                    chapter_id: "test-chapter".to_string(),
+                    beat_index: 2,
+                    completed: false,
+                    mastered: false,
+                },
+            )
+            .unwrap();
+        let mut s = Story::new(&store, &test_course(vec![test_chapter()]), Some(pid));
+        s.start_chapter(0);
+        assert_eq!(s.beat_index, 2, "resumed where the learner left off");
+
+        // A completed (and mastered) chapter restarts from scratch.
+        store
+            .save_story_progress(
+                pid,
+                &StoryProgress {
+                    chapter_id: "test-chapter".to_string(),
+                    beat_index: 4,
+                    completed: true,
+                    mastered: true,
+                },
+            )
+            .unwrap();
+        let mut s = Story::new(&store, &test_course(vec![test_chapter()]), Some(pid));
+        s.start_chapter(0);
+        assert_eq!(
+            s.beat_index, 0,
+            "a completed chapter replays from the start"
+        );
+        assert!(s.chapter_mastered, "replaying preserves mastery");
+    }
+
+    /// Confirming on a locked chapter does nothing, and the picker explains the
+    /// gate.
+    #[test]
+    fn locked_chapter_does_not_start_and_explains_itself() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut s = Story::new(
+            &store,
+            &test_course(vec![test_chapter(), second_chapter()]),
+            Some(pid),
+        );
+        s.chapter_cur = 1; // the locked chapter
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert!(s.picking, "a locked chapter must not start");
+
+        let msgs = polyglot_core::i18n::default();
+        let view = crate::testutil::snapshot(|f, inner, theme| s.render(f, inner, theme, msgs));
+        assert!(
+            view.contains(&msgs.story_gate_note),
+            "the picker states the gating rule"
+        );
+    }
+
+    /// A present beat lists its pool and advances to the next beat.
+    #[test]
+    fn present_beat_renders_pool_and_advances() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let chapter = Chapter {
+            id: "present-chapter".to_string(),
+            title: "Presenta".to_string(),
+            beats: vec![
+                Beat {
+                    practice: Some(PracticeKind::Vocab),
+                    ref_id: "test-lesson".to_string(),
+                    ..beat(BeatKind::Present, "", "", "")
+                },
+                beat(BeatKind::Narration, "", "Fin.", "おわり。"),
+            ],
+        };
+        let mut s = Story::new(&store, &test_course(vec![chapter]), Some(pid));
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // start on the present beat
+        assert_eq!(s.beat_index, 0);
+
+        let msgs = polyglot_core::i18n::default();
+        let view = crate::testutil::snapshot(|f, inner, theme| s.render(f, inner, theme, msgs));
+        // Wide glyphs occupy two buffer cells, so the flattened view carries a
+        // filler space after each one: compare with spaces collapsed.
+        let dense: String = view.chars().filter(|c| !c.is_whitespace()).collect();
+        assert!(
+            dense.contains("こんにちは"),
+            "the present beat lists the pool it introduces; view:\n{view}"
+        );
+
+        s.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert_eq!(s.beat_index, 1, "confirming leaves the present beat");
+    }
+
+    /// The embedded story fits the fixed frame at every beat of every chapter —
+    /// the guard against content that overflows in production.
+    #[test]
+    fn embedded_story_fits_the_frame() {
+        let store = SqliteStore::open_in_memory().unwrap();
+        let course = content::load_embedded(content::DEFAULT_PAIR).unwrap();
+        let pid = store.create_profile("A").unwrap().id;
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let msgs = polyglot_core::i18n::default();
+
+        for (i, chapter) in course.chapters.iter().enumerate() {
+            let mut s = Story::new(&store, &course, Some(pid));
+            s.chapter = chapter.clone();
+            s.picking = false;
+            for beat_index in 0..chapter.beats.len() {
+                s.beat_index = beat_index;
+                s.enter_beat();
+                for page in 0..s.present_page_count().max(1) {
+                    s.present_page = page;
+                    let view = crate::testutil::snapshot(|f, inner, theme| {
+                        s.render(f, inner, theme, msgs)
+                    });
+                    let widest = view.lines().map(|l| l.chars().count()).max().unwrap_or(0);
+                    assert!(
+                        widest <= 80,
+                        "chapter {i} beat {beat_index} page {page}: line of {widest} cells overflows"
+                    );
+                }
+            }
+            let _ = &ctx;
+        }
+    }
 }

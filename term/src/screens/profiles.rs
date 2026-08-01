@@ -113,3 +113,94 @@ impl Profiles {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn store_with_two() -> (SqliteStore, i64, i64) {
+        let s = SqliteStore::open_in_memory().unwrap();
+        let a = s.create_profile("Yui").unwrap().id;
+        let b = s.create_profile("Mei").unwrap().id;
+        (s, a, b)
+    }
+
+    /// Choosing a profile makes it active and reloads the app root.
+    #[test]
+    fn choosing_a_profile_switches_to_it() {
+        let (store, a, b) = store_with_two();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(a),
+        };
+        let mut p = Profiles::new(&store, Some(a));
+        assert_eq!(p.profiles.len(), 2);
+
+        p.handle(KeyCode::Down, KeyModifiers::NONE, &ctx); // move to the second
+        let t = p.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+
+        assert!(
+            matches!(t, Transition::ReloadRoot),
+            "switching profile reloads the root"
+        );
+        assert_eq!(
+            store.active_profile_id().unwrap(),
+            Some(b),
+            "the chosen profile became active"
+        );
+    }
+
+    /// The row after the list opens profile creation.
+    #[test]
+    fn choosing_create_opens_profile_setup() {
+        let (store, a, _) = store_with_two();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(a),
+        };
+        let mut p = Profiles::new(&store, Some(a));
+        for _ in 0..p.profiles.len() {
+            p.handle(KeyCode::Down, KeyModifiers::NONE, &ctx);
+        }
+        let t = p.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert!(
+            matches!(t, Transition::Push(Dest::ProfileSetup)),
+            "got {t:?}"
+        );
+    }
+
+    /// The active profile is marked with a symbol and a label, never by color
+    /// alone.
+    #[test]
+    fn view_marks_the_active_profile() {
+        let (store, a, _) = store_with_two();
+        let msgs = polyglot_core::i18n::default();
+        let p = Profiles::new(&store, Some(a));
+        let view = crate::testutil::snapshot(|f, inner, theme| p.render(f, inner, theme, msgs));
+
+        assert!(view.contains("Yui") && view.contains("Mei"), "lists both");
+        assert!(view.contains('●'), "marks the active profile with a symbol");
+        assert!(
+            view.contains(&msgs.active_profile_label),
+            "and names it in text"
+        );
+    }
+
+    /// The cursor never leaves the list plus its trailing "create" row.
+    #[test]
+    fn cursor_is_clamped() {
+        let (store, a, _) = store_with_two();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(a),
+        };
+        let mut p = Profiles::new(&store, Some(a));
+        p.handle(KeyCode::Up, KeyModifiers::NONE, &ctx);
+        assert_eq!(p.cursor, 0, "up at the top stays");
+
+        for _ in 0..10 {
+            p.handle(KeyCode::Down, KeyModifiers::NONE, &ctx);
+        }
+        assert_eq!(p.cursor, p.profiles.len(), "down stops on the create row");
+    }
+}

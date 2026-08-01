@@ -339,4 +339,54 @@ mod tests {
         // The graded card was persisted as a review.
         assert_eq!(store.count_learned_cards(pid).unwrap(), 1);
     }
+
+    fn card_with_romaji(jp: &str, romaji: &str) -> Card {
+        Card {
+            romaji: romaji.to_string(),
+            ..card(jp)
+        }
+    }
+
+    /// Space answers the current question, like enter and the number keys.
+    #[test]
+    fn space_answers_the_question() {
+        let store = SqliteStore::open_in_memory().unwrap();
+        let pid = store.create_profile("A").unwrap().id;
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let cards = ["みず", "ひ", "て", "き", "こ"].map(card).to_vec();
+        let mut q = Quiz::new(cards, false);
+
+        q.handle(KeyCode::Char(' '), KeyModifiers::NONE, &ctx);
+        assert!(q.answered, "space answers the current question");
+    }
+
+    /// The romaji setting decides whether readings ride along with the options.
+    #[test]
+    fn romaji_setting_controls_the_reading() {
+        let msgs = polyglot_core::i18n::default();
+        let cards = vec![
+            card_with_romaji("みず", "mizu"),
+            card_with_romaji("ひ", "hi"),
+            card_with_romaji("て", "te"),
+            card_with_romaji("き", "ki"),
+        ];
+
+        for show_romaji in [true, false] {
+            let q = Quiz::new(cards.clone(), show_romaji);
+            let view = crate::testutil::snapshot(|f, inner, theme| q.render(f, inner, theme, msgs));
+            let has_reading = view.contains("mizu")
+                || view.contains("(hi)")
+                || view.contains("(te)")
+                || view.contains("(ki)");
+            assert_eq!(
+                has_reading,
+                show_romaji,
+                "show_romaji={show_romaji} should {} the reading; view:\n{view}",
+                if show_romaji { "show" } else { "hide" }
+            );
+        }
+    }
 }

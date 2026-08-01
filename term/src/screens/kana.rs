@@ -614,4 +614,338 @@ mod tests {
         // Centered: the box is indented from the left edge.
         assert!(rows[0].starts_with(' '));
     }
+
+    fn kana(ch: &str, romaji: &str, typ: KanaType, cat: KanaCategory) -> KanaItem {
+        KanaItem {
+            char: ch.to_string(),
+            romaji: romaji.to_string(),
+            kana_type: typ,
+            category: cat,
+        }
+    }
+
+    /// Wraps `kana` in an otherwise-empty course, so a trainer can be built over
+    /// a tiny fixture instead of the whole embedded syllabary.
+    fn course_of(kana: Vec<KanaItem>) -> Course {
+        Course {
+            pair: "es-xx".to_string(),
+            lessons: Vec::new(),
+            kana,
+            patterns: Vec::new(),
+            chapters: Vec::new(),
+        }
+    }
+
+    /// A minimal two-syllabary set whose base gojūon is one kana each, so a
+    /// single mastered kana makes a syllabary fluent.
+    fn gate_course() -> Course {
+        course_of(vec![
+            kana("あ", "a", KanaType::Hiragana, KanaCategory::Base),
+            kana("ア", "a", KanaType::Katakana, KanaCategory::Base),
+        ])
+    }
+
+    /// Five hiragana, enough to fill an option list in either direction.
+    fn reverse_course() -> Course {
+        course_of(vec![
+            kana("あ", "a", KanaType::Hiragana, KanaCategory::Base),
+            kana("い", "i", KanaType::Hiragana, KanaCategory::Base),
+            kana("う", "u", KanaType::Hiragana, KanaCategory::Base),
+            kana("え", "e", KanaType::Hiragana, KanaCategory::Base),
+            kana("お", "o", KanaType::Hiragana, KanaCategory::Base),
+        ])
+    }
+
+    fn group_index(trainer: &KanaTrainer, prefix: &str) -> usize {
+        trainer
+            .groups
+            .iter()
+            .position(|g| g.label.starts_with(prefix))
+            .unwrap_or_else(|| panic!("no group labelled {prefix:?}"))
+    }
+
+    /// Renders the trainer and flattens it to text.
+    fn view(trainer: &KanaTrainer) -> String {
+        let msgs = polyglot_core::i18n::default();
+        crate::testutil::snapshot(|f, inner, theme| trainer.render(f, inner, theme, msgs))
+    }
+
+    /// Confirming a group builds a deck restricted to it.
+    #[test]
+    fn picker_starts_filtered_session() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let course = course_of(vec![
+            kana("あ", "a", KanaType::Hiragana, KanaCategory::Base),
+            kana("が", "ga", KanaType::Hiragana, KanaCategory::Dakuten),
+            kana("ぱ", "pa", KanaType::Hiragana, KanaCategory::Handakuten),
+            kana("きゃ", "kya", KanaType::Hiragana, KanaCategory::Combo),
+            kana("ア", "a", KanaType::Katakana, KanaCategory::Base),
+        ]);
+        let mut trainer = KanaTrainer::new(&store, &course, Some(pid));
+        assert!(trainer.picking, "the trainer opens on the group picker");
+
+        // Move to "Hiragana · Dakuten / Handakuten" and start.
+        trainer.handle(KeyCode::Down, KeyModifiers::NONE, &ctx);
+        trainer.handle(KeyCode::Down, KeyModifiers::NONE, &ctx);
+        trainer.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+
+        assert!(!trainer.picking, "confirming a group starts the session");
+        assert_eq!(trainer.deck.len(), 2, "dakuten + handakuten");
+        for it in &trainer.deck {
+            assert!(
+                matches!(
+                    it.category,
+                    KanaCategory::Dakuten | KanaCategory::Handakuten
+                ),
+                "out-of-group item {:?}",
+                it.char
+            );
+        }
+    }
+
+    /// Space answers the current question, and a correct answer awards XP.
+    #[test]
+    fn space_answers_and_awards_xp() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut trainer = KanaTrainer::new(&store, &gate_course(), Some(pid));
+        trainer.group_cursor = group_index(&trainer, "Hiragana");
+        trainer.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+
+        trainer.handle(KeyCode::Char(' '), KeyModifiers::NONE, &ctx);
+        assert!(trainer.answered, "space answers the question");
+        assert!(store.get_stats(pid).unwrap().xp > 0, "answering awards XP");
+    }
+
+    /// Katakana — and the all-syllabary group, which spans it — stay locked
+    /// until hiragana is fluent, and confirming a locked group does nothing.
+    #[test]
+    fn katakana_and_all_groups_are_gated_on_hiragana() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let msgs = polyglot_core::i18n::default();
+
+        let mut trainer = KanaTrainer::new(&store, &gate_course(), Some(pid));
+        for label in [msgs.katakana_label.as_str(), msgs.kana_group_all.as_str()] {
+            let idx = group_index(&trainer, label);
+            assert!(trainer.groups[idx].locked, "{label} is locked at first");
+
+            trainer.group_cursor = idx;
+            trainer.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+            assert!(
+                trainer.picking,
+                "confirming the locked {label} group must not start a session"
+            );
+        }
+
+        // Mastering the single hiragana opens both gates.
+        store
+            .save_kana_progress(
+                pid,
+                &KanaProgress {
+                    char: "あ".to_string(),
+                    mastered: true,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        let trainer = KanaTrainer::new(&store, &gate_course(), Some(pid));
+        for label in [msgs.katakana_label.as_str(), msgs.kana_group_all.as_str()] {
+            let idx = group_index(&trainer, label);
+            assert!(
+                !trainer.groups[idx].locked,
+                "{label} unlocks once hiragana is fluent"
+            );
+        }
+    }
+
+    /// The locked-group hint shows live progress toward opening the gate.
+    #[test]
+    fn locked_group_hint_shows_live_progress() {
+        let (store, pid) = store_with_profile();
+        let msgs = polyglot_core::i18n::default();
+        let mut trainer = KanaTrainer::new(&store, &gate_course(), Some(pid));
+        trainer.group_cursor = group_index(&trainer, &msgs.katakana_label);
+
+        // The fixture has one hiragana base kana, none mastered yet.
+        assert!(
+            view(&trainer).contains("0/1"),
+            "the hint should show live hiragana progress"
+        );
+    }
+
+    /// A first-time visitor sees the intro; dismissing it persists and is not
+    /// shown again.
+    #[test]
+    fn intro_is_shown_once_and_persisted() {
+        let store = SqliteStore::open_in_memory().unwrap();
+        let pid = store.create_profile("A").unwrap().id; // not kana-onboarded
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+
+        let mut trainer = KanaTrainer::new(&store, &gate_course(), Some(pid));
+        assert!(trainer.intro, "a first-time visitor sees the intro");
+        assert!(!trainer.picking, "the picker waits behind the intro");
+
+        trainer.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert!(!trainer.intro, "confirming dismisses the intro");
+        assert!(trainer.picking, "and falls through to the picker");
+        assert!(
+            store.get_profile(pid).unwrap().kana_onboarded,
+            "dismissing persists that the intro was seen"
+        );
+
+        let again = KanaTrainer::new(&store, &gate_course(), Some(pid));
+        assert!(!again.intro, "the intro does not reappear");
+        assert!(again.picking);
+    }
+
+    /// ← and → flip the drill direction in the picker.
+    #[test]
+    fn arrows_toggle_direction_in_picker() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut trainer = KanaTrainer::new(&store, &reverse_course(), Some(pid));
+        assert!(!trainer.reverse, "the trainer defaults to recognition");
+
+        trainer.handle(KeyCode::Right, KeyModifiers::NONE, &ctx);
+        assert!(trainer.reverse, "→ flips to the reverse direction");
+        trainer.handle(KeyCode::Left, KeyModifiers::NONE, &ctx);
+        assert!(!trainer.reverse, "← flips back");
+    }
+
+    /// In reverse the prompt is the romaji and every option is a glyph — the
+    /// learner must produce the character, not recognize it.
+    #[test]
+    fn reverse_session_asks_for_the_glyph() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let course = reverse_course();
+        let mut trainer = KanaTrainer::new(&store, &course, Some(pid));
+        trainer.reverse = true;
+        trainer.group_cursor = group_index(&trainer, "Hiragana");
+        trainer.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+
+        let glyphs: std::collections::HashSet<&str> =
+            course.kana.iter().map(|k| k.char.as_str()).collect();
+        for opt in &trainer.options {
+            assert!(
+                glyphs.contains(opt.as_str()),
+                "reverse option {opt:?} is not a kana glyph"
+            );
+        }
+        assert_eq!(
+            trainer.options[trainer.correct], trainer.deck[trainer.index].char,
+            "the correct option is the deck's glyph"
+        );
+
+        let msgs = polyglot_core::i18n::default();
+        assert!(
+            view(&trainer).contains(&msgs.kana_prompt_reverse),
+            "the reverse question uses the recall prompt"
+        );
+    }
+
+    /// Mastery is keyed by character, not by direction: a reverse answer
+    /// advances the same per-character streak the forward drill uses.
+    #[test]
+    fn reverse_answer_records_mastery_by_character() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut trainer = KanaTrainer::new(&store, &reverse_course(), Some(pid));
+        trainer.reverse = true;
+        trainer.group_cursor = group_index(&trainer, "Hiragana");
+        trainer.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+
+        let answered_char = trainer.deck[trainer.index].char.clone();
+        trainer.selected = trainer.correct;
+        trainer.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+
+        let saved = store.get_kana_progress(pid).unwrap();
+        let p = saved
+            .get(&answered_char)
+            .unwrap_or_else(|| panic!("no progress recorded under {answered_char:?}"));
+        assert!(p.attempts > 0, "the answer advanced the character's streak");
+    }
+
+    /// Revealing an answer must not shift the layout: the kana tile keeps its
+    /// column so the glyph does not jump under the learner's eyes.
+    #[test]
+    fn tile_position_is_stable_after_answering() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut trainer = KanaTrainer::new(&store, &reverse_course(), Some(pid));
+        trainer.group_cursor = group_index(&trainer, "Hiragana");
+        trainer.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+
+        let tile_column = |v: &str| -> usize {
+            v.lines()
+                .find_map(|l| l.find('╭'))
+                .expect("the view contains the kana tile")
+        };
+        let before = tile_column(&view(&trainer));
+        trainer.selected = (trainer.correct + 1) % trainer.options.len();
+        trainer.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        let after = tile_column(&view(&trainer));
+
+        assert_eq!(before, after, "the tile column moved after answering");
+    }
+
+    /// Every question state, in both directions, fits the fixed frame.
+    #[test]
+    fn question_view_fits_the_frame_in_both_directions() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        for reverse in [false, true] {
+            let mut trainer = KanaTrainer::new(&store, &reverse_course(), Some(pid));
+            trainer.reverse = reverse;
+            trainer.group_cursor = group_index(&trainer, "Hiragana");
+            trainer.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+
+            for answered in [false, true] {
+                if answered {
+                    trainer.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+                }
+                // `snapshot` renders into the real frame; nothing may overflow it,
+                // which shows up as content on the border rows/columns.
+                let v = view(&trainer);
+                let widest = v.lines().map(|l| l.chars().count()).max().unwrap_or(0);
+                assert!(
+                    widest <= 80,
+                    "reverse={reverse} answered={answered}: line of {widest} cells overflows the terminal"
+                );
+                assert!(
+                    v.lines().filter(|l| !l.trim().is_empty()).count() <= 30,
+                    "reverse={reverse} answered={answered}: content overflows the terminal height"
+                );
+            }
+        }
+    }
 }

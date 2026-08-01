@@ -30,7 +30,7 @@ use crate::theme::Theme;
 const BLANK: &str = "▁▁▁▁";
 const MISSED_CAP: usize = 8;
 
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 enum Phase {
     Intro,
     Question,
@@ -561,5 +561,132 @@ mod tests {
         );
         assert!(a.answered);
         assert_eq!(a.correct_count, 1);
+    }
+
+    fn exam(store: &SqliteStore) -> (Assessment, i64) {
+        let course = content::load_embedded("es-ja").unwrap();
+        let pid = store.create_profile("A").unwrap().id;
+        (Assessment::new(store, &course, Some(pid)), pid)
+    }
+
+    /// Answers every question of the current attempt, correctly or not.
+    fn take_exam(a: &mut Assessment, ctx: &Ctx<'_>, correct: bool) {
+        a.handle(KeyCode::Enter, KeyModifiers::NONE, ctx); // intro -> questions
+        while a.phase == Phase::Question {
+            let q = &a.deck[a.index];
+            a.selected = if correct {
+                q.correct
+            } else {
+                (q.correct + 1) % q.options.len()
+            };
+            a.handle(KeyCode::Enter, KeyModifiers::NONE, ctx); // reveal
+            a.handle(KeyCode::Enter, KeyModifiers::NONE, ctx); // advance
+        }
+    }
+
+    /// An all-correct attempt passes and persists the result and best score.
+    #[test]
+    fn passing_persists_the_result() {
+        let store = SqliteStore::open_in_memory().unwrap();
+        let (mut a, pid) = exam(&store);
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let total = a.deck.len();
+        take_exam(&mut a, &ctx, true);
+
+        assert_eq!(a.phase, Phase::Result);
+        assert!(a.attempt_passed(), "an all-correct attempt passes");
+
+        let res = store
+            .get_assessment_result(pid, polyglot_core::model::Jlpt::N5)
+            .unwrap();
+        assert!(res.passed, "the pass is persisted");
+        assert_eq!(res.best_correct as usize, total, "best score");
+        assert_eq!(res.total as usize, total);
+    }
+
+    /// A failed attempt is not marked passed, and can be retried immediately
+    /// with a fresh draw. Mastery Learning: a pass, once earned, is never
+    /// revoked by a later failure.
+    #[test]
+    fn failing_allows_retry_and_never_revokes_a_pass() {
+        let store = SqliteStore::open_in_memory().unwrap();
+        let (mut a, pid) = exam(&store);
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+
+        take_exam(&mut a, &ctx, false);
+        assert!(!a.attempt_passed(), "an all-wrong attempt does not pass");
+        let res = store
+            .get_assessment_result(pid, polyglot_core::model::Jlpt::N5)
+            .unwrap();
+        assert!(!res.passed, "a failed first attempt is not a pass");
+
+        // Retry: a fresh deck, back to the question phase.
+        a.restart(&ctx);
+        assert_eq!(a.phase, Phase::Question);
+        assert_eq!(a.index, 0, "the retry starts from the first question");
+        assert_eq!(a.correct_count, 0, "the score is reset");
+
+        // Pass it, then fail again: the stored pass survives.
+        a.phase = Phase::Intro;
+        take_exam(&mut a, &ctx, true);
+        assert!(
+            store
+                .get_assessment_result(pid, polyglot_core::model::Jlpt::N5)
+                .unwrap()
+                .passed
+        );
+
+        a.restart(&ctx);
+        a.phase = Phase::Intro;
+        take_exam(&mut a, &ctx, false);
+        let res = store
+            .get_assessment_result(pid, polyglot_core::model::Jlpt::N5)
+            .unwrap();
+        assert!(res.passed, "a later failure must not revoke the pass");
+    }
+
+    /// Every phase renders inside the frame, in both romaji settings — long
+    /// space-less Japanese must wrap and the review list must cap.
+    #[test]
+    fn every_phase_fits_the_frame() {
+        let store = SqliteStore::open_in_memory().unwrap();
+        let msgs = polyglot_core::i18n::default();
+
+        for show_romaji in [true, false] {
+            let (mut a, pid) = exam(&store);
+            a = a.with_romaji(show_romaji);
+            let ctx = Ctx {
+                store: &store,
+                profile_id: Some(pid),
+            };
+
+            let check = |a: &Assessment, label: &str| {
+                let view =
+                    crate::testutil::snapshot(|f, inner, theme| a.render(f, inner, theme, msgs));
+                let widest = view.lines().map(|l| l.chars().count()).max().unwrap_or(0);
+                assert!(
+                    widest <= 80,
+                    "romaji={show_romaji} {label}: line of {widest} cells overflows"
+                );
+            };
+
+            check(&a, "intro");
+            a.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+            while a.phase == Phase::Question {
+                check(&a, "question");
+                let q = &a.deck[a.index];
+                a.selected = (q.correct + 1) % q.options.len(); // all wrong: a full review list
+                a.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+                check(&a, "answered");
+                a.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+            }
+            check(&a, "result (failed, every question missed)");
+        }
     }
 }

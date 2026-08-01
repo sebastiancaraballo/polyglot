@@ -464,6 +464,7 @@ fn is_confirm(code: KeyCode) -> bool {
 mod tests {
     use super::*;
     use polyglot_core::content;
+    use polyglot_core::model::Lesson;
     use polyglot_core::storage::SqliteStore;
 
     #[test]
@@ -477,6 +478,211 @@ mod tests {
         assert!(
             r.entries.iter().all(|(_, locked)| *locked),
             "every pattern is locked until its filler vocab is known"
+        );
+    }
+
+    fn card(id: &str, source: &str, jp: &str, romaji: &str) -> Card {
+        Card {
+            id: id.to_string(),
+            source: source.to_string(),
+            jp: jp.to_string(),
+            romaji: romaji.to_string(),
+            notes: String::new(),
+            jlpt: None,
+            functions: Vec::new(),
+            freq: 0,
+        }
+    }
+
+    /// A two-slot pattern mirroring the real "X wa N desu" without depending on
+    /// the shipped content.
+    fn test_course() -> Course {
+        let cards = vec![
+            card("a:1", "Yo", "わたし", "watashi"),
+            card("a:2", "Tú", "あなた", "anata"),
+            card("b:1", "Estudiante", "がくせい", "gakusei"),
+            card("b:2", "Profesor", "せんせい", "sensei"),
+            card("b:3", "Japonés", "にほんじん", "nihonjin"),
+        ];
+        Course {
+            pair: "es-xx".to_string(),
+            lessons: vec![Lesson {
+                id: "a".to_string(),
+                title: String::new(),
+                jlpt: None,
+                functions: Vec::new(),
+                cards,
+            }],
+            kana: Vec::new(),
+            patterns: vec![Pattern {
+                id: "test-pattern".to_string(),
+                title: "X wa N desu".to_string(),
+                jlpt: None,
+                frame: "{X}は{N}です".to_string(),
+                slots: vec![
+                    Slot {
+                        name: "X".to_string(),
+                        card_ids: vec!["a:1".to_string(), "a:2".to_string()],
+                        default: "a:1".to_string(),
+                    },
+                    Slot {
+                        name: "N".to_string(),
+                        card_ids: vec!["b:1".to_string(), "b:2".to_string(), "b:3".to_string()],
+                        default: "b:1".to_string(),
+                    },
+                ],
+                notes: String::new(),
+            }],
+            chapters: Vec::new(),
+        }
+    }
+
+    /// Records a card as known (it survived at least one review).
+    fn mark_known(store: &SqliteStore, pid: i64, card_id: &str) {
+        store
+            .save_card_state(
+                pid,
+                &polyglot_core::model::CardState {
+                    card_id: card_id.to_string(),
+                    interval: 1,
+                    ease: polyglot_core::model::DEFAULT_EASE,
+                    reps: 1,
+                    lapses: 0,
+                    due_at: None,
+                    last_reviewed_at: None,
+                },
+            )
+            .unwrap();
+    }
+
+    fn store_with_profile() -> (SqliteStore, i64) {
+        let s = SqliteStore::open_in_memory().unwrap();
+        let pid = s.create_profile("tester").unwrap().id;
+        (s, pid)
+    }
+
+    /// A course with no patterns still renders.
+    #[test]
+    fn empty_course_renders_without_panicking() {
+        let (store, pid) = store_with_profile();
+        let course = Course {
+            patterns: Vec::new(),
+            ..test_course()
+        };
+        let r = Rikai::new(&store, &course, Some(pid));
+        assert!(r.entries.is_empty());
+        let msgs = polyglot_core::i18n::default();
+        let _ = crate::testutil::snapshot(|f, inner, theme| r.render(f, inner, theme, msgs));
+    }
+
+    /// A pattern unlocks only once every slot has at least one known filler,
+    /// and a locked one cannot be started.
+    #[test]
+    fn pattern_unlocks_once_each_slot_has_a_known_word() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let course = test_course();
+
+        // Only slot X has a known filler: still locked.
+        mark_known(&store, pid, "a:1");
+        let mut r = Rikai::new(&store, &course, Some(pid));
+        assert!(r.entries[0].1, "locked while slot N has no known word");
+        r.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert!(r.picking, "a locked pattern must not start a session");
+
+        // Once slot N has one too, it unlocks.
+        mark_known(&store, pid, "b:1");
+        let r = Rikai::new(&store, &course, Some(pid));
+        assert!(!r.entries[0].1, "unlocked once every slot has a known word");
+    }
+
+    /// Rounds cycle which slot varies, so only one thing changes at a time.
+    #[test]
+    fn session_cycles_the_variable_slot() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        for id in ["a:1", "a:2", "b:1", "b:2"] {
+            mark_known(&store, pid, id);
+        }
+        let mut r = Rikai::new(&store, &test_course(), Some(pid));
+        r.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+
+        assert!(
+            !r.picking,
+            "confirming an unlocked pattern starts a session"
+        );
+        assert_eq!(r.deck.len(), ROUND_LIMIT);
+        for (i, round) in r.deck.iter().enumerate() {
+            assert_eq!(round.slot_idx, i % 2, "round {i} varies the wrong slot");
+        }
+    }
+
+    /// An answer persists the slot's progress and awards XP.
+    #[test]
+    fn answering_persists_pattern_progress_and_xp() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        mark_known(&store, pid, "a:1");
+        mark_known(&store, pid, "b:1");
+        let mut r = Rikai::new(&store, &test_course(), Some(pid));
+        r.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // start
+        let slot_idx = r.deck[r.index].slot_idx;
+        r.selected = r.correct;
+        r.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // reveal
+
+        assert!(
+            store.get_stats(pid).unwrap().xp > 0,
+            "the answer awarded XP"
+        );
+        let progress = store.get_pattern_progress(pid).unwrap();
+        let slot_name = &test_course().patterns[0].slots[slot_idx].name;
+        let key = format!("test-pattern:{slot_name}");
+        assert!(
+            progress.get(&key).is_some_and(|p| p.attempts > 0),
+            "the answer persisted progress for {key}"
+        );
+    }
+
+    /// The prompt blanks the varying slot and pre-fills the fixed one, so only
+    /// one element is under test per round.
+    #[test]
+    fn question_blanks_the_varying_slot_and_fills_the_fixed_one() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        mark_known(&store, pid, "a:1");
+        mark_known(&store, pid, "b:1");
+        let mut r = Rikai::new(&store, &test_course(), Some(pid));
+        r.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+
+        let msgs = polyglot_core::i18n::default();
+        let view = crate::testutil::snapshot(|f, inner, theme| r.render(f, inner, theme, msgs));
+        let dense: String = view.chars().filter(|c| !c.is_whitespace()).collect();
+
+        assert!(dense.contains(BLANK), "the varying slot is blanked");
+        // The other slot shows its default filler.
+        let course = test_course();
+        let fixed = &course.patterns[0].slots[1 - r.deck[0].slot_idx];
+        let fixed_jp = &course.lessons[0]
+            .cards
+            .iter()
+            .find(|c| c.id == fixed.default)
+            .unwrap()
+            .jp;
+        assert!(
+            dense.contains(fixed_jp.as_str()),
+            "the fixed slot shows its default filler {fixed_jp:?}; view:\n{view}"
         );
     }
 }

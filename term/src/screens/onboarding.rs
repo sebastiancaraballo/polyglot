@@ -15,7 +15,7 @@ use ratatui::Frame;
 use crate::app::{Ctx, Transition};
 use crate::theme::Theme;
 
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 enum Step {
     Welcome,
     Exercise,
@@ -188,4 +188,109 @@ fn option_count() -> usize {
 
 fn is_confirm(code: KeyCode) -> bool {
     matches!(code, KeyCode::Enter | KeyCode::Char(' '))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn store_with_profile() -> (SqliteStore, i64) {
+        let s = SqliteStore::open_in_memory().unwrap();
+        let pid = s.create_profile("Yui").unwrap().id;
+        (s, pid)
+    }
+
+    /// The happy path: welcome → exercise (answered correctly) → done, which
+    /// marks the profile onboarded and awards the welcome XP.
+    #[test]
+    fn the_flow_completes_and_persists() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut o = Onboarding::new(Some(pid));
+        assert_eq!(o.step, Step::Welcome);
+
+        o.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert_eq!(o.step, Step::Exercise);
+
+        // Answer correctly, then confirm through to the end.
+        o.selected = sample_correct();
+        o.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert!(o.answered && o.correct);
+        o.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert_eq!(o.step, Step::Done);
+
+        let t = o.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert!(matches!(t, Transition::Pop), "finishing leaves onboarding");
+        assert!(
+            store.get_profile(pid).unwrap().onboarded,
+            "the profile is marked onboarded"
+        );
+        assert_eq!(
+            store.get_stats(pid).unwrap().xp,
+            study::ONBOARDING_XP,
+            "the welcome XP was awarded"
+        );
+    }
+
+    /// A wrong answer keeps the learner on the exercise: the first success has
+    /// to be a real one.
+    #[test]
+    fn a_wrong_answer_stays_on_the_exercise() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut o = Onboarding::new(Some(pid));
+        o.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // -> exercise
+
+        o.selected = (sample_correct() + 1) % option_count();
+        o.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // answer wrongly
+        assert!(o.answered && !o.correct);
+        o.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert_eq!(o.step, Step::Exercise, "a wrong answer does not advance");
+
+        // Correcting it does advance.
+        o.selected = sample_correct();
+        o.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        o.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+        assert_eq!(o.step, Step::Done);
+    }
+
+    /// Space works everywhere enter does: advancing and answering.
+    #[test]
+    fn space_advances_and_answers() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut o = Onboarding::new(Some(pid));
+
+        o.handle(KeyCode::Char(' '), KeyModifiers::NONE, &ctx);
+        assert_eq!(o.step, Step::Exercise, "space leaves the welcome step");
+
+        o.selected = sample_correct();
+        o.handle(KeyCode::Char(' '), KeyModifiers::NONE, &ctx);
+        assert!(o.answered, "space answers the exercise");
+    }
+
+    /// The number keys pick an option directly.
+    #[test]
+    fn number_keys_pick_an_option() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut o = Onboarding::new(Some(pid));
+        o.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // -> exercise
+
+        let key = (b'1' + sample_correct() as u8) as char;
+        o.handle(KeyCode::Char(key), KeyModifiers::NONE, &ctx);
+        assert!(o.answered && o.correct, "the number key answered directly");
+    }
 }

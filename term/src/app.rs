@@ -55,6 +55,7 @@ pub enum Dest {
 }
 
 /// The outcome of a key press within a screen.
+#[derive(Debug)]
 pub enum Transition {
     Stay,
     Quit,

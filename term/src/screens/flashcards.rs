@@ -241,3 +241,171 @@ impl Flashcards {
         lines
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn store_with_profile() -> (SqliteStore, i64) {
+        let s = SqliteStore::open_in_memory().unwrap();
+        let pid = s.create_profile("tester").unwrap().id;
+        (s, pid)
+    }
+
+    fn item(id: &str, prompt: &str, answer: &str, romaji: &str) -> review::Item {
+        review::Item {
+            card_id: id.to_string(),
+            strand: review::Strand::Vocab,
+            prompt: prompt.to_string(),
+            answer: answer.to_string(),
+            secondary: romaji.to_string(),
+            notes: String::new(),
+            freq: 0,
+        }
+    }
+
+    /// A session over one card, already revealed.
+    fn revealed(show_romaji: bool) -> (SqliteStore, Flashcards) {
+        let (store, pid) = store_with_profile();
+        let items = [item("test:1", "Gracias", "ありがとう", "arigatou")];
+        let mut f = Flashcards::new(&store, Some(pid), &items, "Repaso".to_string(), show_romaji);
+        f.revealed = true;
+        (store, f)
+    }
+
+    fn view(f: &Flashcards) -> String {
+        let msgs = polyglot_core::i18n::default();
+        crate::testutil::snapshot(|frame, inner, theme| f.render(frame, inner, theme, msgs))
+    }
+
+    /// The romaji setting decides whether the reading rides along with the
+    /// answer; the Japanese always shows.
+    #[test]
+    fn romaji_setting_controls_the_reading_on_reveal() {
+        let (_s, f) = revealed(true);
+        let v = view(&f);
+        assert!(v.contains("arigatou"), "the reading shows when enabled");
+
+        let (_s, f) = revealed(false);
+        let v = view(&f);
+        assert!(!v.contains("arigatou"), "the reading hides when disabled");
+        let dense: String = v.chars().filter(|c| !c.is_whitespace()).collect();
+        assert!(
+            dense.contains("ありがとう"),
+            "the Japanese word still shows; view:\n{v}"
+        );
+    }
+
+    /// Space reveals the current card, like enter.
+    #[test]
+    fn space_reveals_the_card() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let items = [item("test:1", "Gracias", "ありがとう", "arigatou")];
+        let mut f = Flashcards::new(&store, Some(pid), &items, "Repaso".to_string(), true);
+        assert!(!f.revealed);
+
+        f.handle(KeyCode::Char(' '), KeyModifiers::NONE, &ctx);
+        assert!(f.revealed, "space reveals the current flashcard");
+    }
+
+    /// More new cards than the pacing budget admits: the session is capped and
+    /// the screen says how many are waiting, rather than dropping them silently.
+    #[test]
+    fn held_back_new_cards_are_surfaced() {
+        let (store, pid) = store_with_profile();
+        let items: Vec<review::Item> = (0..15)
+            .map(|i| {
+                let id = format!("v:{i}");
+                item(&id, &id, &id, "")
+            })
+            .collect();
+        let f = Flashcards::new(&store, Some(pid), &items, "Repaso".to_string(), true);
+
+        assert_eq!(
+            f.queue.len(),
+            10,
+            "the paced new-card intake caps the session"
+        );
+        assert_eq!(f.held_back_new, 5);
+        assert!(
+            view(&f).contains('5'),
+            "the card view states how many new cards are held back"
+        );
+    }
+
+    /// The four grades render one per line, in ascending order of recall
+    /// quality, each with its resulting interval.
+    #[test]
+    fn grade_options_render_one_per_line() {
+        let msgs = polyglot_core::i18n::default();
+        let theme = Theme::plain();
+        let (_s, f) = revealed(true);
+
+        let lines = f.grade_options(&theme, msgs);
+        assert_eq!(lines.len(), 4, "one line per grade");
+        for (i, want) in [
+            &msgs.grade_again,
+            &msgs.grade_hard,
+            &msgs.grade_good,
+            &msgs.grade_easy,
+        ]
+        .iter()
+        .enumerate()
+        {
+            let text: String = lines[i]
+                .spans
+                .iter()
+                .map(|s| s.content.as_ref())
+                .collect::<String>();
+            assert!(
+                text.starts_with(&format!("[{}] {}", i + 1, want)),
+                "line {i} = {text:?}, want it to start with [{}] {want}",
+                i + 1
+            );
+        }
+    }
+
+    /// Grading advances to the next card and persists the review.
+    #[test]
+    fn grading_advances_and_persists() {
+        let (store, pid) = store_with_profile();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let items = [
+            item("test:1", "Gracias", "ありがとう", "arigatou"),
+            item("test:2", "Hola", "こんにちは", "konnichiwa"),
+        ];
+        let mut f = Flashcards::new(&store, Some(pid), &items, "Repaso".to_string(), true);
+
+        f.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx); // reveal
+        f.handle(KeyCode::Char('3'), KeyModifiers::NONE, &ctx); // grade "Good"
+
+        assert_eq!(f.index, 1, "grading advances to the next card");
+        assert!(!f.revealed, "the next card starts hidden");
+        assert_eq!(f.reviewed, 1);
+        assert_eq!(
+            store.count_learned_cards(pid).unwrap(),
+            1,
+            "the review was persisted"
+        );
+    }
+
+    /// A session with nothing due renders the empty state instead of a card.
+    #[test]
+    fn nothing_due_renders_the_empty_state() {
+        let (store, pid) = store_with_profile();
+        let f = Flashcards::new(&store, Some(pid), &[], "Repaso".to_string(), true);
+        assert!(f.finished(), "an empty queue is immediately finished");
+        let msgs = polyglot_core::i18n::default();
+        assert!(
+            view(&f).contains(&msgs.nothing_due),
+            "the empty state explains there is nothing due"
+        );
+    }
+}

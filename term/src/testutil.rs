@@ -14,8 +14,14 @@ use crate::theme::Theme;
 /// returns the whole screen as text (trailing spaces trimmed for stable
 /// snapshots). The plain theme keeps the output escape-free.
 pub fn snapshot(draw: impl FnOnce(&mut Frame, Rect, &Theme)) -> String {
+    snapshot_at(80, 30, draw)
+}
+
+/// Like [`snapshot`], on a terminal of the given size — for the layouts that
+/// only appear when the frame is too small for its full treatment.
+pub fn snapshot_at(width: u16, height: u16, draw: impl FnOnce(&mut Frame, Rect, &Theme)) -> String {
     let theme = Theme::plain();
-    let mut terminal = Terminal::new(TestBackend::new(80, 30)).unwrap();
+    let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
     terminal
         .draw(|f| {
             let inner = draw_frame(f, &theme);

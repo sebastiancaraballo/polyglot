@@ -225,3 +225,164 @@ fn wipe_all(ctx: &Ctx<'_>) -> Result<(), String> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use polyglot_core::storage::SqliteStore;
+
+    /// Two profiles, so a wipe is distinguishable from a single delete.
+    fn store_with_profiles() -> (SqliteStore, i64) {
+        let s = SqliteStore::open_in_memory().unwrap();
+        let pid = s.create_profile("Yui").unwrap().id;
+        s.create_profile("Otro").unwrap();
+        (s, pid)
+    }
+
+    /// Positions the cursor on an action row (1 = delete profile, 2 = wipe all).
+    fn at_action(row: usize) -> Settings {
+        Settings {
+            cursor: row,
+            ..Settings::new(true)
+        }
+    }
+
+    fn press(s: &mut Settings, code: KeyCode, ctx: &Ctx<'_>) -> Transition {
+        s.handle(code, KeyModifiers::NONE, ctx)
+    }
+
+    /// Confirming the toggle flips the displayed value and persists it.
+    #[test]
+    fn toggle_romaji_flips_and_persists() {
+        let (store, pid) = store_with_profiles();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut s = Settings::new(true);
+        press(&mut s, KeyCode::Enter, &ctx);
+
+        assert!(!s.show_romaji, "the displayed value flips to off");
+        assert!(
+            !store.get_profile(pid).unwrap().show_romaji,
+            "the choice is persisted"
+        );
+
+        press(&mut s, KeyCode::Enter, &ctx);
+        assert!(s.show_romaji, "toggling again flips it back");
+        assert!(store.get_profile(pid).unwrap().show_romaji);
+    }
+
+    /// A destructive item opens a confirmation that defaults to Cancel — the
+    /// safe option must be the one already selected.
+    #[test]
+    fn destructive_item_opens_confirmation_defaulting_to_cancel() {
+        let (store, pid) = store_with_profiles();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut s = at_action(1);
+        press(&mut s, KeyCode::Enter, &ctx);
+
+        assert!(s.confirming, "the confirmation opened");
+        assert!(!s.confirm_yes, "it defaults to Cancel, not Yes");
+        assert_eq!(
+            store.list_profiles().unwrap().len(),
+            2,
+            "opening the confirmation deletes nothing"
+        );
+    }
+
+    /// Accepting the default (Cancel) returns to the list without deleting.
+    #[test]
+    fn default_cancel_does_not_delete() {
+        let (store, pid) = store_with_profiles();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut s = at_action(1);
+        press(&mut s, KeyCode::Enter, &ctx); // open (default Cancel)
+        let t = press(&mut s, KeyCode::Enter, &ctx); // accept the default
+
+        assert!(matches!(t, Transition::Stay), "cancelling stays put");
+        assert!(!s.confirming, "and returns to the settings list");
+        assert_eq!(
+            store.list_profiles().unwrap().len(),
+            2,
+            "nothing was deleted"
+        );
+    }
+
+    /// Moving to Yes and confirming deletes only the active profile.
+    #[test]
+    fn confirming_yes_deletes_the_profile() {
+        let (store, pid) = store_with_profiles();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut s = at_action(1);
+        press(&mut s, KeyCode::Enter, &ctx); // open confirmation
+        press(&mut s, KeyCode::Down, &ctx); // move to Yes
+        assert!(s.confirm_yes, "down moves the cursor to Yes");
+
+        let t = press(&mut s, KeyCode::Enter, &ctx);
+        assert!(
+            matches!(t, Transition::ReloadRoot),
+            "deleting the active profile reloads the root"
+        );
+        let left = store.list_profiles().unwrap();
+        assert_eq!(left.len(), 1, "only the active profile was deleted");
+        assert_ne!(left[0].id, pid);
+    }
+
+    /// The wipe removes every profile, returning the app to first-run state.
+    #[test]
+    fn confirming_yes_wipes_all_data() {
+        let (store, pid) = store_with_profiles();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+        let mut s = at_action(2); // 0 = toggle, 1 = delete profile, 2 = wipe all
+        press(&mut s, KeyCode::Enter, &ctx);
+        press(&mut s, KeyCode::Down, &ctx);
+        let t = press(&mut s, KeyCode::Enter, &ctx);
+
+        assert!(matches!(t, Transition::ReloadRoot));
+        assert!(
+            store.list_profiles().unwrap().is_empty(),
+            "the wipe removed every profile"
+        );
+    }
+
+    /// Esc leaves the settings list, and cancels an open confirmation without
+    /// performing it.
+    #[test]
+    fn esc_goes_back_and_cancels_confirmation() {
+        let (store, pid) = store_with_profiles();
+        let ctx = Ctx {
+            store: &store,
+            profile_id: Some(pid),
+        };
+
+        let mut s = Settings::new(true);
+        assert!(
+            matches!(press(&mut s, KeyCode::Esc, &ctx), Transition::Pop),
+            "esc leaves the settings screen"
+        );
+
+        let mut s = at_action(1);
+        press(&mut s, KeyCode::Enter, &ctx); // open confirmation
+        let t = press(&mut s, KeyCode::Esc, &ctx);
+        assert!(matches!(t, Transition::Stay), "esc stays on the screen");
+        assert!(!s.confirming, "esc cancels the confirmation");
+        assert_eq!(
+            store.list_profiles().unwrap().len(),
+            2,
+            "nothing was deleted"
+        );
+    }
+}
