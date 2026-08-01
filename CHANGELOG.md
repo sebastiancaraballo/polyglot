@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Kanji trainer** — a new activity under *Aprender*: a character is shown in the
+  same focal tile the kana trainer uses, the learner picks its meaning among four,
+  and its on'yomi/kun'yomi readings are revealed with the answer. Mastery is the
+  same accuracy-based streak kana use, and progress persists per profile.
+  The activity is **gated on kana fluency** — readings are written in kana, so
+  reading kana is a genuine prerequisite — and is hidden entirely for a pair that
+  teaches no kanji.
+- **A seed batch of 20 N5 kanji** (`content/es-ja/kanji/n5.yaml`): the most frequent
+  characters of the level, self-authored like the rest of the course, each with its
+  first-met readings and a Spanish meaning. Vocabulary cards are still written in
+  kana only; using kanji in cards is a later slice.
+
+### Changed
+- The focal tile that frames a character moved out of the kana trainer into a shared
+  `tile` module, so both trainers render their prompt identically.
+
+### Added
 - **Kanji support in the engine** (#62). The engine can now be taught kanji: a
   `KanjiItem` model with on'yomi/kun'yomi readings and a meaning, an optional
   `content/<pair>/kanji/*.yaml` table, `kanji_progress` persistence (migration 11)

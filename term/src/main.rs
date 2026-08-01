@@ -9,6 +9,7 @@ mod frame;
 mod screens;
 mod textfmt;
 mod theme;
+mod tile;
 
 #[cfg(test)]
 mod golden;

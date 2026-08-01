@@ -19,6 +19,7 @@ use crate::screens::assessment::Assessment;
 use crate::screens::flashcards::Flashcards;
 use crate::screens::kana::KanaTrainer;
 use crate::screens::kanachart::KanaChart;
+use crate::screens::kanji::KanjiTrainer;
 use crate::screens::menu::{Menu, Summary};
 use crate::screens::onboarding::Onboarding;
 use crate::screens::profiles::Profiles;
@@ -41,6 +42,7 @@ pub struct Ctx<'a> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Dest {
     Kana,
+    Kanji,
     Flashcards,
     Review,
     Quiz,
@@ -79,6 +81,7 @@ enum Screen {
     Stats(Stats),
     KanaChart(Box<KanaChart>),
     Kana(Box<KanaTrainer>),
+    Kanji(Box<KanjiTrainer>),
     Flashcards(Box<Flashcards>),
     Quiz(Box<Quiz>),
     Settings(Settings),
@@ -138,6 +141,7 @@ impl App {
             Screen::Stats(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::KanaChart(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Kana(s) => s.render(f, inner, &self.theme, self.msgs),
+            Screen::Kanji(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Flashcards(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Quiz(s) => s.render(f, inner, &self.theme, self.msgs),
             Screen::Settings(s) => s.render(f, inner, &self.theme, self.msgs),
@@ -161,6 +165,7 @@ impl App {
                 Screen::Stats(s) => s.handle(code, mods, &ctx),
                 Screen::KanaChart(s) => s.handle(code, mods, &ctx),
                 Screen::Kana(s) => s.handle(code, mods, &ctx),
+                Screen::Kanji(s) => s.handle(code, mods, &ctx),
                 Screen::Flashcards(s) => s.handle(code, mods, &ctx),
                 Screen::Quiz(s) => s.handle(code, mods, &ctx),
                 Screen::Settings(s) => s.handle(code, mods, &ctx),
@@ -226,6 +231,11 @@ impl App {
             Dest::Stats => Screen::Stats(Stats::new(&self.store, &self.course, self.profile_id)),
             Dest::KanaChart => Screen::KanaChart(Box::new(KanaChart::new(&self.course))),
             Dest::Kana => Screen::Kana(Box::new(KanaTrainer::new(
+                &self.store,
+                &self.course,
+                self.profile_id,
+            ))),
+            Dest::Kanji => Screen::Kanji(Box::new(KanjiTrainer::new(
                 &self.store,
                 &self.course,
                 self.profile_id,

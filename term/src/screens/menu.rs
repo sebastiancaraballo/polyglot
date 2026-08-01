@@ -44,6 +44,9 @@ pub struct Summary {
     pub total: i64,
     pub reading_locked: bool,
     pub rikai_locked: bool,
+    /// The pair teaches kanji at all; hides the activity entirely when it does not.
+    pub teaches_kanji: bool,
+    pub kanji_locked: bool,
     pub assessment_locked: bool,
     pub assessment_passed: bool,
 }
@@ -61,12 +64,15 @@ impl Summary {
             + course.lessons.iter().map(|l| l.cards.len()).sum::<usize>())
             as i64;
 
+        let teaches_kanji = !course.kanji.is_empty();
         let Some(pid) = profile_id else {
             return Ok(Summary {
                 total,
                 reading_locked: true,
                 rikai_locked: true,
                 assessment_locked: true,
+                teaches_kanji,
+                kanji_locked: true,
                 ..Summary::default()
             });
         };
@@ -86,6 +92,11 @@ impl Summary {
             .flat_map(|l| &l.cards)
             .filter(|c| decoder.decodable(&c.jp))
             .count();
+
+        // Kanji readings are written in kana, so reading kana fluently is a real
+        // prerequisite and not an arbitrary gate: the same one that opens
+        // word-level reading opens kanji.
+        let kanji_locked = !study::new_gate(&course.kana, &kana_progress).reading_unlocked();
 
         let card_states = store.get_card_states(pid)?;
         let known: HashSet<String> = card_states
@@ -114,6 +125,8 @@ impl Summary {
             total,
             reading_locked: readable == 0,
             rikai_locked,
+            teaches_kanji,
+            kanji_locked,
             assessment_locked: !all_mastered,
             assessment_passed,
         })
@@ -215,7 +228,18 @@ impl Menu {
                         summary.rikai_locked,
                         &msgs.rikai_locked,
                     ),
-                ],
+                ]
+                .into_iter()
+                .chain(summary.teaches_kanji.then(|| {
+                    Item::gated(
+                        "漢",
+                        &msgs.item_kanji,
+                        Dest::Kanji,
+                        summary.kanji_locked,
+                        &msgs.kanji_locked,
+                    )
+                }))
+                .collect(),
             ),
             Item::category(
                 "◫",
@@ -701,6 +725,72 @@ mod tests {
         assert!(
             !s.reading_locked,
             "reading unlocks once a word is decodable"
+        );
+    }
+
+    /// Kanji readings are written in kana, so the activity stays locked until
+    /// both syllabaries are fluent — the same gate that opens word reading.
+    #[test]
+    fn kanji_is_gated_on_kana_fluency() {
+        use polyglot_core::model::KanaProgress;
+        let store = polyglot_core::storage::SqliteStore::open_in_memory().unwrap();
+        let course = polyglot_core::content::load_embedded("es-ja").unwrap();
+        let p = store.create_profile("A").unwrap();
+
+        let s = Summary::build(&store, &course, Some(p.id)).unwrap();
+        assert!(s.teaches_kanji, "the course ships a kanji table");
+        assert!(s.kanji_locked, "locked before kana fluency");
+
+        // Master every kana: the gate opens.
+        for k in &course.kana {
+            store
+                .save_kana_progress(
+                    p.id,
+                    &KanaProgress {
+                        char: k.char.clone(),
+                        mastered: true,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+        }
+        let s = Summary::build(&store, &course, Some(p.id)).unwrap();
+        assert!(!s.kanji_locked, "kana fluency unlocks kanji");
+    }
+
+    /// A pair that teaches no kanji does not show the activity at all — an
+    /// entry that can never do anything is worse than no entry.
+    #[test]
+    fn kanji_activity_is_absent_when_the_pair_teaches_none() {
+        let msgs = polyglot_core::i18n::default();
+        let without = Menu::new(
+            msgs,
+            Summary {
+                teaches_kanji: false,
+                ..Default::default()
+            },
+            "test".to_string(),
+        );
+        let learn = &without.items[0];
+        assert!(
+            !learn.children.iter().any(|c| c.dest == Some(Dest::Kanji)),
+            "no kanji entry without a kanji table"
+        );
+
+        let with = Menu::new(
+            msgs,
+            Summary {
+                teaches_kanji: true,
+                ..Default::default()
+            },
+            "test".to_string(),
+        );
+        assert!(
+            with.items[0]
+                .children
+                .iter()
+                .any(|c| c.dest == Some(Dest::Kanji)),
+            "the entry appears once the pair teaches kanji"
         );
     }
 

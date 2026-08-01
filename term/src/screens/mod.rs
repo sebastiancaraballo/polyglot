@@ -4,6 +4,7 @@ pub mod assessment;
 pub mod flashcards;
 pub mod kana;
 pub mod kanachart;
+pub mod kanji;
 pub mod menu;
 pub mod onboarding;
 pub mod profiles;
