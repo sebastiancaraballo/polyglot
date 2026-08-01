@@ -55,6 +55,7 @@ messages! {
         tagline: "es → ja",
 
         item_kana: "Entrenador de Kana",
+        item_kanji: "Entrenador de Kanji",
         item_kana_chart: "Tabla de Kana",
         item_flashcards: "Flashcards",
         item_review: "Repaso",
@@ -129,6 +130,14 @@ messages! {
         kana_intro_title: "Entrenador de Kana",
         kana_intro_body: "El kana es la base para leer japonés. Lo aprenderás en este orden:\n\n1. Hiragana\n2. Katakana\n3. Lectura de palabras y frases\n\nCada etapa se desbloquea al dominar la anterior. Dominas un kana cuando lo reconoces bien varias veces seguidas: así afianzas la lectura antes de pasar a leer.",
         kana_intro_help: "ENTER empezar · ESC volver",
+
+        kanji_title: "Entrenador de Kanji",
+        kanji_prompt: "¿Qué significa?",
+        kanji_on_label: "On'yomi",
+        kanji_kun_label: "Kun'yomi",
+        kanji_none: "Este curso todavía no enseña kanji.",
+        kanji_locked: "Domina los dos silabarios primero: las lecturas se escriben en kana.",
+        kanji_intro_note: "Un kanji se lee de varias formas según la palabra. Aquí aprendes su significado; las lecturas se muestran al responder.",
 
         kana_chart_title: "Tabla de Kana",
         kana_chart_help: "← → cambiar página · ESC volver",

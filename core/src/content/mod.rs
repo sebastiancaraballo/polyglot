@@ -1045,18 +1045,48 @@ mod tests {
         }
     }
 
-    /// The es-ja course teaches no kanji yet, so its evaluable content must
-    /// still be kanji-free. This is the state the N5 kanji slice will change —
-    /// when it lands, this test goes and the coverage test above carries on.
+    /// The shipped kanji table is well-formed: every entry has readings, a
+    /// meaning and a level.
     #[test]
-    fn embedded_course_teaches_no_kanji_yet() {
+    fn embedded_kanji_table_is_well_formed() {
         let course = load_embedded(DEFAULT_PAIR).unwrap();
-        assert!(course.kanji.is_empty(), "no kanji table ships yet");
+        assert!(!course.kanji.is_empty(), "the course ships kanji");
+        let mut seen = HashSet::new();
+        for k in &course.kanji {
+            assert!(seen.insert(&k.char), "duplicate kanji {:?}", k.char);
+            assert_eq!(k.char.chars().count(), 1, "{:?} is one character", k.char);
+            assert!(
+                k.char.chars().all(crate::model::is_han),
+                "{:?} is a kanji",
+                k.char
+            );
+            assert!(!k.readings().is_empty(), "{:?} has readings", k.char);
+            assert!(!k.meaning.trim().is_empty(), "{:?} has a meaning", k.char);
+            assert_eq!(k.jlpt, Some(Jlpt::N5), "{:?} is tagged N5", k.char);
+            // Readings are written in kana, which is what the trainer displays.
+            for r in k.readings() {
+                assert!(
+                    r.chars().all(|c| {
+                        let u = c as u32;
+                        (0x3040..=0x309F).contains(&u) || (0x30A0..=0x30FF).contains(&u)
+                    }),
+                    "reading {r:?} of {:?} must be written in kana",
+                    k.char
+                );
+            }
+        }
+    }
+
+    /// Vocabulary is still written in kana only: the cards will start using
+    /// kanji in a later slice, once these are actually taught.
+    #[test]
+    fn embedded_vocabulary_is_still_kana_only() {
+        let course = load_embedded(DEFAULT_PAIR).unwrap();
         for lesson in &course.lessons {
             for card in &lesson.cards {
                 assert!(
                     !card.jp.chars().any(crate::model::is_han),
-                    "card {:?} uses kanji before any are taught",
+                    "card {:?} uses kanji",
                     card.id
                 );
             }

@@ -1,0 +1,110 @@
+# N5 kanji — seed batch.
+#
+# Self-authored, like the rest of the course: no proprietary JLPT list is copied.
+# These are the most frequent kanji of the level, chosen to pair with vocabulary
+# the course already teaches (numbers, people, time, places).
+#
+# Readings are the ones a beginner meets first, not an exhaustive list: a kanji's
+# applicable reading depends on the word, and each card's own romaji stays the
+# authority for how that word is read.
+items:
+  - char: 日
+    on: [ニチ, ジツ]
+    kun: [ひ, か]
+    meaning: día, sol
+    jlpt: N5
+  - char: 本
+    on: [ホン]
+    kun: [もと]
+    meaning: libro, origen
+    jlpt: N5
+  - char: 人
+    on: [ジン, ニン]
+    kun: [ひと]
+    meaning: persona
+    jlpt: N5
+  - char: 大
+    on: [ダイ, タイ]
+    kun: [おお]
+    meaning: grande
+    jlpt: N5
+  - char: 小
+    on: [ショウ]
+    kun: [ちい, こ]
+    meaning: pequeño
+    jlpt: N5
+  - char: 中
+    on: [チュウ]
+    kun: [なか]
+    meaning: centro, dentro
+    jlpt: N5
+  - char: 山
+    on: [サン]
+    kun: [やま]
+    meaning: montaña
+    jlpt: N5
+  - char: 川
+    on: [セン]
+    kun: [かわ]
+    meaning: río
+    jlpt: N5
+  - char: 水
+    on: [スイ]
+    kun: [みず]
+    meaning: agua
+    jlpt: N5
+  - char: 火
+    on: [カ]
+    kun: [ひ]
+    meaning: fuego
+    jlpt: N5
+  - char: 木
+    on: [モク]
+    kun: [き]
+    meaning: árbol, madera
+    jlpt: N5
+  - char: 金
+    on: [キン]
+    kun: [かね]
+    meaning: oro, dinero
+    jlpt: N5
+  - char: 土
+    on: [ド]
+    kun: [つち]
+    meaning: tierra, suelo
+    jlpt: N5
+  - char: 月
+    on: [ゲツ, ガツ]
+    kun: [つき]
+    meaning: luna, mes
+    jlpt: N5
+  - char: 年
+    on: [ネン]
+    kun: [とし]
+    meaning: año
+    jlpt: N5
+  - char: 時
+    on: [ジ]
+    kun: [とき]
+    meaning: hora, tiempo
+    jlpt: N5
+  - char: 上
+    on: [ジョウ]
+    kun: [うえ, あ]
+    meaning: arriba, encima
+    jlpt: N5
+  - char: 下
+    on: [カ, ゲ]
+    kun: [した, さ]
+    meaning: abajo, debajo
+    jlpt: N5
+  - char: 口
+    on: [コウ]
+    kun: [くち]
+    meaning: boca
+    jlpt: N5
+  - char: 目
+    on: [モク]
+    kun: [め]
+    meaning: ojo
+    jlpt: N5

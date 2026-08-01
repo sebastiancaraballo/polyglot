@@ -25,6 +25,7 @@ use ratatui::Frame;
 
 use crate::app::{Ctx, Transition};
 use crate::theme::Theme;
+use crate::tile::big_tile;
 
 const OPTION_COUNT: usize = 4;
 
@@ -501,45 +502,6 @@ fn is_confirm(code: KeyCode) -> bool {
     matches!(code, KeyCode::Enter | KeyCode::Char(' '))
 }
 
-/// Renders a stimulus as a large bordered focal tile, centered in `width`. A
-/// terminal cannot change the font size, so prominence comes from a wide border
-/// and generous padding (2 rows, 6 columns), mirroring the Go tile.
-fn big_tile(stimulus: &str, width: u16) -> Vec<String> {
-    const PAD_H: usize = 6;
-    const PAD_V: usize = 2;
-    let sw = display_width(stimulus);
-    let inner_w = sw + PAD_H * 2;
-    let lead = " ".repeat((width as usize).saturating_sub(inner_w + 2) / 2);
-
-    let border = |l: &str, r: &str| format!("{lead}{l}{}{r}", "─".repeat(inner_w));
-    let blank = format!("{lead}│{}│", " ".repeat(inner_w));
-    let glyph = format!(
-        "{lead}│{}{stimulus}{}│",
-        " ".repeat(PAD_H),
-        " ".repeat(inner_w - sw - PAD_H)
-    );
-
-    let mut rows = vec![border("╭", "╮")];
-    rows.extend(std::iter::repeat_n(blank.clone(), PAD_V));
-    rows.push(glyph);
-    rows.extend(std::iter::repeat_n(blank, PAD_V));
-    rows.push(border("╰", "╯"));
-    rows
-}
-
-fn display_width(s: &str) -> usize {
-    s.chars()
-        .map(|c| {
-            let u = c as u32;
-            if (0x3040..=0x30FF).contains(&u) || (0x4E00..=0x9FFF).contains(&u) {
-                2
-            } else {
-                1
-            }
-        })
-        .sum()
-}
-
 /// Substitutes the first `%s` in a format template.
 fn fmt1(template: &str, a: &str) -> String {
     template.replacen("%s", a, 1)
@@ -602,17 +564,6 @@ mod tests {
         // Progress for the current kana was persisted.
         let saved = store.get_kana_progress(pid).unwrap();
         assert!(!saved.is_empty(), "an answer persisted kana progress");
-    }
-
-    #[test]
-    fn big_tile_is_a_padded_centered_box() {
-        let rows = big_tile("あ", 40);
-        assert_eq!(rows.len(), 7, "top + 2 pad + glyph + 2 pad + bottom");
-        assert!(rows[0].contains('╭') && rows[0].contains('╮'));
-        assert!(rows[3].contains('あ'), "the glyph sits in the middle row");
-        assert!(rows[6].contains('╰') && rows[6].contains('╯'));
-        // Centered: the box is indented from the left edge.
-        assert!(rows[0].starts_with(' '));
     }
 
     fn kana(ch: &str, romaji: &str, typ: KanaType, cat: KanaCategory) -> KanaItem {
