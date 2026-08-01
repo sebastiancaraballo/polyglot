@@ -1,0 +1,30 @@
+---
+source: term/src/golden.rs
+expression: "snapshot(|frame, inner, theme| f.render(frame, inner, theme, msgs()))"
+---
+
+
+
+        ╭──────────────────────────────────────────────────────────────╮
+        │                                                              │
+        │   ¡Sesión completada!                                        │
+        │                                                              │
+        │   Tarjetas repasadas: 1                                      │
+        │                                                              │
+        │   ESC volver al menú                                         │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        ╰──────────────────────────────────────────────────────────────╯

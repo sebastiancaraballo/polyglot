@@ -1,0 +1,20 @@
+---
+source: term/src/golden.rs
+expression: "crate::testutil::snapshot_at(80, 16, |f, inner, theme|\nm.render(f, inner, theme, msgs()))"
+---
+        ╭──────────────────────────────────────────────────────────────╮
+        │                                                              │
+        │   Polyglot  v0.1.0                                           │
+        │   es → ja                                 ⠀⠀⠀⣠⡔⠆⠩⠙⠛⠙⠴⣦⣄⠀⠀⠀   │
+        │                                           ⠀⣠⣾⣿⣿⣶⣶⣄⣀⣀⡰⠿⠉⠑⢄⠀   │
+        │     ⇄ Yui · Cambiar de perfil             ⠰⣷⣿⣿⣿⣿⣿⣿⡛⠩⠀⠀⠀⠀⠈⠆   │
+        │                                           ⡏⣿⣿⣿⣿⣿⢿⠛⡄⠀⠀⠀⠀⠀⠀⢸   │
+        │   ▸ ◆  Aprender ›                         ⡇⠏⠹⣿⠿⢿⠈⠈⠁⠀⠀⠀⠀⠀⠀⢸   │
+        │     ◫  Leer ›                             ⠰⡀⠀⡜⠀⠐⡄⠀⠀⠀⠀⠀⠀⠀⢀⠆   │
+        │     ◉  Evaluar ›                          ⠀⠑⢄⠀⠹⠑⠀⠠⠤⠀⠀⢀⠀⡠⠊⠀   │
+        │     ▩  Herramientas ›                     ⠀⠀⠀⠑⠢⠶⣿⣷⣾⣦⠠⠔⠊⠀⠀⠀   │
+        │     ⚙  Ajustes                                               │
+        │     ⏻  Salir                                                 │
+        │   ↑/↓ moverse · ENTER entrar/cambiar perfil · Q salir        │
+        │                                                              │
+        ╰──────────────────────────────────────────────────────────────╯

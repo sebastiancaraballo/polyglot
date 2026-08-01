@@ -74,6 +74,16 @@ fn menu_submenu() {
     )));
 }
 
+/// Too short for the block wordmark: the plain-text app name takes over as the
+/// title on top, while the stats stay at the foot of the column.
+#[test]
+fn menu_without_wordmark() {
+    let m = Menu::new(msgs(), sample_summary(), "0.1.0".to_string());
+    insta::assert_snapshot!(
+        crate::testutil::snapshot_at(80, 16, |f, inner, theme| m.render(f, inner, theme, msgs()))
+    );
+}
+
 #[test]
 fn stats_screen() {
     let (store, pid) = store_with_profile();
@@ -222,6 +232,147 @@ fn flashcards_nothing_due() {
     // A fresh profile can decode nothing yet, so the review queue is empty.
     let (store, pid) = store_with_profile();
     let f = Flashcards::new(&store, Some(pid), &[], msgs().flash_title.clone(), true);
+    insta::assert_snapshot!(snapshot(|frame, inner, theme| f.render(
+        frame,
+        inner,
+        theme,
+        msgs()
+    )));
+}
+
+#[test]
+fn settings_list_romaji_off() {
+    let s = Settings::new(false);
+    insta::assert_snapshot!(snapshot(|f, inner, theme| s.render(
+        f,
+        inner,
+        theme,
+        msgs()
+    )));
+}
+
+/// A vocabulary item with a reading, notes and a frequency rank, so every
+/// optional line of the reveal is exercised.
+fn vocab_item(freq: i64) -> polyglot_core::review::Item {
+    polyglot_core::review::Item {
+        card_id: "greetings:1".to_string(),
+        strand: polyglot_core::review::Strand::Vocab,
+        prompt: "Gracias".to_string(),
+        answer: "ありがとう".to_string(),
+        secondary: "arigatou".to_string(),
+        notes: "Entrada kana: arigatou.".to_string(),
+        freq,
+    }
+}
+
+fn kana_item() -> polyglot_core::review::Item {
+    polyglot_core::review::Item {
+        card_id: "kana:あ".to_string(),
+        strand: polyglot_core::review::Strand::Kana,
+        prompt: "あ".to_string(),
+        answer: "a".to_string(),
+        secondary: String::new(),
+        notes: String::new(),
+        freq: 0,
+    }
+}
+
+/// Builds a session over `items`, optionally revealing the first card.
+fn flashcards_with(
+    store: &SqliteStore,
+    pid: i64,
+    items: &[polyglot_core::review::Item],
+    reveal: bool,
+) -> Flashcards {
+    let mut f = Flashcards::new(store, Some(pid), items, msgs().flash_title.clone(), true);
+    if reveal {
+        let ctx = Ctx {
+            store,
+            profile_id: Some(pid),
+        };
+        f.handle(KeyCode::Enter, KeyModifiers::NONE, &ctx);
+    }
+    f
+}
+
+#[test]
+fn flashcards_prompt() {
+    let (store, pid) = store_with_profile();
+    let f = flashcards_with(&store, pid, &[vocab_item(0)], false);
+    insta::assert_snapshot!(snapshot(|frame, inner, theme| f.render(
+        frame,
+        inner,
+        theme,
+        msgs()
+    )));
+}
+
+#[test]
+fn flashcards_revealed_vocab() {
+    let (store, pid) = store_with_profile();
+    let f = flashcards_with(&store, pid, &[vocab_item(0)], true);
+    insta::assert_snapshot!(snapshot(|frame, inner, theme| f.render(
+        frame,
+        inner,
+        theme,
+        msgs()
+    )));
+}
+
+#[test]
+fn flashcards_revealed_vocab_with_freq() {
+    let (store, pid) = store_with_profile();
+    let f = flashcards_with(&store, pid, &[vocab_item(14)], true);
+    insta::assert_snapshot!(snapshot(|frame, inner, theme| f.render(
+        frame,
+        inner,
+        theme,
+        msgs()
+    )));
+}
+
+#[test]
+fn flashcards_revealed_kana() {
+    let (store, pid) = store_with_profile();
+    let f = flashcards_with(&store, pid, &[kana_item()], true);
+    insta::assert_snapshot!(snapshot(|frame, inner, theme| f.render(
+        frame,
+        inner,
+        theme,
+        msgs()
+    )));
+}
+
+#[test]
+fn flashcards_held_back_notice() {
+    // More new cards than the pacing budget admits: the notice states how many
+    // are waiting.
+    let (store, pid) = store_with_profile();
+    let items: Vec<polyglot_core::review::Item> = (0..15)
+        .map(|i| polyglot_core::review::Item {
+            card_id: format!("v:{i}"),
+            prompt: format!("palabra {i}"),
+            ..vocab_item(0)
+        })
+        .collect();
+    let f = flashcards_with(&store, pid, &items, false);
+    insta::assert_snapshot!(snapshot(|frame, inner, theme| f.render(
+        frame,
+        inner,
+        theme,
+        msgs()
+    )));
+}
+
+#[test]
+fn flashcards_summary() {
+    let (store, pid) = store_with_profile();
+    let ctx = Ctx {
+        store: &store,
+        profile_id: Some(pid),
+    };
+    let mut f = flashcards_with(&store, pid, &[vocab_item(0)], true);
+    f.handle(KeyCode::Char('3'), KeyModifiers::NONE, &ctx); // grade the only card
     insta::assert_snapshot!(snapshot(|frame, inner, theme| f.render(
         frame,
         inner,

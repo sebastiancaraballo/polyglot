@@ -185,6 +185,9 @@ const REST_HOLD: usize = 156;
 /// Display height of a globe frame (braille rows).
 const GLOBE_HEIGHT: u16 = 8;
 
+/// Rows the block wordmark occupies in the header: 4 glyph rows plus a gap.
+const WORDMARK_BLOCK_HEIGHT: u16 = 5;
+
 impl Menu {
     pub fn new(msgs: &Messages, summary: Summary, version: String) -> Menu {
         let assessment_label = if summary.assessment_passed {
@@ -400,19 +403,34 @@ impl Menu {
         // Show the block wordmark when it fits horizontally and leaves room for
         // the globe/info columns below it; otherwise the info column keeps the
         // plain-text title (the Go fallback).
-        let show_wordmark = area.width >= 55 && area.height >= 13;
         let show_globe = area.width >= 44;
+        let column_height = |info_len: usize| {
+            if show_globe {
+                (info_len as u16).max(GLOBE_HEIGHT)
+            } else {
+                info_len as u16
+            }
+        };
+
+        // The frame's content height is a fixed budget that does not grow with a
+        // taller terminal, so a long level must drop the wordmark rather than
+        // push its own rows out of view.
+        let mut show_wordmark = area.width >= 55 && area.height >= 13;
+        if show_wordmark {
+            let with_wordmark = self.info_lines(theme, msgs, true).len();
+            show_wordmark = WORDMARK_BLOCK_HEIGHT + column_height(with_wordmark) <= area.height;
+        }
         let info = self.info_lines(theme, msgs, show_wordmark);
 
         // Measure the header block so it can be centered vertically in the frame
         // (matching the Go menu, which centers its content rather than anchoring
         // it to the top).
-        let cols_h = if show_globe {
-            (info.len() as u16).max(GLOBE_HEIGHT)
+        let cols_h = column_height(info.len());
+        let wm_h = if show_wordmark {
+            WORDMARK_BLOCK_HEIGHT
         } else {
-            info.len() as u16
+            0
         };
-        let wm_h = if show_wordmark { 5 } else { 0 }; // 4 rows + 1 gap
         let block_h = (wm_h + cols_h).min(area.height);
         let top_pad = area.height.saturating_sub(block_h) / 2;
         let block = Rect {
@@ -434,14 +452,23 @@ impl Menu {
             block
         };
 
-        // Draw the rotating globe beside the info column when there is room.
+        // Draw the rotating globe beside the info column when there is room:
+        // the menu reads left-to-right, so the options lead and the art sits on
+        // the right.
         if show_globe {
-            let [globe, _gap, info_area] = Layout::horizontal([
-                Constraint::Length(16),
-                Constraint::Length(7),
+            let [info_area, _gap, globe] = Layout::horizontal([
                 Constraint::Min(0),
+                Constraint::Length(7),
+                Constraint::Length(16),
             ])
             .areas(cols);
+            // The globe is shorter than the options column, so center it against
+            // that column rather than letting it hang from the top.
+            let globe = Rect {
+                y: globe.y + globe.height.saturating_sub(GLOBE_HEIGHT) / 2,
+                height: GLOBE_HEIGHT.min(globe.height),
+                ..globe
+            };
             f.render_widget(
                 Paragraph::new(art::GLOBE_FRAMES[self.frame]).style(theme.accent),
                 globe,
@@ -457,33 +484,17 @@ impl Menu {
     /// is false when the block wordmark already carries the app name.
     fn info_lines<'a>(&self, theme: &Theme, msgs: &Messages, show_name: bool) -> Vec<Line<'a>> {
         let mut lines: Vec<Line> = Vec::new();
-        if show_name {
-            lines.push(Line::styled(
-                format!("v{} · {}", self.version, msgs.tagline),
-                theme.subtle,
-            ));
-        } else {
+        // Without the block wordmark the plain-text app name is the screen's
+        // title, so it stays on top; the version line rides with the stats at
+        // the foot instead.
+        if !show_name {
             lines.push(Line::styled(
                 format!("{}  v{}", msgs.app_name, self.version),
                 theme.title,
             ));
             lines.push(Line::styled(msgs.tagline.clone(), theme.subtle));
+            lines.push(Line::raw(""));
         }
-        lines.push(Line::raw(""));
-        lines.push(Line::styled(
-            format!("★ {}: {}", msgs.xp_label, self.summary.xp),
-            theme.subtle,
-        ));
-        lines.push(Line::styled(
-            format!(
-                "▲ {}: {} {}",
-                msgs.streak_label, self.summary.streak, msgs.days_suffix
-            ),
-            theme.subtle,
-        ));
-        // The menu header shows XP and streak only; the learned/total figure
-        // lives on the stats screen (matching the Go menu).
-        lines.push(Line::raw(""));
 
         if self.section == TOP_LEVEL {
             let name = if self.summary.name.is_empty() {
@@ -520,6 +531,28 @@ impl Menu {
             };
             lines.push(Line::styled(format!("{prefix}{icon}  {label}"), style));
         }
+
+        // Progress sits under the options: the menu is for choosing, the
+        // numbers are context. The learned/total figure lives on the stats
+        // screen (matching the Go menu).
+        lines.push(Line::raw(""));
+        if show_name {
+            lines.push(Line::styled(
+                format!("v{} · {}", self.version, msgs.tagline),
+                theme.subtle,
+            ));
+        }
+        lines.push(Line::styled(
+            format!("★ {}: {}", msgs.xp_label, self.summary.xp),
+            theme.subtle,
+        ));
+        lines.push(Line::styled(
+            format!(
+                "▲ {}: {} {}",
+                msgs.streak_label, self.summary.streak, msgs.days_suffix
+            ),
+            theme.subtle,
+        ));
         lines
     }
 }
@@ -669,5 +702,338 @@ mod tests {
             !s.reading_locked,
             "reading unlocks once a word is decodable"
         );
+    }
+
+    /// A menu over an in-memory store, for the key-handling tests.
+    fn test_menu() -> Menu {
+        let msgs = polyglot_core::i18n::default();
+        let summary = Summary {
+            name: "Sebastián".to_string(),
+            xp: 1240,
+            streak: 5,
+            learned: 8,
+            total: 20,
+            ..Default::default()
+        };
+        Menu::new(msgs, summary, "test".to_string())
+    }
+
+    fn locked_menu() -> Menu {
+        let msgs = polyglot_core::i18n::default();
+        let summary = Summary {
+            name: "Sebastián".to_string(),
+            total: 20,
+            reading_locked: true,
+            ..Default::default()
+        };
+        Menu::new(msgs, summary, "test".to_string())
+    }
+
+    /// Positions the menu on the leaf that navigates to `dest`, descending into
+    /// the category holding it.
+    fn open_leaf(menu: &mut Menu, dest: Dest) {
+        for (ci, cat) in menu.items.iter().enumerate() {
+            for (li, child) in cat.children.iter().enumerate() {
+                if child.dest == Some(dest) && !child.quit {
+                    menu.section = ci as i32;
+                    menu.cursor = li as i32;
+                    return;
+                }
+            }
+        }
+        panic!("no leaf navigates to {dest:?}");
+    }
+
+    /// Renders the menu at `w`×`h` and flattens it to text.
+    fn view_at(menu: &Menu, w: u16, h: u16) -> String {
+        let msgs = polyglot_core::i18n::default();
+        let theme = Theme::plain();
+        let mut terminal = Terminal::new(TestBackend::new(w, h)).unwrap();
+        terminal
+            .draw(|f| {
+                let inner = draw_frame(f, &theme);
+                menu.render(f, inner, &theme, msgs);
+            })
+            .unwrap();
+        flatten(&terminal)
+    }
+
+    #[test]
+    fn navigation_moves_cursor() {
+        let store = polyglot_core::storage::SqliteStore::open_in_memory().unwrap();
+        let c = ctx(&store);
+        let mut menu = test_menu();
+
+        menu.handle(KeyCode::Down, KeyModifiers::NONE, &c);
+        assert_eq!(menu.cursor, 2, "cursor after down");
+        menu.handle(KeyCode::Up, KeyModifiers::NONE, &c);
+        assert_eq!(menu.cursor, 1, "cursor after up");
+    }
+
+    /// The cursor never leaves the list, at either end or either level.
+    #[test]
+    fn cursor_is_clamped() {
+        let store = polyglot_core::storage::SqliteStore::open_in_memory().unwrap();
+        let c = ctx(&store);
+
+        let mut menu = test_menu();
+        menu.cursor = 0;
+        menu.handle(KeyCode::Up, KeyModifiers::NONE, &c);
+        assert_eq!(menu.cursor, 0, "up at the top stays");
+
+        // Inside a category, down stops at the last child.
+        let mut menu = test_menu();
+        menu.section = 0;
+        menu.cursor = menu.items[0].children.len() as i32 - 1;
+        menu.handle(KeyCode::Down, KeyModifiers::NONE, &c);
+        assert_eq!(
+            menu.cursor,
+            menu.items[0].children.len() as i32 - 1,
+            "down clamps at the last child"
+        );
+    }
+
+    /// The menu opens at the top level with the first category selected (the
+    /// profile switcher occupies cursor 0).
+    #[test]
+    fn defaults_to_first_category() {
+        let msgs = polyglot_core::i18n::default();
+        let menu = test_menu();
+        assert_eq!(menu.section, TOP_LEVEL);
+        assert_eq!(menu.cursor, 1);
+        let first = &menu.items[(menu.cursor - 1) as usize];
+        assert!(!first.children.is_empty(), "the first item is a category");
+        assert_eq!(first.label, msgs.cat_learn);
+    }
+
+    /// Left also leaves a category, and esc at the top level does nothing.
+    #[test]
+    fn back_navigation() {
+        let store = polyglot_core::storage::SqliteStore::open_in_memory().unwrap();
+        let c = ctx(&store);
+
+        // Open the third category, then go back: the cursor lands on it again.
+        let mut menu = test_menu();
+        menu.section = 2;
+        menu.cursor = 1;
+        menu.handle(KeyCode::Esc, KeyModifiers::NONE, &c);
+        assert_eq!(menu.section, TOP_LEVEL);
+        assert_eq!(menu.cursor, 3, "restored to the category row");
+
+        // Left arrow leaves the category too.
+        let mut menu = test_menu();
+        menu.section = 0;
+        menu.handle(KeyCode::Left, KeyModifiers::NONE, &c);
+        assert_eq!(menu.section, TOP_LEVEL);
+
+        // Esc at the top level is a no-op.
+        let mut menu = test_menu();
+        let t = menu.handle(KeyCode::Esc, KeyModifiers::NONE, &c);
+        assert!(matches!(t, Transition::Stay));
+        assert_eq!(menu.section, TOP_LEVEL);
+    }
+
+    /// Both the Quit item and the `q` key quit.
+    #[test]
+    fn quit_item_and_key() {
+        let store = polyglot_core::storage::SqliteStore::open_in_memory().unwrap();
+        let c = ctx(&store);
+
+        let mut menu = test_menu();
+        menu.cursor = menu.items.len() as i32; // Quit is the last top-level leaf
+        assert!(matches!(
+            menu.handle(KeyCode::Enter, KeyModifiers::NONE, &c),
+            Transition::Quit
+        ));
+
+        let mut menu = test_menu();
+        assert!(matches!(
+            menu.handle(KeyCode::Char('q'), KeyModifiers::NONE, &c),
+            Transition::Quit
+        ));
+    }
+
+    /// Enter and space both activate the selected leaf.
+    #[test]
+    fn enter_and_space_navigate() {
+        let store = polyglot_core::storage::SqliteStore::open_in_memory().unwrap();
+        let c = ctx(&store);
+
+        for code in [KeyCode::Enter, KeyCode::Char(' ')] {
+            let mut menu = test_menu();
+            open_leaf(&mut menu, Dest::Kana);
+            let t = menu.handle(code, KeyModifiers::NONE, &c);
+            assert!(
+                matches!(t, Transition::Push(Dest::Kana)),
+                "{code:?} should navigate to Kana, got {t:?}"
+            );
+        }
+    }
+
+    /// The profile header row opens the profile switcher.
+    #[test]
+    fn profile_header_navigates_to_profiles() {
+        let store = polyglot_core::storage::SqliteStore::open_in_memory().unwrap();
+        let c = ctx(&store);
+        let mut menu = test_menu();
+        menu.cursor = 0;
+        let t = menu.handle(KeyCode::Enter, KeyModifiers::NONE, &c);
+        assert!(matches!(t, Transition::Push(Dest::Profiles)), "got {t:?}");
+    }
+
+    /// Icons are text symbols, never color-only or emoji.
+    #[test]
+    fn uses_text_symbols() {
+        let menu = test_menu();
+        let want = ["◆", "◫", "◉", "▩", "⚙", "⏻"];
+        assert_eq!(menu.items.len(), want.len(), "top-level item count");
+        for (i, icon) in want.iter().enumerate() {
+            assert_eq!(&menu.items[i].icon, icon, "item {i} icon");
+        }
+    }
+
+    /// The top level shows the profile and progress, and hides the activities
+    /// that live one level down.
+    #[test]
+    fn top_level_shows_progress_but_not_submenu_items() {
+        let msgs = polyglot_core::i18n::default();
+        let content = view_at(&test_menu(), 80, 30);
+        for want in [
+            "Sebastián",
+            &msgs.switch_profile,
+            "1240",
+            &msgs.cat_learn,
+            &msgs.cat_evaluate,
+        ] {
+            assert!(content.contains(want), "view is missing {want:?}");
+        }
+        assert!(
+            !content.contains(&msgs.item_kana),
+            "activity labels belong to the submenu"
+        );
+    }
+
+    /// A category shows its children, the back hint, and drops the profile row.
+    #[test]
+    fn submenu_shows_children() {
+        let msgs = polyglot_core::i18n::default();
+        let mut menu = test_menu();
+        menu.section = 0; // Aprender
+        let content = view_at(&menu, 80, 30);
+        for want in [&msgs.item_kana, &msgs.item_flashcards, &msgs.item_rikai] {
+            assert!(content.contains(want), "submenu is missing {want:?}");
+        }
+        assert!(
+            !content.contains(&msgs.switch_profile),
+            "the submenu drops the profile switcher"
+        );
+    }
+
+    /// The block wordmark renders when it fits and is dropped when the level's
+    /// list would push the frame's bottom border off-screen — even on a
+    /// generously tall terminal, since the frame height is a fixed budget.
+    #[test]
+    fn wordmark_yields_to_a_long_level() {
+        let wordmark_top = crate::art::WORDMARK.lines().next().unwrap();
+
+        // The real grouped menu is short enough to keep the wordmark.
+        let content = view_at(&test_menu(), 120, 100);
+        assert!(
+            content.contains(wordmark_top),
+            "the grouped top level keeps the wordmark"
+        );
+
+        // Eleven rows no longer fit the wordmark on top of the fixed budget.
+        let msgs = polyglot_core::i18n::default();
+        let mut menu = test_menu();
+        menu.items = (0..11)
+            .map(|_| Item::leaf("▤", &msgs.item_stats, Dest::Stats))
+            .collect();
+        let content = view_at(&menu, 120, 100);
+        assert!(
+            !content.contains(wordmark_top),
+            "a long level drops the wordmark rather than clipping the frame"
+        );
+        assert!(
+            content.contains('╰'),
+            "the frame's bottom border stays visible"
+        );
+    }
+
+    /// A locked item shows the lock glyph instead of its own icon, and explains
+    /// itself once activated.
+    #[test]
+    fn locked_item_is_marked_and_explained() {
+        let msgs = polyglot_core::i18n::default();
+        let store = polyglot_core::storage::SqliteStore::open_in_memory().unwrap();
+        let c = ctx(&store);
+        let mut menu = locked_menu();
+        open_leaf(&mut menu, Dest::Flashcards); // lives under "Aprender"
+
+        let content = view_at(&menu, 80, 30);
+        assert_eq!(
+            content.matches(LOCK_GLYPH).count(),
+            1,
+            "exactly the locked Flashcards row carries the lock"
+        );
+        assert!(
+            !content.contains('▣'),
+            "the locked item's own icon is replaced by the lock"
+        );
+
+        menu.handle(KeyCode::Enter, KeyModifiers::NONE, &c);
+        let content = view_at(&menu, 80, 30);
+        assert!(
+            content.contains(&msgs.reading_locked),
+            "activating a locked item explains why"
+        );
+    }
+
+    /// With nothing gated, no item is locked.
+    #[test]
+    fn unlocked_menu_has_no_locks() {
+        let menu = test_menu();
+        for cat in &menu.items {
+            for child in &cat.children {
+                assert!(!child.locked, "item {:?} should be unlocked", child.label);
+            }
+        }
+    }
+
+    /// The globe rests on the frame facing Japan, then spins a full turn and
+    /// comes back to rest.
+    #[test]
+    fn globe_rests_then_spins() {
+        let mut menu = test_menu();
+        menu.animate = true;
+        menu.frame = 0;
+        menu.holding = 0;
+
+        // It holds on the resting frame for the whole rest interval.
+        for _ in 0..REST_HOLD {
+            menu.tick();
+            assert_eq!(menu.frame, 0, "still resting");
+        }
+        // Then it starts turning.
+        menu.tick();
+        assert_eq!(menu.frame, 1, "leaves the resting frame");
+
+        // A full turn returns to frame 0 and re-arms the rest.
+        for _ in 1..crate::art::GLOBE_FRAMES.len() {
+            menu.tick();
+        }
+        assert_eq!(menu.frame, 0, "back to the resting frame");
+        assert_eq!(menu.holding, 0, "the rest interval is re-armed");
+    }
+
+    /// Reduced motion (or `NO_COLOR`) keeps the globe static.
+    #[test]
+    fn static_globe_never_advances() {
+        let mut menu = test_menu();
+        menu.animate = false;
+        for _ in 0..(REST_HOLD + 10) {
+            menu.tick();
+        }
+        assert_eq!(menu.frame, 0, "a static globe never advances");
     }
 }

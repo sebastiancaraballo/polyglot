@@ -1,0 +1,30 @@
+---
+source: term/src/golden.rs
+expression: "snapshot(|frame, inner, theme| f.render(frame, inner, theme, msgs()))"
+---
+
+
+
+        ╭──────────────────────────────────────────────────────────────╮
+        │                                                              │
+        │   Flashcards  1/1                                            │
+        │                                                              │
+        │   あ                                                          │
+        │                                                              │
+        │   a                                                          │
+        │                                                              │
+        │   ¿Qué tal lo recordaste?                                    │
+        │   [1] Otra vez (hoy)                                         │
+        │   [2] Difícil (1d)                                           │
+        │   [3] Bien (1d)                                              │
+        │   [4] Fácil (4d)                                             │
+        │   ESC volver al menú                                         │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        │                                                              │
+        ╰──────────────────────────────────────────────────────────────╯
