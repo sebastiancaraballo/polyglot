@@ -1,43 +1,408 @@
-# N5 kanji — seed batch.
+# N5 kanji — the full commonly-taught set (~106 characters).
 #
 # Self-authored, like the rest of the course: no proprietary JLPT list is copied.
-# These are the most frequent kanji of the level, chosen to pair with vocabulary
-# the course already teaches (numbers, people, time, places).
+# (The JLPT stopped publishing official lists in 2010; this is the set N5 prep
+# material conventionally converges on, written from scratch.)
 #
 # Readings are the ones a beginner meets first, not an exhaustive list: a kanji's
 # applicable reading depends on the word, and each card's own romaji stays the
 # authority for how that word is read.
+#
+# Okurigana convention — a deliberate teaching decision. When a kun reading is a
+# verb or adjective *stem*, the inflectional ending is shown in parentheses:
+# た(べる), あ(がる), あたら(しい). A bare stem (た, あ) is unpronounceable and
+# meaningless to a beginner; the parentheses say "the kanji reads た, the word
+# continues べる in kana" — the dictionary convention, and one that maps cleanly
+# onto the root-plus-ending intuition Spanish speakers already have from
+# conjugation. Standalone-word readings (みず, やま) carry no parentheses.
 items:
+  # --- Numbers ---------------------------------------------------------------
+  - char: 一
+    on: [イチ]
+    kun: [ひと(つ)]
+    meaning: uno
+    jlpt: N5
+  - char: 二
+    on: [ニ]
+    kun: [ふた(つ)]
+    meaning: dos
+    jlpt: N5
+  - char: 三
+    on: [サン]
+    kun: [みっ(つ)]
+    meaning: tres
+    jlpt: N5
+  - char: 四
+    on: [シ]
+    kun: [よん, よっ(つ)]
+    meaning: cuatro
+    jlpt: N5
+  - char: 五
+    on: [ゴ]
+    kun: [いつ(つ)]
+    meaning: cinco
+    jlpt: N5
+  - char: 六
+    on: [ロク]
+    kun: [むっ(つ)]
+    meaning: seis
+    jlpt: N5
+  - char: 七
+    on: [シチ]
+    kun: [なな, なな(つ)]
+    meaning: siete
+    jlpt: N5
+  - char: 八
+    on: [ハチ]
+    kun: [やっ(つ)]
+    meaning: ocho
+    jlpt: N5
+  - char: 九
+    on: [キュウ, ク]
+    kun: [ここの(つ)]
+    meaning: nueve
+    jlpt: N5
+  - char: 十
+    on: [ジュウ]
+    kun: [とお]
+    meaning: diez
+    jlpt: N5
+  - char: 百
+    on: [ヒャク]
+    meaning: cien
+    jlpt: N5
+  - char: 千
+    on: [セン]
+    meaning: mil
+    jlpt: N5
+  - char: 万
+    on: [マン]
+    meaning: diez mil
+    jlpt: N5
+  - char: 円
+    on: [エン]
+    kun: [まる(い)]
+    meaning: yen; redondo
+    jlpt: N5
+
+  # --- Time ------------------------------------------------------------------
+  - char: 今
+    on: [コン]
+    kun: [いま]
+    meaning: ahora
+    jlpt: N5
+  - char: 分
+    on: [フン, ブン]
+    kun: [わ(かる)]
+    meaning: minuto; entender
+    jlpt: N5
+  - char: 半
+    on: [ハン]
+    kun: [なか(ば)]
+    meaning: mitad; y media (hora)
+    jlpt: N5
+  - char: 間
+    on: [カン]
+    kun: [あいだ, ま]
+    meaning: intervalo, entre
+    jlpt: N5
+  - char: 前
+    on: [ゼン]
+    kun: [まえ]
+    meaning: antes, delante
+    jlpt: N5
+  - char: 後
+    on: [ゴ, コウ]
+    kun: [あと, うし(ろ)]
+    meaning: después, detrás
+    jlpt: N5
+  - char: 毎
+    on: [マイ]
+    meaning: cada
+    jlpt: N5
+  - char: 週
+    on: [シュウ]
+    meaning: semana
+    jlpt: N5
+  - char: 曜
+    on: [ヨウ]
+    meaning: día de la semana
+    jlpt: N5
+  - char: 午
+    on: [ゴ]
+    meaning: mediodía
+    jlpt: N5
+  - char: 時
+    on: [ジ]
+    kun: [とき]
+    meaning: hora, tiempo
+    jlpt: N5
+  - char: 年
+    on: [ネン]
+    kun: [とし]
+    meaning: año
+    jlpt: N5
+  - char: 月
+    on: [ゲツ, ガツ]
+    kun: [つき]
+    meaning: luna, mes
+    jlpt: N5
   - char: 日
     on: [ニチ, ジツ]
     kun: [ひ, か]
     meaning: día, sol
+    jlpt: N5
+
+  # --- People & family -------------------------------------------------------
+  - char: 人
+    on: [ジン, ニン]
+    kun: [ひと]
+    meaning: persona
+    jlpt: N5
+  - char: 女
+    on: [ジョ]
+    kun: [おんな]
+    meaning: mujer
+    jlpt: N5
+  - char: 男
+    on: [ダン, ナン]
+    kun: [おとこ]
+    meaning: hombre, varón
+    jlpt: N5
+  - char: 子
+    on: [シ]
+    kun: [こ]
+    meaning: niño, hijo
+    jlpt: N5
+  - char: 母
+    on: [ボ]
+    kun: [はは]
+    meaning: madre
+    jlpt: N5
+  - char: 父
+    on: [フ]
+    kun: [ちち]
+    meaning: padre
+    jlpt: N5
+  - char: 友
+    on: [ユウ]
+    kun: [とも]
+    meaning: amigo
+    jlpt: N5
+  - char: 名
+    on: [メイ, ミョウ]
+    kun: [な]
+    meaning: nombre
+    jlpt: N5
+  - char: 生
+    on: [セイ, ショウ]
+    kun: [い(きる), う(まれる)]
+    meaning: vida; nacer
+    jlpt: N5
+  - char: 先
+    on: [セン]
+    kun: [さき]
+    meaning: anterior, delante
+    jlpt: N5
+
+  # --- Body ------------------------------------------------------------------
+  - char: 口
+    on: [コウ]
+    kun: [くち]
+    meaning: boca
+    jlpt: N5
+  - char: 目
+    on: [モク]
+    kun: [め]
+    meaning: ojo
+    jlpt: N5
+  - char: 手
+    on: [シュ]
+    kun: [て]
+    meaning: mano
+    jlpt: N5
+  - char: 足
+    on: [ソク]
+    kun: [あし, た(りる)]
+    meaning: pie, pierna; bastar
+    jlpt: N5
+  - char: 耳
+    on: [ジ]
+    kun: [みみ]
+    meaning: oreja, oído
+    jlpt: N5
+  - char: 力
+    on: [リョク, リキ]
+    kun: [ちから]
+    meaning: fuerza
+    jlpt: N5
+
+  # --- School & language -----------------------------------------------------
+  - char: 学
+    on: [ガク]
+    kun: [まな(ぶ)]
+    meaning: estudio; aprender
+    jlpt: N5
+  - char: 校
+    on: [コウ]
+    meaning: escuela
+    jlpt: N5
+  - char: 語
+    on: [ゴ]
+    kun: [かた(る)]
+    meaning: idioma, palabra
+    jlpt: N5
+  - char: 国
+    on: [コク]
+    kun: [くに]
+    meaning: país
+    jlpt: N5
+  - char: 外
+    on: [ガイ]
+    kun: [そと]
+    meaning: fuera, exterior
     jlpt: N5
   - char: 本
     on: [ホン]
     kun: [もと]
     meaning: libro, origen
     jlpt: N5
-  - char: 人
-    on: [ジン, ニン]
-    kun: [ひと]
-    meaning: persona
-    jlpt: N5
+
+  # --- Adjectives ------------------------------------------------------------
   - char: 大
     on: [ダイ, タイ]
-    kun: [おお]
+    kun: [おお(きい)]
     meaning: grande
     jlpt: N5
   - char: 小
     on: [ショウ]
-    kun: [ちい, こ]
+    kun: [ちい(さい), こ]
     meaning: pequeño
     jlpt: N5
-  - char: 中
-    on: [チュウ]
-    kun: [なか]
-    meaning: centro, dentro
+  - char: 高
+    on: [コウ]
+    kun: [たか(い)]
+    meaning: alto, caro
     jlpt: N5
+  - char: 安
+    on: [アン]
+    kun: [やす(い)]
+    meaning: barato; tranquilo
+    jlpt: N5
+  - char: 新
+    on: [シン]
+    kun: [あたら(しい)]
+    meaning: nuevo
+    jlpt: N5
+  - char: 古
+    on: [コ]
+    kun: [ふる(い)]
+    meaning: viejo, antiguo
+    jlpt: N5
+  - char: 長
+    on: [チョウ]
+    kun: [なが(い)]
+    meaning: largo; jefe
+    jlpt: N5
+  - char: 明
+    on: [メイ]
+    kun: [あか(るい)]
+    meaning: claro, brillante
+    jlpt: N5
+  - char: 白
+    on: [ハク]
+    kun: [しろ, しろ(い)]
+    meaning: blanco
+    jlpt: N5
+
+  # --- Verbs -----------------------------------------------------------------
+  - char: 行
+    on: [コウ, ギョウ]
+    kun: [い(く)]
+    meaning: ir
+    jlpt: N5
+  - char: 来
+    on: [ライ]
+    kun: [く(る)]
+    meaning: venir
+    jlpt: N5
+  - char: 帰
+    on: [キ]
+    kun: [かえ(る)]
+    meaning: volver, regresar
+    jlpt: N5
+  - char: 見
+    on: [ケン]
+    kun: [み(る)]
+    meaning: ver, mirar
+    jlpt: N5
+  - char: 聞
+    on: [ブン]
+    kun: [き(く)]
+    meaning: oír; preguntar
+    jlpt: N5
+  - char: 言
+    on: [ゲン, ゴン]
+    kun: [い(う)]
+    meaning: decir
+    jlpt: N5
+  - char: 話
+    on: [ワ]
+    kun: [はな(す), はなし]
+    meaning: hablar; conversación
+    jlpt: N5
+  - char: 読
+    on: [ドク]
+    kun: [よ(む)]
+    meaning: leer
+    jlpt: N5
+  - char: 書
+    on: [ショ]
+    kun: [か(く)]
+    meaning: escribir
+    jlpt: N5
+  - char: 食
+    on: [ショク]
+    kun: [た(べる)]
+    meaning: comer
+    jlpt: N5
+  - char: 飲
+    on: [イン]
+    kun: [の(む)]
+    meaning: beber
+    jlpt: N5
+  - char: 買
+    on: [バイ]
+    kun: [か(う)]
+    meaning: comprar
+    jlpt: N5
+  - char: 会
+    on: [カイ]
+    kun: [あ(う)]
+    meaning: encontrarse; reunión
+    jlpt: N5
+  - char: 休
+    on: [キュウ]
+    kun: [やす(む)]
+    meaning: descansar
+    jlpt: N5
+  - char: 出
+    on: [シュツ]
+    kun: [で(る), だ(す)]
+    meaning: salir; sacar
+    jlpt: N5
+  - char: 入
+    on: [ニュウ]
+    kun: [はい(る), い(れる)]
+    meaning: entrar; meter
+    jlpt: N5
+  - char: 立
+    on: [リツ]
+    kun: [た(つ)]
+    meaning: ponerse de pie
+    jlpt: N5
+
+  # --- Nature, places & things -----------------------------------------------
   - char: 山
     on: [サン]
     kun: [やま]
@@ -73,38 +438,111 @@ items:
     kun: [つち]
     meaning: tierra, suelo
     jlpt: N5
-  - char: 月
-    on: [ゲツ, ガツ]
-    kun: [つき]
-    meaning: luna, mes
+  - char: 天
+    on: [テン]
+    meaning: cielo
     jlpt: N5
-  - char: 年
-    on: [ネン]
-    kun: [とし]
-    meaning: año
+  - char: 気
+    on: [キ, ケ]
+    meaning: energía, ánimo
     jlpt: N5
-  - char: 時
-    on: [ジ]
-    kun: [とき]
-    meaning: hora, tiempo
+  - char: 雨
+    on: [ウ]
+    kun: [あめ]
+    meaning: lluvia
+    jlpt: N5
+  - char: 電
+    on: [デン]
+    meaning: electricidad
+    jlpt: N5
+  - char: 車
+    on: [シャ]
+    kun: [くるま]
+    meaning: coche, vehículo
+    jlpt: N5
+  - char: 駅
+    on: [エキ]
+    meaning: estación de tren
+    jlpt: N5
+  - char: 道
+    on: [ドウ]
+    kun: [みち]
+    meaning: camino, calle
+    jlpt: N5
+  - char: 社
+    on: [シャ]
+    meaning: empresa; santuario
+    jlpt: N5
+  - char: 店
+    on: [テン]
+    kun: [みせ]
+    meaning: tienda
+    jlpt: N5
+  - char: 銀
+    on: [ギン]
+    meaning: plata
+    jlpt: N5
+  - char: 病
+    on: [ビョウ]
+    meaning: enfermedad
+    jlpt: N5
+  - char: 院
+    on: [イン]
+    meaning: institución (hospital, academia)
+    jlpt: N5
+  - char: 花
+    on: [カ]
+    kun: [はな]
+    meaning: flor
+    jlpt: N5
+  - char: 魚
+    on: [ギョ]
+    kun: [さかな]
+    meaning: pez, pescado
+    jlpt: N5
+  - char: 田
+    on: [デン]
+    kun: [た]
+    meaning: arrozal
+    jlpt: N5
+  - char: 中
+    on: [チュウ]
+    kun: [なか]
+    meaning: centro, dentro
     jlpt: N5
   - char: 上
     on: [ジョウ]
-    kun: [うえ, あ]
+    kun: [うえ, あ(がる)]
     meaning: arriba, encima
     jlpt: N5
   - char: 下
     on: [カ, ゲ]
-    kun: [した, さ]
+    kun: [した, さ(がる)]
     meaning: abajo, debajo
     jlpt: N5
-  - char: 口
-    on: [コウ]
-    kun: [くち]
-    meaning: boca
+  - char: 何
+    kun: [なに, なん]
+    meaning: qué
     jlpt: N5
-  - char: 目
-    on: [モク]
-    kun: [め]
-    meaning: ojo
+
+  # --- Directions ------------------------------------------------------------
+  - char: 東
+    on: [トウ]
+    kun: [ひがし]
+    meaning: este
+    jlpt: N5
+  - char: 西
+    on: [セイ, サイ]
+    kun: [にし]
+    meaning: oeste
+    jlpt: N5
+  - char: 南
+    on: [ナン]
+    kun: [みなみ]
+    meaning: sur
+    jlpt: N5
+  - char: 北
+    on: [ホク]
+    kun: [きた]
+    meaning: norte
     jlpt: N5

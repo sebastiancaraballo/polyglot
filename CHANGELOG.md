@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **The full N5 kanji set: 106 characters** (up from the seed 20), completing the
+  kanji slice of the es-ja N5 track — numbers, time, people and family, body,
+  school and language, adjectives, verbs, nature/places, directions. Self-authored,
+  with beginner-first readings and Spanish meanings, every meaning distinct so
+  multiple-choice options are never ambiguous.
+- **Okurigana convention, now enforced by the loader.** When a kun reading is a
+  verb or adjective stem, its inflectional ending is shown in parentheses —
+  た(べる), あ(がる), あたら(しい) — the dictionary convention, chosen so a
+  beginner never meets a bare, unpronounceable stem. The content loader rejects
+  readings that break the convention (non-kana, unbalanced or empty groups, text
+  after the group), and the three seed entries that shipped bare stems
+  (上 あ, 下 さ, 小 ちい) are fixed to carry their endings.
+
+### Changed
+- The kanji frame-fit test now walks every character in the table in both
+  question states, instead of a randomly sampled session — the entry that
+  overflows is exactly the one a random deck may not draw.
+
+### Added
 - **Kanji trainer** — a new activity under *Aprender*: a character is shown in the
   same focal tile the kana trainer uses, the learner picks its meaning among four,
   and its on'yomi/kun'yomi readings are revealed with the answer. Mastery is the
