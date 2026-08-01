@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-08-01
+
 ### Changed
 - **Rewritten in Rust; the Go implementation is retired.** The app is now a Cargo
   workspace: `core/` holds the language-agnostic engine and `term/` the ratatui
